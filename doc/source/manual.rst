@@ -25,7 +25,7 @@ of the 5 pin cable are named PE and numbers ranging form 1-4.
   +---------+--------------+
   | 3       | Interrupt    |
   +---------+--------------+
-  | 4       | VCC 3V3      |
+  | 4       | VCC 1V8      |
   +---------+--------------+
 
 .. figure:: images/pressure_sensor_housing.jpg
