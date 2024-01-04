@@ -12,6 +12,7 @@ build-*
 build_*
 cscope.*
 .dir
+.cache
 
 /*.patch
 
