@@ -1,0 +1,53 @@
+# Copyright (c) 2021 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+manifest:
+  self:
+    path: lwm2m_server
+
+  remotes:
+    - name: eclipse-leshan
+      url-base: https://github.com/eclipse-leshan/
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: leshan
+      remote: eclipse-leshan
+      revision: master
+    - name: zephyr
+      remote: zephyrproject-rtos
+      repo-path: zephyr
+      revision: main
+      import:
+        name-allowlist:
+          - TraceRecorderSource
+          - canopennode
+          - chre
+          - cmsis
+          - cmsis-dsp
+          - cmsis-nn
+          - edtt
+          - fatfs
+          - hal_nordic
+          - hal_st # required for ST sensors (unrelated to STM32 MCUs)
+          - hal_wurthelektronik
+          - liblc3
+          - libmetal
+          - littlefs
+          - loramac-node
+          - lvgl
+          - lz4
+          - mipi-sys-t
+          - nanopb
+          - net-tools
+          - nrf_hw_models
+          - open-amp
+          - picolibc
+          - psa-arch-tests
+          - segger
+          - tinycrypt
+          - tf-m-tests
+          - uoscore-uedhoc
+          - zcbor
+          - zscilib
