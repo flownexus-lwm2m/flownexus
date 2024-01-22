@@ -23,6 +23,10 @@ tags
 .envrc
 .vscode
 sanity-out*
+.classpath
+.settings
+target
+.idea
 
 doc/_build
 doc/nrf/_doxygen/
