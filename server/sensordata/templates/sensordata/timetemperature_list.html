@@ -3,6 +3,7 @@
     <thead>
       <tr>
         <th>Time</th>
+        <th>Endpoint</th>
         <th>Temperature</th>
       </tr>
     </thead>
@@ -10,6 +11,7 @@
       {% for tt in timetemperature_list %}
       <tr>
         <td>{{ tt.time }}</td>
+        <td>{{ tt.ep}}</td>
         <td>{{ tt.temperature }}</td>
       </tr>
       {% endfor %}
