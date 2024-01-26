@@ -5,5 +5,5 @@ from sensordata import views as sensordata_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('sensordata.urls')),
-    path('timetemperature/list/', sensordata_views.TimeTemperatureListView.as_view(), name='timetemperature_list'),
+    path('sensordata/list/', sensordata_views.SensorDataListView.as_view(), name='sensordata_list'),
 ]

@@ -1,11 +1,6 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import TimeTemperatureViewSet
-
-
-router = DefaultRouter()
-router.register(r'timetemperature', TimeTemperatureViewSet)
+from django.urls import path
+from .views import CreateSensorDataView
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('add/', CreateSensorDataView.as_view(), name='add_sensor_data'),
 ]
