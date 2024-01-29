@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 class CreateSensorDataView(APIView):
     def post(self, request, format=None):
-        logger.debug("CreateSernsorDataView: " + (str)(request.data))
         serializer = GenericLWM2MSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
