@@ -22,7 +22,7 @@ public class DataSenderRest {
     public void sendData(String data) {
         logger.info("DataSenderRest: {}", data);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:8000/api/add/"))
+                .uri(URI.create("http://127.0.0.1:8000/api/endpointdata/"))
                 .header("Content-Type", "application/json")
                 .POST(BodyPublishers.ofString(data)) // Construct a request with the provided data
                 .build();
@@ -30,9 +30,9 @@ public class DataSenderRest {
         System.out.println("DataSenderRest: " + data);
         client.sendAsync(request, BodyHandlers.ofString())
               .thenApply(HttpResponse::body)
-              //.thenAccept(responseBody -> logger.info("Successful response: {}", responseBody))
+              .thenAccept(responseBody -> logger.info("Successful response: {}", responseBody))
               .exceptionally(e -> {
-                  //logger.error("Request failed", e);
+                  logger.error("Request failed", e);
                   return null;
               });
     }
