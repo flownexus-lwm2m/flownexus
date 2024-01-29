@@ -5,7 +5,8 @@ from sensordata.models import SensorData
 import binascii
 import struct
 
-TEST_PAYLOADS = [
+
+TEST_PAYLOAD = [
     {
         "ep": "qemu_x86",
         "res": "/3303/0/5700",
@@ -16,7 +17,6 @@ TEST_PAYLOADS = [
             "value": "40370838ac4f0838"
         }
     },
-    # more payloads
 ]
 
 class SensorDataTests(APITestCase):
@@ -35,15 +35,14 @@ class SensorDataTests(APITestCase):
         """
         url = reverse('add_sensor_data')
 
-        for payload in TEST_PAYLOADS:
-            print(f"Testing payload {payload}...")
-            response = self.client.post(url, payload, format='json')
+        for pl in TEST_PAYLOAD:
+            response = self.client.post(url, pl, format='json')
 
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
             self.assertEqual(SensorData.objects.count(), 1)
-            self.assertEqual(SensorData.objects.get().ep, payload['ep'])
-            expected_temperature = self.convert_hex_to_double(payload['val']['value'])
+            self.assertEqual(SensorData.objects.get().endpoint, pl['ep'])
+            expected_temperature = self.convert_hex_to_double(pl['val']['value'])
             self.assertEqual(SensorData.objects.get().temperature, expected_temperature)
 
             SensorData.objects.all().delete()
