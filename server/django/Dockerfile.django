@@ -1,0 +1,22 @@
+# Use the official lightweight Python image.
+# 3.11.0a4 at the time of writing; use 3.11 when it is released
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Create and set the working directory in the container
+WORKDIR /django
+
+# Copy the content of the local src directory to the working directory
+COPY . /django/
+
+# Install dependencies in the container
+RUN pip install --no-cache-dir -r /django/requirements.txt
+
+# Give execution rights on the start-up script
+RUN chmod +x /django/django_start.sh
+
+# Configure the container to run in an executed manner, replace "myproject" with your Django project name
+ENTRYPOINT ["/django/django_start.sh"]
