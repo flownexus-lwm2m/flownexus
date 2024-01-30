@@ -1,0 +1,19 @@
+# Use the official OpenJDK 17 base image
+FROM openjdk:17-slim
+
+# Set the working directory in the container
+WORKDIR /leshan
+
+# Copy the source code, build files, and other necessary files
+COPY . /leshan/
+
+# Install Maven
+RUN apt-get update && \
+    apt-get install -y maven && \
+    rm -rf /var/lib/apt/lists/*
+
+# Your startup script that handles running Leshan and logging
+RUN chmod +x /leshan/leshan_build_run.sh
+
+# Set the entrypoint to your start script
+ENTRYPOINT ["/leshan/leshan_build_run.sh"]
