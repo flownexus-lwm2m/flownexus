@@ -22,7 +22,7 @@ public class DataSenderRest {
     public void sendData(String data) {
         logger.info("DataSenderRest: {}", data);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:8000/api/endpointdata/"))
+                .uri(URI.create("http://django:8000/api/endpointdata/"))
                 .header("Content-Type", "application/json")
                 .POST(BodyPublishers.ofString(data)) // Construct a request with the provided data
                 .build();
