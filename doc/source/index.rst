@@ -1,13 +1,5 @@
 .. toctree::
-   :maxdepth: 2
-   :caption: Architecture
+   :maxdepth: 3
+   :caption: LwM2M Server
 
-   architecture.rst
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Manual
-
-   manual.rst
-
+   documentation.rst
