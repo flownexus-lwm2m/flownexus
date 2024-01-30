@@ -19,8 +19,8 @@ import re
 
 # -- Project information -----------------------------------------------------
 
-project = 'Waterlevel Monitor'
-copyright = '2023, Jonas Remmert'
+project = 'LwM2M Server'
+copyright = '2024, Jonas Remmert'
 author = 'Jonas Remmert'
 
 version = re.sub('', '', os.popen('git describe --tags').read().strip())
@@ -60,7 +60,6 @@ html_theme_options = {
 
 html_context = {
     "display_github": True,
-    "github_user": "phytec",
     "github_repo": "zephyr-ksp0704",
     "github_version": "main",
     "conf_py_path": "/source/",
@@ -85,7 +84,7 @@ latex_elements = {
     'fontpkg': '\\usepackage{lmodern}',
     'papersize': 'a4paper',
     'extraclassoptions': 'oneside',
-    'pointsize': '11pt',
+    'pointsize': '10pt',
     'preamble': r'''
         \usepackage{microtype}
         \setcounter{tocdepth}{3}
@@ -105,13 +104,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ('architecture',
+    ('documentation',
      'waterlevel_monitor_architecture_'+version+'.tex',
-     u'Waterlevel Monitor',
-     author,
-     'manual'),
-    ('manual',
-     'waterlevel_monitor_manual_'+version+'.tex',
      u'Waterlevel Monitor',
      author,
      'manual'),
