@@ -1,0 +1,30 @@
+services:
+  django:
+    build:
+      context: ./django
+      dockerfile: Dockerfile.django
+    volumes:
+      - ./django:/django
+      - ./logs:/django/logs
+    ports:
+      - "8000:8000"
+    networks:
+      - mynetwork
+
+  leshan:
+    build:
+      context: ./leshan
+      dockerfile: Dockerfile.leshan
+    volumes:
+      - ./leshan:/leshan
+      - ./logs:/leshan/logs
+    ports:
+      - "5683:5683/udp" # LWM2M default UDP port
+      - "5684:5684"     # For LWM2M over DTLS
+    networks:
+      - mynetwork
+
+# Define the custom network
+networks:
+  mynetwork:
+    driver: bridge
