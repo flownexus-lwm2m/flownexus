@@ -1,3 +1,4 @@
 Django==5.0.1
 requests==2.31.0
 djangorestframework==3.14.0
+whitenoise==6.6.0
