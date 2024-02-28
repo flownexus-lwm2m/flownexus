@@ -51,8 +51,6 @@ exclude_patterns = []
 #html_theme = 'alabaster'
 html_theme = 'sphinx_rtd_theme'
 
-html_static_path = ['sphinx-static']
-#html_logo = 'sphinx-static/logo.svg'
 html_theme_options = {
     'logo_only': False,
     'display_version': True,
