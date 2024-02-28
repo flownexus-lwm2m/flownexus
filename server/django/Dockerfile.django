@@ -15,6 +15,9 @@ COPY . /django/
 # Install dependencies in the container
 RUN pip install --no-cache-dir -r /django/requirements.txt
 
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
 # Give execution rights on the start-up script
 RUN chmod +x /django/django_start.sh
 
