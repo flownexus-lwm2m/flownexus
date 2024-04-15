@@ -1,48 +1,102 @@
-Architecture (High Level)
--------------------------
+Motivation
+----------
 
-Introduction
-............
+This project aims to provide a minimal and standalone Open Source IoT platform.
+The focus is on systems with a deployment of up to a few thousand devices, it
+does not aim to be scalable to millions of devices.
 
-This project serves as a concept to test IoT components and protocols and
-create a proof of concept for a IoT system.
+The goal is to build a system that recieves e.g. regular temperature samples
+from remote IoT devices. The temperature samples will be send to a backend and
+stored in a database. The data is be visualized in a web application.
 
-The goal is to build a system that takes regular temperature samples from a remote
-IoT device. The temperature samples will be send to a backend and stored in a
-database. The backend will also provide a REST API to access the data. The data
-will be visualized in a web application.
+General Requirements
+....................
 
-**Other Requirements:**
+* No dependencies of external services like AWS, MQTT brokers or similar. The
+  system has to be able to run in a local environment.
+* The main focus is the LwM2M protocol and the communication between Zephyr and
+  the server.
+* The system should show how to add data to a database and visualize it in a
+  web application.
+* The web application has to support a secure login and basic user management.
 
-* There should be no dependencies of external services like AWS, MQTT brokers
-  or similar.
-* The main focus it the LwM2M protocol and the communication between Zephyr and
-  the server. The server implementation behind LwM2M will be showcased but
-  could later be replaced with application specific server implementations and
-  visualizations.
+Platform Features
+.................
+
+* Certificate based authentication and encryption.
+* Server to read and observe resources from IoT Device.
+* Server to write resources to IoT Devices.
+* OTA Update.
+* Receive logs from IoT Devices.
 
 IoT Device
 ..........
 
-The application can e.g. be used with a dedicated nRF9160 device or from
-simulation. The nRF9160 is a low power LTE-M and NB-IoT module that runs Zephyr
-OS.
+An IoT device is a resource constrained (energy, flash..) that is connected to
+the internet. The IoT device has to support LwM2M. Mainly systems that run
+Zephyr should be compatible. The application can e.g. be used with a dedicated
+nRF9160 device or via a simulation like native_sim or in Renode. The nRF9160 is
+a low power LTE-M and NB-IoT SoC that runs Zephyr OS. UDP is used as transport
+protocol as it allows to keep devices connected even when the device is
+sleeping for extended periods (TCP would require a new connection setup
+typically after a few minutes).
 
-Device Management Protocol
-..........................
+Technical Documentation
+-----------------------
 
-As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
-``subsys/net/lib/lwm2m``. This LwM2M client sample application implements the
-LwM2M library and establishes a connection to an LwM2M server. The example can
-be build with the following command:
+Django Server
+.............
+
+Run Django Unit Tests
+~~~~~~~~~~~~~~~~~~~~~
+
+There are unit tests defined, which test the deserializer in Django, which
+parses the json payload from the Rest API. You can run the unit tests with the
+following command:
 
 .. code-block:: console
 
-  host:~$ west build -b nrf9161dk_nrf9160_ns fw_test/lwm2m_client -p
-  host:~$ west flash --recover
+  host:server/django/~$ python3 manage.py test sensordata
+  Found 2 test(s).
+  Creating test database for alias 'default'...
+  ----------------------------------------------------------------------
+  Ran 2 tests in 0.008s
 
-Server
-......
+  OK
+  Destroying test database for alias 'default'...
+
+
+Start
+~~~~~
+
+The Django server can also run locally, without the need of a docker container.
+Make sure to create a virtual environment and install the requirements:
+
+.. code-block:: console
+
+  host:server/django/~$ python3 -m venv venv
+  host:server/django/~$ source venv/bin/activate
+  host:server/django/~$ pip install -r requirements.txt
+  host:server/django/~$ ./django_start.sh
+
+
+.. code-block:: console
+
+   host:server/django/~$ python manage.py runserver
+
+Unless you add new files, you can keep the server running while modifying the
+server.
+
+Make Migrations to a new Database Model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: console
+
+   host:server/django/~$ python manage.py makemigrations sensordata
+   host:server/django/~$ python manage.py migrate
+
+LwM2M Server
+............
 
 Overview and Interfaces
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,8 +130,17 @@ two components are connected via a REST API.
    :User: -up-> Django : HTTPS
    @enduml
 
+Start
+~~~~~
+
+The Lwm2m server can also run locally, without the need of a docker container:
+
+.. code-block:: console
+
+   host:server/leshan/~$ ./leshan_build_run.sh
+
 Container Environment
-~~~~~~~~~~~~~~~~~~~~~
+.....................
 
 Both components run in a Docker container. The Leshan server is running in a
 ``openjdk:17-slim`` container and the Django server is running in a
@@ -146,6 +209,19 @@ The container can be build and started with the following commands:
    ✔ Container server-leshan-1  Stopped                                     10.5s 
 
 
+Zephyr (IoT Device)
+...................
+
+As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
+``subsys/net/lib/lwm2m``. This LwM2M client sample application implements the
+LwM2M library and establishes a connection to an LwM2M server. The example can
+be build with the following command:
+
+.. code-block:: console
+
+  host:~$ west build -b nrf9161dk_nrf9160_ns fw_test/lwm2m_client -p
+  host:~$ west flash --recover
+
 Zephyr (Simulation)
 ~~~~~~~~~~~~~~~~~~~
 
@@ -199,71 +275,3 @@ LAST UPDATED field contains a recent timestamp.
 .. figure:: images/django_local.png
 
   Endpoints table in Django
-
-Infrastructure
-~~~~~~~~~~~~~~
-
-System Documentation (Technical)
---------------------------------
-
-LwM2M Server
-............
-
-Start Server
-~~~~~~~~~~~~
-
-The Lwm2m server can also run locally, without the need of a docker container:
-
-.. code-block:: console
-
-   host:server/leshan/~$ ./leshan_build_run.sh
-
-Django Server
-.............
-
-Run Django Unit Tests Server
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There are unit tests defined, which test the deserializer in Django, which
-parses the json payload from the Rest API. You can run the unit tests with the
-following command:
-
-.. code-block:: console
-
-  host:server/django/~$ python3 manage.py test sensordata
-  Found 2 test(s).
-  Creating test database for alias 'default'...
-  ----------------------------------------------------------------------
-  Ran 2 tests in 0.008s
-
-  OK
-  Destroying test database for alias 'default'...
-
-
-Start Server
-~~~~~~~~~~~~
-
-The Django server can also run locally, without the need of a docker container. Make sure to create a virtual environment and install the requirements:
-
-.. code-block:: console
-
-  host:server/django/~$ python3 -m venv venv
-  host:server/django/~$ source venv/bin/activate
-  host:server/django/~$ pip install -r requirements.txt
-  host:server/django/~$ ./django_start.sh
-
-
-.. code-block:: console
-
-   host:server/django/~$ python manage.py runserver
-
-Unless you add new files, you can keep the server running while modifying the
-server.
-
-Make Migrations to a new Database Model
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: console
-
-   host:server/django/~$ python manage.py makemigrations sensordata
-   host:server/django/~$ python manage.py migrate
