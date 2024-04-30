@@ -14,7 +14,7 @@
  *     Sierra Wireless - initial API and implementation
  *     Orange - keep one JSON dependency
  *******************************************************************************/
-package com.example.model;
+package lwm2m.model;
 
 import java.util.ArrayList;
 import java.util.List;

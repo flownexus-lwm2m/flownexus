@@ -3,8 +3,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.example</groupId>
-    <artifactId>leshan-server</artifactId>
+    <groupId>lwm2m</groupId>
+    <artifactId>leshan-svr</artifactId>
     <version>0.9</version>
     <name>Leshan Server</name>
     <url>http://maven.apache.org</url>
@@ -54,7 +54,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.example.MyLeshanServer</mainClass>
+                            <mainClass>lwm2m.LeshanSvr</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

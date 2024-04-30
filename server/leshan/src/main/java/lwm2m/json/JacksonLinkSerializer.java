@@ -13,7 +13,7 @@
  * Contributors:
  *     Sierra Wireless - initial API and implementation
  *******************************************************************************/
-package com.example.json;
+package lwm2m.json;
 
 import java.io.IOException;
 

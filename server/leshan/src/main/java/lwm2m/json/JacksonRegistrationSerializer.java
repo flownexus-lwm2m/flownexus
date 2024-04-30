@@ -14,7 +14,7 @@
  *     Sierra Wireless - initial API and implementation
  *     Orange - keep one JSON dependency
  *******************************************************************************/
-package com.example.json;
+package lwm2m.json;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
