@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Architecture (High Level) &mdash; LwM2M Server  documentation</title>
+  <title>Motivation &mdash; LwM2M Server  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -45,28 +45,27 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">LwM2M Server</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Architecture (High Level)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Motivation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general-requirements">General Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#platform-features">Platform Features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#iot-device">IoT Device</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#device-management-protocol">Device Management Protocol</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#server">Server</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#overview-and-interfaces">Overview and Interfaces</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#container-environment">Container Environment</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#zephyr-simulation">Zephyr (Simulation)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#infrastructure">Infrastructure</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="#system-documentation-technical">System Documentation (Technical)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#lwm2m-server">LwM2M Server</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#start-server">Start Server</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="#technical-documentation">Technical Documentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#django-server">Django Server</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#run-django-unit-tests-server">Run Django Unit Tests Server</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id1">Start Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-django-unit-tests">Run Django Unit Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#start">Start</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#make-migrations-to-a-new-database-model">Make Migrations to a new Database Model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#lwm2m-server">LwM2M Server</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview-and-interfaces">Overview and Interfaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Start</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#container-environment">Container Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#zephyr-iot-device">Zephyr (IoT Device)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#zephyr-simulation">Zephyr (Simulation)</a></li>
 </ul>
 </li>
 </ul>
@@ -87,7 +86,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Architecture (High Level)</li>
+      <li class="breadcrumb-item active">Motivation</li>
       <li class="wy-breadcrumbs-aside">
               <a href="https://github.com//zephyr-ksp0704/blob/main/source/documentation.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
@@ -97,45 +96,94 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="architecture-high-level">
-<h1>Architecture (High Level)<a class="headerlink" href="#architecture-high-level" title="Link to this heading"></a></h1>
-<section id="introduction">
-<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
-<p>This project serves as a concept to test IoT components and protocols and
-create a proof of concept for a IoT system.</p>
-<p>The goal is to build a system that takes regular temperature samples from a remote
-IoT device. The temperature samples will be send to a backend and stored in a
-database. The backend will also provide a REST API to access the data. The data
-will be visualized in a web application.</p>
-<p><strong>Other Requirements:</strong></p>
+  <section id="motivation">
+<h1>Motivation<a class="headerlink" href="#motivation" title="Link to this heading"></a></h1>
+<p>This project aims to provide a minimal and standalone Open Source IoT platform.
+The focus is on systems with a deployment of up to a few thousand devices, it
+does not aim to be scalable to millions of devices.</p>
+<p>The goal is to build a system that recieves e.g. regular temperature samples
+from remote IoT devices. The temperature samples will be send to a backend and
+stored in a database. The data is be visualized in a web application.</p>
+<section id="general-requirements">
+<h2>General Requirements<a class="headerlink" href="#general-requirements" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>There should be no dependencies of external services like AWS, MQTT brokers
-or similar.</p></li>
-<li><p>The main focus it the LwM2M protocol and the communication between Zephyr and
-the server. The server implementation behind LwM2M will be showcased but
-could later be replaced with application specific server implementations and
-visualizations.</p></li>
+<li><p>No dependencies of external services like AWS, MQTT brokers or similar. The
+system has to be able to run in a local environment.</p></li>
+<li><p>The main focus is the LwM2M protocol and the communication between Zephyr and
+the server.</p></li>
+<li><p>The system should show how to add data to a database and visualize it in a
+web application.</p></li>
+<li><p>The web application has to support a secure login and basic user management.</p></li>
+</ul>
+</section>
+<section id="platform-features">
+<h2>Platform Features<a class="headerlink" href="#platform-features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Certificate based authentication and encryption.</p></li>
+<li><p>Server to read and observe resources from IoT Device.</p></li>
+<li><p>Server to write resources to IoT Devices.</p></li>
+<li><p>OTA Update.</p></li>
+<li><p>Receive logs from IoT Devices.</p></li>
 </ul>
 </section>
 <section id="iot-device">
 <h2>IoT Device<a class="headerlink" href="#iot-device" title="Link to this heading"></a></h2>
-<p>The application can e.g. be used with a dedicated nRF9160 device or from
-simulation. The nRF9160 is a low power LTE-M and NB-IoT module that runs Zephyr
-OS.</p>
+<p>An IoT device is a resource constrained (energy, flash..) that is connected to
+the internet. The IoT device has to support LwM2M. Mainly systems that run
+Zephyr should be compatible. The application can e.g. be used with a dedicated
+nRF9160 device or via a simulation like native_sim or in Renode. The nRF9160 is
+a low power LTE-M and NB-IoT SoC that runs Zephyr OS. UDP is used as transport
+protocol as it allows to keep devices connected even when the device is
+sleeping for extended periods (TCP would require a new connection setup
+typically after a few minutes).</p>
 </section>
-<section id="device-management-protocol">
-<h2>Device Management Protocol<a class="headerlink" href="#device-management-protocol" title="Link to this heading"></a></h2>
-<p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
-<code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
-LwM2M library and establishes a connection to an LwM2M server. The example can
-be build with the following command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>nrf9161dk_nrf9160_ns<span class="w"> </span>fw_test/lwm2m_client<span class="w"> </span>-p
-<span class="gp">host:~$ </span>west<span class="w"> </span>flash<span class="w"> </span>--recover
+</section>
+<section id="technical-documentation">
+<h1>Technical Documentation<a class="headerlink" href="#technical-documentation" title="Link to this heading"></a></h1>
+<section id="django-server">
+<h2>Django Server<a class="headerlink" href="#django-server" title="Link to this heading"></a></h2>
+<section id="run-django-unit-tests">
+<h3>Run Django Unit Tests<a class="headerlink" href="#run-django-unit-tests" title="Link to this heading"></a></h3>
+<p>There are unit tests defined, which test the deserializer in Django, which
+parses the json payload from the Rest API. You can run the unit tests with the
+following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python3<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
+<span class="go">Found 2 test(s).</span>
+<span class="go">Creating test database for alias &#39;default&#39;...</span>
+<span class="go">----------------------------------------------------------------------</span>
+<span class="go">Ran 2 tests in 0.008s</span>
+
+<span class="go">OK</span>
+<span class="go">Destroying test database for alias &#39;default&#39;...</span>
 </pre></div>
 </div>
 </section>
-<section id="server">
-<h2>Server<a class="headerlink" href="#server" title="Link to this heading"></a></h2>
+<section id="start">
+<h3>Start<a class="headerlink" href="#start" title="Link to this heading"></a></h3>
+<p>The Django server can also run locally, without the need of a docker container.
+Make sure to create a virtual environment and install the requirements:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="gp">host:server/django/~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:server/django/~$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="gp">host:server/django/~$ </span>./django_start.sh
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
+</pre></div>
+</div>
+<p>Unless you add new files, you can keep the server running while modifying the
+server.</p>
+</section>
+<section id="make-migrations-to-a-new-database-model">
+<h3>Make Migrations to a new Database Model<a class="headerlink" href="#make-migrations-to-a-new-database-model" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
+<span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+</pre></div>
+</div>
+</section>
+</section>
+<section id="lwm2m-server">
+<h2>LwM2M Server<a class="headerlink" href="#lwm2m-server" title="Link to this heading"></a></h2>
 <section id="overview-and-interfaces">
 <h3>Overview and Interfaces<a class="headerlink" href="#overview-and-interfaces" title="Link to this heading"></a></h3>
 <p>The server consists of two components. The LwM2M server and the Django server.
@@ -172,8 +220,16 @@ Leshan -right-&gt; Django : REST API\nSensor Val, States..
 </figure>
 </div></blockquote>
 </section>
+<section id="id1">
+<h3>Start<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<p>The Lwm2m server can also run locally, without the need of a docker container:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/leshan/~$ </span>./leshan_build_run.sh
+</pre></div>
+</div>
+</section>
+</section>
 <section id="container-environment">
-<h3>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading"></a></h3>
+<h2>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading"></a></h2>
 <p>Both components run in a Docker container. The Leshan server is running in a
 <code class="docutils literal notranslate"><span class="pre">openjdk:17-slim</span></code> container and the Django server is running in a
 <code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
@@ -240,6 +296,16 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 </pre></div>
 </div>
 </section>
+<section id="zephyr-iot-device">
+<h2>Zephyr (IoT Device)<a class="headerlink" href="#zephyr-iot-device" title="Link to this heading"></a></h2>
+<p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
+<code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
+LwM2M library and establishes a connection to an LwM2M server. The example can
+be build with the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>nrf9161dk_nrf9160_ns<span class="w"> </span>fw_test/lwm2m_client<span class="w"> </span>-p
+<span class="gp">host:~$ </span>west<span class="w"> </span>flash<span class="w"> </span>--recover
+</pre></div>
+</div>
 <section id="zephyr-simulation">
 <h3>Zephyr (Simulation)<a class="headerlink" href="#zephyr-simulation" title="Link to this heading"></a></h3>
 <p>The Zephyr application can run in simulation mode. This allows to test all
@@ -288,63 +354,6 @@ LAST UPDATED field contains a recent timestamp.</p>
 <p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id4" title="Link to this image"></a></p>
 </figcaption>
 </figure>
-</section>
-<section id="infrastructure">
-<h3>Infrastructure<a class="headerlink" href="#infrastructure" title="Link to this heading"></a></h3>
-</section>
-</section>
-</section>
-<section id="system-documentation-technical">
-<h1>System Documentation (Technical)<a class="headerlink" href="#system-documentation-technical" title="Link to this heading"></a></h1>
-<section id="lwm2m-server">
-<h2>LwM2M Server<a class="headerlink" href="#lwm2m-server" title="Link to this heading"></a></h2>
-<section id="start-server">
-<h3>Start Server<a class="headerlink" href="#start-server" title="Link to this heading"></a></h3>
-<p>The Lwm2m server can also run locally, without the need of a docker container:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/leshan/~$ </span>./leshan_build_run.sh
-</pre></div>
-</div>
-</section>
-</section>
-<section id="django-server">
-<h2>Django Server<a class="headerlink" href="#django-server" title="Link to this heading"></a></h2>
-<section id="run-django-unit-tests-server">
-<h3>Run Django Unit Tests Server<a class="headerlink" href="#run-django-unit-tests-server" title="Link to this heading"></a></h3>
-<p>There are unit tests defined, which test the deserializer in Django, which
-parses the json payload from the Rest API. You can run the unit tests with the
-following command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python3<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
-<span class="go">Found 2 test(s).</span>
-<span class="go">Creating test database for alias &#39;default&#39;...</span>
-<span class="go">----------------------------------------------------------------------</span>
-<span class="go">Ran 2 tests in 0.008s</span>
-
-<span class="go">OK</span>
-<span class="go">Destroying test database for alias &#39;default&#39;...</span>
-</pre></div>
-</div>
-</section>
-<section id="id1">
-<h3>Start Server<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
-<p>The Django server can also run locally, without the need of a docker container. Make sure to create a virtual environment and install the requirements:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
-<span class="gp">host:server/django/~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-<span class="gp">host:server/django/~$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-<span class="gp">host:server/django/~$ </span>./django_start.sh
-</pre></div>
-</div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
-</pre></div>
-</div>
-<p>Unless you add new files, you can keep the server running while modifying the
-server.</p>
-</section>
-<section id="make-migrations-to-a-new-database-model">
-<h3>Make Migrations to a new Database Model<a class="headerlink" href="#make-migrations-to-a-new-database-model" title="Link to this heading"></a></h3>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
-<span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
-</pre></div>
-</div>
 </section>
 </section>
 </section>
