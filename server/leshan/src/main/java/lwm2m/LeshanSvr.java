@@ -1,4 +1,4 @@
-package com.example;
+package lwm2m;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,10 +28,10 @@ import org.eclipse.leshan.server.registration.RegistrationUpdate;
 import org.eclipse.leshan.server.observation.ObservationListener;
 import org.eclipse.leshan.server.californium.endpoint.CaliforniumServerEndpointsProvider;
 
-import com.example.json.JacksonLinkSerializer;
-import com.example.json.JacksonLwM2mNodeSerializer;
-import com.example.json.JacksonRegistrationSerializer;
-import com.example.json.JacksonVersionSerializer;
+import lwm2m.json.JacksonLinkSerializer;
+import lwm2m.json.JacksonLwM2mNodeSerializer;
+import lwm2m.json.JacksonRegistrationSerializer;
+import lwm2m.json.JacksonVersionSerializer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -50,21 +50,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.Collection;
 import java.nio.ByteBuffer;
 
-import com.example.DataSenderRest;
+import lwm2m.DataSenderRest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class MyLeshanServer {
+public class LeshanSvr{
     private final ExecutorService onboardingExecutor = Executors.newCachedThreadPool();
     private static DataSenderRest dataSenderRest = new DataSenderRest();
     private LeshanServer server;
     private ObjectMapper mapper;
     private SimpleModule module;
-    private static final Logger logger = LoggerFactory.getLogger(MyLeshanServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(LeshanSvr.class);
 
-    public MyLeshanServer() {
+    public LeshanSvr() {
         LeshanServerBuilder builder = new LeshanServerBuilder();
         builder.setEndpointsProviders(new CaliforniumServerEndpointsProvider());
         server = builder.build();
@@ -81,7 +81,7 @@ public class MyLeshanServer {
     }
 
     public static void main(String[] args) {
-        final MyLeshanServer myServer = new MyLeshanServer();
+        final LeshanSvr myServer = new LeshanSvr();
 
         // Add a shutdown hook to cleanly shutdown the resources
         Runtime.getRuntime().addShutdownHook(new Thread(() -> myServer.stop()));
@@ -180,10 +180,10 @@ public class MyLeshanServer {
     }
 
     public class MyRegistrationListener implements RegistrationListener {
-        private final MyLeshanServer server;
+        private final LeshanSvr server;
         private static final Logger logger = LoggerFactory.getLogger(MyRegistrationListener.class);
 
-        public MyRegistrationListener(MyLeshanServer server) {
+        public MyRegistrationListener(LeshanSvr server) {
             this.server = server;
         }
 
@@ -211,10 +211,10 @@ public class MyLeshanServer {
 
 
     public class MyObservationListener implements ObservationListener {
-        private final MyLeshanServer server;
+        private final LeshanSvr server;
         private static final Logger logger = LoggerFactory.getLogger(MyObservationListener.class);
 
-        public MyObservationListener(MyLeshanServer server) {
+        public MyObservationListener(LeshanSvr server) {
             this.server = server;
         }
 
@@ -290,10 +290,10 @@ public class MyLeshanServer {
     }
 
     public class MySendListener implements SendListener {
-        private final MyLeshanServer server;
+        private final LeshanSvr server;
         private static final Logger logger = LoggerFactory.getLogger(MySendListener.class);
 
-        public MySendListener(MyLeshanServer server) {
+        public MySendListener(LeshanSvr server) {
             this.server = server;
         }
 
