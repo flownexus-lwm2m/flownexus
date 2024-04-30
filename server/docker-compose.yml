@@ -23,6 +23,8 @@ services:
       - "5684:5684"     # For LWM2M over DTLS
     networks:
       - mynetwork
+    environment:
+      - DATA_SENDER_URI=http://django:8000
 
 # Define the custom network
 networks:
