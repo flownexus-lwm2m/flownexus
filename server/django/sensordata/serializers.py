@@ -6,6 +6,7 @@ import logging
 import json
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class GenericLWM2MSerializer(serializers.Serializer):
     """
@@ -38,9 +39,7 @@ class GenericLWM2MSerializer(serializers.Serializer):
     }
 
     def deserialize_sensor_data(self, json_string):
-        logger.info("deserializer: deserialize_sensor_data")
-        # Pretty print
-        logger.debug(json_string)
+        logger.debug("deserializer: deserialize_sensor_data\n" + json_string)
 
         data = json.loads(json_string)
         sensor_data = {}
