@@ -1,0 +1,17 @@
+name: Build and Deploy Sphinx Site
+
+on:
+  pull_request:
+
+jobs:
+  build-doc:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install Packages
+      run: sudo apt-get update && sudo apt-get install -y default-jre plantuml tox
+    - name: Build static site with Tox
+      run: |
+        cd doc
+        tox -e py3-html

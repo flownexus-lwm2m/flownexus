@@ -8,27 +8,22 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    environment:
+      name: github-pages
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-
-    - name: Install Java
-      run: sudo apt-get update && sudo apt-get install -y default-jre
-
-    - name: Install PlantUML
-      run: sudo apt-get install -y plantuml
-
-    - name: Install Tox
-      run: pip install tox
-
+    - name: Install Packages
+      run: sudo apt-get update && sudo apt-get install -y default-jre plantuml tox
     - name: Build static site with Tox
       run: |
         cd doc
         tox -e py3-html
-
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+      id: deployment
+      uses: actions/deploy-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./doc/build/html
+    - name: Print deployment page URL
+      run: echo "Deployed to ${{ steps.deployment.outputs.page_url }}"
