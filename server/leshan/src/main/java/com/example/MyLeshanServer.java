@@ -52,6 +52,9 @@ import java.nio.ByteBuffer;
 
 import com.example.DataSenderRest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class MyLeshanServer {
     private final ExecutorService onboardingExecutor = Executors.newCachedThreadPool();
@@ -59,6 +62,7 @@ public class MyLeshanServer {
     private LeshanServer server;
     private ObjectMapper mapper;
     private SimpleModule module;
+    private static final Logger logger = LoggerFactory.getLogger(MyLeshanServer.class);
 
     public MyLeshanServer() {
         LeshanServerBuilder builder = new LeshanServerBuilder();
@@ -87,7 +91,7 @@ public class MyLeshanServer {
 
     public void start() {
         server.start();
-        System.out.println("LeshanServer started");
+        logger.info("LeshanServer started");
     }
 
     public void stop() {
@@ -111,7 +115,7 @@ public class MyLeshanServer {
     }
 
     private void onboardingDevice(Registration registration) {
-        System.out.println("Onboarding " + registration.getEndpoint());
+        logger.info("Onboarding " + registration.getEndpoint());
         onboardingExecutor.submit(() -> {
             LwM2mLink[] res;
             try {
@@ -120,12 +124,12 @@ public class MyLeshanServer {
                 if (discoverResponse.isSuccess()) {
                     res = discoverResponse.getObjectLinks();
                     if (res != null) {
-                        System.out.println("Resources:");
+                        logger.debug("Resources:");
                         for (LwM2mLink link : res) {
-                            System.out.println(link);
+                            logger.debug(link.toString());
                         }
                     } else {
-                        System.out.println("No resources found.");
+                        logger.error("No resources found.");
                     }
                 } else {
                     System.err.println("Failed to discover resources: " +
@@ -145,34 +149,7 @@ public class MyLeshanServer {
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
-                    System.out.println(jsonContent);
-                    String data = new StringBuilder("{\"ep\":\"") //
-                            .append(registration.getEndpoint()) //
-                            .append("\",\"res\":\"3\"") //
-                            .append("\",\"val\":") //
-                            .append(jsonContent) //
-                            .append("}") //
-                            .toString();
-                    dataSenderRest.sendData(data);
-                } else {
-                    System.err.println("Failed to read resources: " +
-                                             readResp.getErrorMessage());
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            try {
-                ReadResponse readResp = server.send(registration, new ReadRequest(3));
-                if (readResp.isSuccess()) {
-                    mapper.enable(SerializationFeature.INDENT_OUTPUT);
-                    String jsonContent = null;
-                    try {
-                        jsonContent = mapper.writeValueAsString(readResp.getContent());
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                    System.out.println(jsonContent);
+                    logger.debug(jsonContent);
                     String data = new StringBuilder("{\"ep\":\"") //
                             .append(registration.getEndpoint()) //
                             .append("\",\"res\":\"3\"") //
@@ -204,6 +181,7 @@ public class MyLeshanServer {
 
     public class MyRegistrationListener implements RegistrationListener {
         private final MyLeshanServer server;
+        private static final Logger logger = LoggerFactory.getLogger(MyRegistrationListener.class);
 
         public MyRegistrationListener(MyLeshanServer server) {
             this.server = server;
@@ -212,7 +190,7 @@ public class MyLeshanServer {
         @Override
         public void registered(Registration registration, Registration previousReg,
                                       Collection<Observation> previousObsersations) {
-            System.out.println("new device registered: " + registration.getEndpoint());
+            logger.info("new device registered: " + registration.getEndpoint());
             /* Onboarding: read and subscribe to device resources initially.*/
             server.onboardingDevice(registration);
         }
@@ -220,20 +198,21 @@ public class MyLeshanServer {
         @Override
         public void updated(RegistrationUpdate update, Registration updatedReg,
                                   Registration previousReg) {
-            System.out.println("Device updated: " + updatedReg.getEndpoint());
+            logger.info("Device updated: " + updatedReg.getEndpoint());
         }
 
         @Override
         public void unregistered(Registration registration, Collection<Observation> observations,
                                          boolean expired,
                                          Registration newReg) {
-            System.out.println("Device left: " + registration.getEndpoint());
+            logger.info("Device left: " + registration.getEndpoint());
         }
     }
 
 
     public class MyObservationListener implements ObservationListener {
         private final MyLeshanServer server;
+        private static final Logger logger = LoggerFactory.getLogger(MyObservationListener.class);
 
         public MyObservationListener(MyLeshanServer server) {
             this.server = server;
@@ -247,7 +226,7 @@ public class MyLeshanServer {
         public void onResponse(SingleObservation observation, Registration registration,
                                       ObserveResponse response) {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            //System.out.println("onResponse (single): " + response);
+            //logger.info("onResponse (single): " + response);
             String jsonContent = null;
             try {
                 jsonContent = mapper.writeValueAsString(response.getContent());
@@ -301,8 +280,8 @@ public class MyLeshanServer {
 
         @Override
         public void onError(Observation observation, Registration registration, Exception error) {
-            System.out.println("onError: " + registration.getEndpoint());
-            System.out.println("onError: " + error);
+            logger.error("onError: " + registration.getEndpoint());
+            logger.error("onError: " + error);
         }
 
         @Override
@@ -312,6 +291,7 @@ public class MyLeshanServer {
 
     public class MySendListener implements SendListener {
         private final MyLeshanServer server;
+        private static final Logger logger = LoggerFactory.getLogger(MySendListener.class);
 
         public MySendListener(MyLeshanServer server) {
             this.server = server;
@@ -320,16 +300,16 @@ public class MyLeshanServer {
         @Override
         public void dataReceived(Registration registration,
                                          TimestampedLwM2mNodes data, SendRequest request) {
-            System.out.println("dataReceived from: " + registration.getEndpoint());
-            System.out.println("data: " + data);
+            logger.info("dataReceived from: " + registration.getEndpoint());
+            logger.info("data: " + data);
         }
 
         @Override
         public void onError(Registration registration,
                                  String errorMessage, Exception error) {
-          System.out.println("Unable to handle Send Request from: " + registration.getEndpoint());
-          System.out.println(errorMessage);
-          System.out.println(error);
+          logger.error("Unable to handle Send Request from: " + registration.getEndpoint());
+          logger.error(errorMessage);
+          logger.error(error.toString());
         }
     }
 }
