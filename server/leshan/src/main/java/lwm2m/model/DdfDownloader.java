@@ -13,7 +13,7 @@
  * Contributors:
  *     Ville Skyttä - initial implementation
  *******************************************************************************/
-package com.example.model;
+package lwm2m.model;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

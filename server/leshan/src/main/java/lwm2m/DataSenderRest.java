@@ -1,4 +1,4 @@
-package com.example;
+package lwm2m;
 
 import java.net.URI;
 import java.net.http.HttpClient;

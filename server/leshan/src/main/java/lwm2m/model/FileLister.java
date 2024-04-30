@@ -13,7 +13,7 @@
  * Contributors:
  *     Sierra Wireless - initial API and implementation
  *******************************************************************************/
-package com.example.model;
+package lwm2m.model;
 
 import java.io.File;
 import java.io.FileNotFoundException;
