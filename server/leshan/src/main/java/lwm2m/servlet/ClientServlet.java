@@ -14,7 +14,7 @@
  *     Sierra Wireless - initial API and implementation
  *     Orange - keep one JSON dependency
  *******************************************************************************/
-package org.eclipse.leshan.server.demo.servlet;
+package lwm2m.servlet;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,10 +28,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -84,12 +84,12 @@ import org.eclipse.leshan.core.response.WriteAttributesResponse;
 import org.eclipse.leshan.core.response.WriteCompositeResponse;
 import org.eclipse.leshan.core.response.WriteResponse;
 import org.eclipse.leshan.server.LeshanServer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonLinkSerializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonLwM2mNodeDeserializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonLwM2mNodeSerializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonRegistrationSerializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonResponseSerializer;
 import org.eclipse.leshan.server.registration.Registration;
+import lwm2m.json.JacksonLinkSerializer;
+import lwm2m.json.JacksonLwM2mNodeDeserializer;
+import lwm2m.json.JacksonLwM2mNodeSerializer;
+import lwm2m.json.JacksonRegistrationSerializer;
+import lwm2m.json.JacksonResponseSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -294,6 +294,10 @@ public class ClientServlet extends HttpServlet {
      */
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+        LOG.trace("Received PUT on {} from {}", req.getPathInfo(), req.getRemoteAddr());
+        LOG.info("req: " + req.toString());
+
         String[] path = StringUtils.split(req.getPathInfo(), '/');
         String clientEndpoint = path[0];
         // /clients/endPoint/composite : do LightWeight M2M WriteComposite request on a given client.
@@ -633,6 +637,7 @@ public class ClientServlet extends HttpServlet {
         String contentType = StringUtils.substringBefore(req.getContentType(), ";");
         if ("application/json".equals(contentType)) {
             String content = IOUtils.toString(req.getInputStream(), req.getCharacterEncoding());
+            LOG.info("Parsed content: {}", content);
             LwM2mNode node;
             try {
                 node = mapper.readValue(content, LwM2mNode.class);
@@ -643,9 +648,11 @@ public class ClientServlet extends HttpServlet {
                 throw new InvalidRequestException(String.format(
                         "Can not handle %s : Only LwM2m Child Node is supported", node.getClass().getSimpleName()));
             }
+            LOG.info("Parsed node: {}", node);
             return (LwM2mChildNode) node;
         } else if ("text/plain".equals(contentType)) {
             String content = IOUtils.toString(req.getInputStream(), req.getCharacterEncoding());
+            LOG.info("Parsed content: {}", content);
             int rscId = Integer.valueOf(target.substring(target.lastIndexOf("/") + 1));
             return LwM2mSingleResource.newStringResource(rscId, content);
         }

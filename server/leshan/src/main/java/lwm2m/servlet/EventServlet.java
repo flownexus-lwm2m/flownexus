@@ -15,7 +15,7 @@
  *     Michał Wadowski (Orange) - Add Observe-Composite feature.
  *     Orange - keep one JSON dependency
  *******************************************************************************/
-package org.eclipse.leshan.server.demo.servlet;
+package lwm2m.servlet;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.eclipse.jetty.servlets.EventSource;
 import org.eclipse.jetty.servlets.EventSourceServlet;
@@ -42,14 +42,6 @@ import org.eclipse.leshan.core.response.ObserveCompositeResponse;
 import org.eclipse.leshan.core.response.ObserveResponse;
 import org.eclipse.leshan.server.LeshanServer;
 import org.eclipse.leshan.server.californium.endpoint.CaliforniumServerEndpoint;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonLinkSerializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonLwM2mNodeSerializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonRegistrationSerializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonRegistrationUpdateSerializer;
-import org.eclipse.leshan.server.demo.servlet.json.JacksonVersionSerializer;
-import org.eclipse.leshan.server.demo.servlet.log.CoapMessage;
-import org.eclipse.leshan.server.demo.servlet.log.CoapMessageListener;
-import org.eclipse.leshan.server.demo.servlet.log.CoapMessageTracer;
 import org.eclipse.leshan.server.endpoint.LwM2mServerEndpoint;
 import org.eclipse.leshan.server.observation.ObservationListener;
 import org.eclipse.leshan.server.queue.PresenceListener;
@@ -59,14 +51,20 @@ import org.eclipse.leshan.server.registration.RegistrationUpdate;
 import org.eclipse.leshan.server.send.SendListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import lwm2m.servlet.log.CoapMessage;
+import lwm2m.servlet.log.CoapMessageListener;
+import lwm2m.servlet.log.CoapMessageTracer;
+import lwm2m.json.JacksonLinkSerializer;
+import lwm2m.json.JacksonLwM2mNodeSerializer;
+import lwm2m.json.JacksonRegistrationSerializer;
+import lwm2m.json.JacksonRegistrationUpdateSerializer;
+import lwm2m.json.JacksonVersionSerializer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import jline.internal.Log;
 
 public class EventServlet extends EventSourceServlet {
 
@@ -261,7 +259,7 @@ public class EventServlet extends EventSourceServlet {
 
                     sendEvent(EVENT_SEND, eventData, registration.getEndpoint());
                 } catch (JsonProcessingException e) {
-                    Log.warn(String.format("Error while processing json [%s] : [%s]", data.toString(), e.getMessage()));
+                    LOG.warn(String.format("Error while processing json [%s] : [%s]", data.toString(), e.getMessage()));
                 }
             }
         }
@@ -337,7 +335,7 @@ public class EventServlet extends EventSourceServlet {
                 coapLog.put("ep", this.endpoint);
                 sendEvent(EVENT_COAP_LOG, EventServlet.this.mapper.writeValueAsString(coapLog), endpoint);
             } catch (JsonProcessingException e) {
-                Log.warn(String.format("Error while processing json [%s] : [%s]", message.toString(), e.getMessage()));
+                LOG.warn(String.format("Error while processing json [%s] : [%s]", message.toString(), e.getMessage()));
                 sendEvent(EVENT_COAP_LOG, message.toString(), endpoint);
             }
         }
