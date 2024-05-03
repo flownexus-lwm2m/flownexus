@@ -13,7 +13,7 @@
  * Contributors:
  *     Sierra Wireless - initial API and implementation
  *******************************************************************************/
-package org.eclipse.leshan.server.demo.servlet.log;
+package lwm2m.servlet.log;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
