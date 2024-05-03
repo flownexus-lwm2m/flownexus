@@ -1,6 +1,8 @@
 package lwm2m;
 import java.util.ArrayList;
 import java.util.List;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import org.eclipse.leshan.server.LeshanServer;
 import org.eclipse.leshan.server.LeshanServerBuilder;
@@ -27,6 +29,12 @@ import org.eclipse.leshan.server.registration.RegistrationListener;
 import org.eclipse.leshan.server.registration.RegistrationUpdate;
 import org.eclipse.leshan.server.observation.ObservationListener;
 import org.eclipse.leshan.server.californium.endpoint.CaliforniumServerEndpointsProvider;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlets.EventSource;
+import org.eclipse.jetty.servlets.EventSourceServlet;
 
 import lwm2m.json.JacksonLinkSerializer;
 import lwm2m.json.JacksonLwM2mNodeSerializer;
@@ -51,6 +59,9 @@ import java.util.Collection;
 import java.nio.ByteBuffer;
 
 import lwm2m.DataSenderRest;
+import lwm2m.servlet.ClientServlet;
+import lwm2m.servlet.EventServlet;
+import lwm2m.servlet.ObjectSpecServlet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,12 +92,22 @@ public class LeshanSvr{
     }
 
     public static void main(String[] args) {
-        final LeshanSvr myServer = new LeshanSvr();
+        final LeshanSvr lwm2mServer = new LeshanSvr();
+        Server webServer = createJettyServer(lwm2mServer.server);
 
         // Add a shutdown hook to cleanly shutdown the resources
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> myServer.stop()));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> lwm2mServer.stop()));
 
-        myServer.start();
+        try {
+            lwm2mServer.start();
+            webServer.start();
+            logger.info("Web server started at {}.", webServer.getURI());
+
+        } catch (Exception e) {
+
+            logger.error("Unable to create and start server ...", e);
+            System.exit(1);
+        }
     }
 
     public void start() {
@@ -112,6 +133,30 @@ public class LeshanSvr{
             this.onboardingExecutor.shutdownNow();
             Thread.currentThread().interrupt(); // Preserve interrupt status
         }
+    }
+
+    private static Server createJettyServer(LeshanServer lwServer) {
+        // Now prepare Jetty
+        InetSocketAddress jettyAddr = new InetSocketAddress(8080);
+        Server server = new Server(jettyAddr);
+        ServletContextHandler root = new ServletContextHandler(null, "/", true, false);
+        server.setHandler(root);
+
+        // Create REST API Servlets
+        EventServlet eventServlet = new EventServlet(lwServer);
+        ServletHolder eventServletHolder = new ServletHolder(eventServlet);
+        root.addServlet(eventServletHolder, "/api/event/*");
+
+        ClientServlet clientServlet = new ClientServlet(lwServer);
+        ServletHolder clientServletHolder = new ServletHolder(clientServlet);
+        root.addServlet(clientServletHolder, "/api/clients/*");
+
+        ObjectSpecServlet objectSpecServlet = new ObjectSpecServlet(lwServer.getModelProvider(),
+                                                                    lwServer.getRegistrationService());
+        ServletHolder objectSpecServletHolder = new ServletHolder(objectSpecServlet);
+        root.addServlet(objectSpecServletHolder, "/api/objectspecs/*");
+
+        return server;
     }
 
     private void onboardingDevice(Registration registration) {
