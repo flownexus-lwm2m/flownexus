@@ -36,3 +36,6 @@ doc/*_doc.log
 
 ext/lib/bin/supl
 ext/lib/bin/libsupl.zip
+
+# Entity Relationship Diagram is a generated file, do not add to version control
+doc/source/images/erd.svg
