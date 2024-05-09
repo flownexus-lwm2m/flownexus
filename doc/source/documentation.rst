@@ -87,6 +87,18 @@ following command:
   OK
   Destroying test database for alias 'default'...
 
+Entity Relationship Diagram (ERD)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An Entity Relationship Diagram (ERD) is a visual representation of the database
+schema. It is be automatically generated from the Django models.
+
+``sensordata`` is the Django app that contains the application logic.
+
+.. figure:: images/erd.svg
+
+  Entity Relationship Diagram generated from Django models
+
 LwM2M Server
 ............
 
