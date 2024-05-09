@@ -32,7 +32,8 @@ version = re.sub('', '', os.popen('git describe --tags').read().strip())
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinxcontrib.plantuml'
+    'sphinxcontrib.plantuml',
+    'sphinx.ext.imgconverter'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
