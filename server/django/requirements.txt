@@ -1,4 +1,10 @@
-Django==5.0.4
+Django==5.0.6
+django-extensions==3.2.3
 requests==2.31.0
 djangorestframework==3.15.1
 whitenoise==6.6.0
+
+# Generation of Entity-Relationship Diagrams
+graphviz==0.20.3
+pyparsing==3.1.2
+pydot==2.0.0
