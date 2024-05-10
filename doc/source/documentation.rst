@@ -52,10 +52,10 @@ Make sure to create a virtual environment and install the requirements:
 
 .. code-block:: console
 
-  host:lwm2m_server/django$ python3 -m venv venv
-  host:lwm2m_server/django$ source venv/bin/activate
-  host:lwm2m_server/django$ pip install -r requirements.txt
-  host:lwm2m_server/django$ python manage.py runserver
+  host:lwm2m_server/server/django$ python3 -m venv venv
+  host:lwm2m_server/server/django$ source venv/bin/activate
+  host:lwm2m_server/server/django$ pip install -r requirements.txt
+  host:lwm2m_server/server/django$ python manage.py runserver
 
 Unless you add new files, you can keep the server running while modifying the
 server. The Django server should now be up and running under the following URL:
@@ -66,8 +66,8 @@ Migrate Database Model
 
 .. code-block:: console
 
-   host:lwm2m_server/django$ python manage.py makemigrations sensordata
-   host:lwm2m_server/django$ python manage.py migrate
+   host:lwm2m_server/server/django$ python manage.py makemigrations sensordata
+   host:lwm2m_server/server/django$ python manage.py migrate
 
 Run Django Unit Tests
 ~~~~~~~~~~~~~~~~~~~~~
@@ -78,7 +78,7 @@ following command:
 
 .. code-block:: console
 
-  host:lwm2m_server/django$ python3 manage.py test sensordata
+  host:lwm2m_server/server/django$ python3 manage.py test sensordata
   Found 2 test(s).
   Creating test database for alias 'default'...
   ----------------------------------------------------------------------
@@ -95,7 +95,7 @@ container:
 
 .. code-block:: console
 
-   host:lwm2m_server/leshan$ ./leshan_build_run.sh
+   host:lwm2m_server/server/leshan$ ./leshan_build_run.sh
 
 Overview and Interfaces
 ~~~~~~~~~~~~~~~~~~~~~~~
