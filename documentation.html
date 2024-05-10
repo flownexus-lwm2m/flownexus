@@ -16,7 +16,7 @@
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
         <script src="_static/documentation_options.js?v=5929fcd5"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -53,19 +53,20 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="#technical-documentation">Technical Documentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#django-server">Django Server</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#migrate-database-model">Migrate Database Model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#run-django-unit-tests">Run Django Unit Tests</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#start">Start</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#make-migrations-to-a-new-database-model">Make Migrations to a new Database Model</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#lwm2m-server">LwM2M Server</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#overview-and-interfaces">Overview and Interfaces</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id1">Start</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#container-environment">Container Environment</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#zephyr-iot-device">Zephyr (IoT Device)</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#zephyr-simulation">Zephyr (Simulation)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#deployment">Deployment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#container-environment">Container Environment</a></li>
 </ul>
 </li>
 </ul>
@@ -142,12 +143,30 @@ typically after a few minutes).</p>
 <h1>Technical Documentation<a class="headerlink" href="#technical-documentation" title="Link to this heading"></a></h1>
 <section id="django-server">
 <h2>Django Server<a class="headerlink" href="#django-server" title="Link to this heading"></a></h2>
+<p>The Django server can also run locally, without the need of a docker container.
+Make sure to create a virtual environment and install the requirements:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/django$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="gp">host:lwm2m_server/django$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:lwm2m_server/django$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="gp">host:lwm2m_server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
+</pre></div>
+</div>
+<p>Unless you add new files, you can keep the server running while modifying the
+server. The Django server should now be up and running under the following URL:
+<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin</span></code>.</p>
+<section id="migrate-database-model">
+<h3>Migrate Database Model<a class="headerlink" href="#migrate-database-model" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
+<span class="gp">host:lwm2m_server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+</pre></div>
+</div>
+</section>
 <section id="run-django-unit-tests">
 <h3>Run Django Unit Tests<a class="headerlink" href="#run-django-unit-tests" title="Link to this heading"></a></h3>
 <p>There are unit tests defined, which test the deserializer in Django, which
 parses the json payload from the Rest API. You can run the unit tests with the
 following command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python3<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/django$ </span>python3<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
 <span class="go">Found 2 test(s).</span>
 <span class="go">Creating test database for alias &#39;default&#39;...</span>
 <span class="go">----------------------------------------------------------------------</span>
@@ -158,32 +177,14 @@ following command:</p>
 </pre></div>
 </div>
 </section>
-<section id="start">
-<h3>Start<a class="headerlink" href="#start" title="Link to this heading"></a></h3>
-<p>The Django server can also run locally, without the need of a docker container.
-Make sure to create a virtual environment and install the requirements:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
-<span class="gp">host:server/django/~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-<span class="gp">host:server/django/~$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-<span class="gp">host:server/django/~$ </span>./django_start.sh
-</pre></div>
-</div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
-</pre></div>
-</div>
-<p>Unless you add new files, you can keep the server running while modifying the
-server.</p>
-</section>
-<section id="make-migrations-to-a-new-database-model">
-<h3>Make Migrations to a new Database Model<a class="headerlink" href="#make-migrations-to-a-new-database-model" title="Link to this heading"></a></h3>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
-<span class="gp">host:server/django/~$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
-</pre></div>
-</div>
-</section>
 </section>
 <section id="lwm2m-server">
 <h2>LwM2M Server<a class="headerlink" href="#lwm2m-server" title="Link to this heading"></a></h2>
+<p>For testing the Lwm2m server can run locally, without the need of a docker
+container:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/leshan$ </span>./leshan_build_run.sh
+</pre></div>
+</div>
 <section id="overview-and-interfaces">
 <h3>Overview and Interfaces<a class="headerlink" href="#overview-and-interfaces" title="Link to this heading"></a></h3>
 <p>The server consists of two components. The LwM2M server and the Django server.
@@ -191,7 +192,7 @@ The LwM2M server is responsible for the communication with the IoT device. The
 Django server is responsible for the REST API, database and visualization. The
 two components are connected via a REST API.</p>
 <blockquote>
-<div><figure class="align-default" id="id2">
+<div><figure class="align-default" id="id1">
 <p class="plantuml">
 <img src="_images/plantuml-c7df7a74750b54c9f3cca56d61c7d605baa4d490.png" alt="&#64;startuml
 left to right direction
@@ -215,21 +216,67 @@ Leshan -right-&gt; Django : REST API\nSensor Val, States..
 &#64;enduml"/>
 </p>
 <figcaption>
-<p><span class="caption-text">Both components running in one machine</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+<p><span class="caption-text">Both components running in one machine</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 </div></blockquote>
 </section>
-<section id="id1">
-<h3>Start<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
-<p>The Lwm2m server can also run locally, without the need of a docker container:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:server/leshan/~$ </span>./leshan_build_run.sh
+</section>
+<section id="zephyr-iot-device">
+<h2>Zephyr (IoT Device)<a class="headerlink" href="#zephyr-iot-device" title="Link to this heading"></a></h2>
+<p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
+<code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
+LwM2M library and establishes a connection to an LwM2M server. The example can
+be build with the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>nrf9161dk_nrf9160_ns<span class="w"> </span>fw_test/lwm2m_client<span class="w"> </span>-p
+<span class="gp">host:lwm2m_server$ </span>west<span class="w"> </span>flash<span class="w"> </span>--recover
 </pre></div>
 </div>
+<section id="zephyr-simulation">
+<h3>Zephyr (Simulation)<a class="headerlink" href="#zephyr-simulation" title="Link to this heading"></a></h3>
+<p>The Zephyr application can run in simulation mode. This allows to test all
+components locally. Once leshan and Zephyr are running, the Zephyr application
+can be started in emulation with the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server$ </span>zephyr_build_run_sim.sh
+
+<span class="go">*** Booting nRF Connect SDK zephyr-v3.5.0-3024-g7c3e830729b7 ***</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_engine: lwm2m_engine_init: LWM2M engine socket receive thread started</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_security: security_create: Create LWM2M security instance: 0</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_server: server_create: Create LWM2M server instance: 0</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_device: device_create: Create LWM2M device instance: 0</span>
+<span class="go">[00:00:00.010,000] &lt;dbg&gt; net_lwm2m_obj_firmware: firmware_create: Create LWM2M firmware instance: 0</span>
+<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: Initializing network</span>
+<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: IPv4 address: 192.0.2.1</span>
+</pre></div>
+</div>
+<p>You should see the following output in the docker console or in the most recent
+log file in <code class="docutils literal notranslate"><span class="pre">server/logs/</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/docker_compose$ </span>leshan-1<span class="w">  </span><span class="p">|</span><span class="w"> </span>LeshanServer<span class="w"> </span>started
+<span class="go">leshan-1  | new device registered: qemu_x86</span>
+<span class="go">leshan-1  | Onboarding qemu_x86</span>
+<span class="go">leshan-1  | Resources:</span>
+<span class="go">leshan-1  | &lt;/3&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0/0&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0/1&gt;</span>
+<span class="go">[..]</span>
+</pre></div>
+</div>
+<p>Additionally you can see the device in the Django server under
+<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin/sensordata/endpoint/</span></code>. You should see that the
+LAST UPDATED field contains a recent timestamp.</p>
+<figure class="align-default" id="id2">
+<img alt="_images/django_local.png" src="_images/django_local.png" />
+<figcaption>
+<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+</figcaption>
+</figure>
 </section>
 </section>
+<section id="deployment">
+<h2>Deployment<a class="headerlink" href="#deployment" title="Link to this heading"></a></h2>
 <section id="container-environment">
-<h2>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading"></a></h2>
+<h3>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading"></a></h3>
 <p>Both components run in a Docker container. The Leshan server is running in a
 <code class="docutils literal notranslate"><span class="pre">openjdk:17-slim</span></code> container and the Django server is running in a
 <code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
@@ -257,7 +304,7 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 <code class="docutils literal notranslate"><span class="pre">Dockerfile.leshan</span></code> defines the Leshan container and the file
 <code class="docutils literal notranslate"><span class="pre">Dockerfile.django</span></code> defines the Django container.</p>
 <p>The container can be build and started with the following commands:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>docker<span class="w"> </span>compose<span class="w"> </span>build
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>build
 <span class="go">[+] Building 0.5s (20/20) FINISHED                               docker:default</span>
 <span class="go"> =&gt; [leshan internal] load build definition from Dockerfile.leshan         0.0s</span>
 <span class="go"> =&gt; [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s</span>
@@ -280,7 +327,7 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 <span class="go"> =&gt; =&gt; naming to docker.io/library/server-django                           0.0s</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>docker<span class="w"> </span>compose<span class="w"> </span>up
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>up
 <span class="go">[+] Running 2/0</span>
 <span class="go"> ✔ Container server-leshan-1  Created                                      0.0s</span>
 <span class="go"> ✔ Container server-django-1  Created                                      0.0s</span>
@@ -295,65 +342,6 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 <span class="go"> ✔ Container server-leshan-1  Stopped                                     10.5s</span>
 </pre></div>
 </div>
-</section>
-<section id="zephyr-iot-device">
-<h2>Zephyr (IoT Device)<a class="headerlink" href="#zephyr-iot-device" title="Link to this heading"></a></h2>
-<p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
-<code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
-LwM2M library and establishes a connection to an LwM2M server. The example can
-be build with the following command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>nrf9161dk_nrf9160_ns<span class="w"> </span>fw_test/lwm2m_client<span class="w"> </span>-p
-<span class="gp">host:~$ </span>west<span class="w"> </span>flash<span class="w"> </span>--recover
-</pre></div>
-</div>
-<section id="zephyr-simulation">
-<h3>Zephyr (Simulation)<a class="headerlink" href="#zephyr-simulation" title="Link to this heading"></a></h3>
-<p>The Zephyr application can run in simulation mode. This allows to test all
-components locally. Once leshan and Zephyr are running, the Zephyr application
-can be started in emulation with the following command:</p>
-<p>In addition you have to start <code class="docutils literal notranslate"><span class="pre">zeth</span></code> via net-tools to create a virtual
-network interface for the Zephyr emulation:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server$ </span>net_tools_start.sh
-<span class="go">Using ../tools/net-tools/./zeth.conf configuration file.</span>
-<span class="go">Creating zeth</span>
-</pre></div>
-</div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>qemu_x86<span class="w"> </span>../zephyr/samples/net/lwm2m_client/<span class="w"> </span>-p
-<span class="gp">host:~$ </span>west<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>run
-
-<span class="gp gp-VirtualEnv">(Zephyr Boot log in another terminal)</span>
-<span class="go">*** Booting nRF Connect SDK zephyr-v3.5.0-3024-g7c3e830729b7 ***</span>
-<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_engine: lwm2m_engine_init: LWM2M engine socket receive thread started</span>
-<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_security: security_create: Create LWM2M security instance: 0</span>
-<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_server: server_create: Create LWM2M server instance: 0</span>
-<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_device: device_create: Create LWM2M device instance: 0</span>
-<span class="go">[00:00:00.010,000] &lt;dbg&gt; net_lwm2m_obj_firmware: firmware_create: Create LWM2M firmware instance: 0</span>
-<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: Initializing network</span>
-<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: IPv4 address: 192.0.2.1</span>
-</pre></div>
-</div>
-<p>You should see the following output in the docker console or in the most recent
-log file in <code class="docutils literal notranslate"><span class="pre">server/logs/</span></code>:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">docker_compose:~$ </span>leshan-1<span class="w">  </span><span class="p">|</span><span class="w"> </span>LeshanServer<span class="w"> </span>started
-<span class="go">leshan-1  | new device registered: qemu_x86</span>
-<span class="go">leshan-1  | Onboarding qemu_x86</span>
-<span class="go">leshan-1  | Resources:</span>
-<span class="go">leshan-1  | &lt;/3&gt;</span>
-<span class="go">leshan-1  | &lt;/3/0&gt;</span>
-<span class="go">leshan-1  | &lt;/3/0/0&gt;</span>
-<span class="go">leshan-1  | &lt;/3/0/1&gt;</span>
-<span class="go">[..]</span>
-</pre></div>
-</div>
-<p>Additionally you can see the device in the Django server under
-<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin/sensordata/endpoint/</span></code>. You should see that the
-LAST UPDATED field contains a recent timestamp.</p>
-<figure class="align-default" id="id4">
-<img alt="_images/django_local.png" src="_images/django_local.png" />
-<figcaption>
-<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id4" title="Link to this image"></a></p>
-</figcaption>
-</figure>
 </section>
 </section>
 </section>
