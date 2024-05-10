@@ -145,10 +145,10 @@ typically after a few minutes).</p>
 <h2>Django Server<a class="headerlink" href="#django-server" title="Link to this heading"></a></h2>
 <p>The Django server can also run locally, without the need of a docker container.
 Make sure to create a virtual environment and install the requirements:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/django$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
-<span class="gp">host:lwm2m_server/django$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-<span class="gp">host:lwm2m_server/django$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-<span class="gp">host:lwm2m_server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/django$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="gp">host:lwm2m_server/server/django$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:lwm2m_server/server/django$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="gp">host:lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>runserver
 </pre></div>
 </div>
 <p>Unless you add new files, you can keep the server running while modifying the
@@ -156,8 +156,8 @@ server. The Django server should now be up and running under the following URL:
 <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin</span></code>.</p>
 <section id="migrate-database-model">
 <h3>Migrate Database Model<a class="headerlink" href="#migrate-database-model" title="Link to this heading"></a></h3>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
-<span class="gp">host:lwm2m_server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
+<span class="gp">host:lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
 </pre></div>
 </div>
 </section>
@@ -166,7 +166,7 @@ server. The Django server should now be up and running under the following URL:
 <p>There are unit tests defined, which test the deserializer in Django, which
 parses the json payload from the Rest API. You can run the unit tests with the
 following command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/django$ </span>python3<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/django$ </span>python3<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
 <span class="go">Found 2 test(s).</span>
 <span class="go">Creating test database for alias &#39;default&#39;...</span>
 <span class="go">----------------------------------------------------------------------</span>
@@ -182,7 +182,7 @@ following command:</p>
 <h2>LwM2M Server<a class="headerlink" href="#lwm2m-server" title="Link to this heading"></a></h2>
 <p>For testing the Lwm2m server can run locally, without the need of a docker
 container:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/leshan$ </span>./leshan_build_run.sh
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/leshan$ </span>./leshan_build_run.sh
 </pre></div>
 </div>
 <section id="overview-and-interfaces">
