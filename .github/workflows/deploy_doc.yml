@@ -1,4 +1,4 @@
-name: Build and Deploy Sphinx Site
+name: Build and Deploy Sphinx Doc
 
 on:
   push:
@@ -6,24 +6,20 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Install Packages
-      run: sudo apt-get update && sudo apt-get install -y default-jre plantuml tox
-    - name: Build static site with Tox
-      run: |
-        cd doc
-        tox -e py3-html
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./doc/build/html
-    - name: Print deployment page URL
-      run: echo "Deployed to ${{ steps.deployment.outputs.page_url }}"
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Packages
+        run: sudo apt-get update && sudo apt-get install -y default-jre plantuml tox
+      - name: Build static site with Tox
+        run: |
+          cd doc
+          tox -e py3-html
+          cd ..
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: doc/build/html

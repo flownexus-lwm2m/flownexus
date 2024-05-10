@@ -1,4 +1,4 @@
-name: Build and Deploy Sphinx Site
+name: Build Sphinx Doc
 
 on:
   pull_request:
