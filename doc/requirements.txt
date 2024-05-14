@@ -1,5 +1,6 @@
 Sphinx==7.3.7
-sphinx-rtd-theme==2.0.0
+sphinx-book-theme==1.1.2
 plantuml==0.3.0
 sphinxcontrib-plantuml
+sphinx-autobuild
 codespell
