@@ -1,16 +1,10 @@
-Motivation
-----------
+Documentation
+==================
 
-This project aims to provide a minimal and standalone Open Source IoT platform.
-The focus is on systems with a deployment of up to a few thousand devices, it
-does not aim to be scalable to millions of devices.
-
-The goal is to build a system that recieves e.g. regular temperature samples
-from remote IoT devices. The temperature samples will be send to a backend and
-stored in a database. The data is be visualized in a web application.
-
+Overview
+--------
 General Requirements
-....................
+^^^^^^^^^^^^^^^^^^^^
 
 * No dependencies of external services like AWS, MQTT brokers or similar. The
   system has to be able to run in a local environment.
@@ -21,7 +15,7 @@ General Requirements
 * The web application has to support a secure login and basic user management.
 
 Platform Features
-.................
+^^^^^^^^^^^^^^^^^
 
 * Certificate based authentication and encryption.
 * Server to read and observe resources from IoT Device.
@@ -30,7 +24,7 @@ Platform Features
 * Receive logs from IoT Devices.
 
 IoT Device
-..........
+^^^^^^^^^^
 
 An IoT device is a resource constrained (energy, flash..) that is connected to
 the internet. The IoT device has to support LwM2M. Mainly systems that run
@@ -41,6 +35,8 @@ protocol as it allows to keep devices connected even when the device is
 sleeping for extended periods (TCP would require a new connection setup
 typically after a few minutes).
 
+Django
+------
 Django
 ------
 
@@ -59,7 +55,7 @@ server. The Django server should now be up and running under the following URL:
 ``http://localhost:8000/admin``.
 
 Migrate Database Model
-......................
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: console
 
@@ -67,7 +63,7 @@ Migrate Database Model
    host:lwm2m_server/server/django$ python manage.py migrate
 
 Run Django Unit Tests
-.....................
+^^^^^^^^^^^^^^^^^^^^^
 
 There are unit tests defined, which test the deserializer in Django, which
 parses the json payload from the Rest API. You can run the unit tests with the
@@ -85,7 +81,7 @@ following command:
   Destroying test database for alias 'default'...
 
 Entity Relationship Diagram (ERD)
-.................................
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 An Entity Relationship Diagram (ERD) is a visual representation of the database
 schema. It is be automatically generated from the Django models.
@@ -98,6 +94,8 @@ schema. It is be automatically generated from the Django models.
 
 Leshan LwM2M
 ------------
+Leshan LwM2M
+------------
 
 For testing the Lwm2m server can run locally, without the need of a docker
 container:
@@ -107,7 +105,7 @@ container:
    host:lwm2m_server/server/leshan$ ./leshan_build_run.sh
 
 Overview and Interfaces
-.......................
+^^^^^^^^^^^^^^^^^^^^^^^
 
 The server consists of two components. The LwM2M server and the Django server.
 The LwM2M server is responsible for the communication with the IoT device. The
@@ -140,6 +138,8 @@ two components are connected via a REST API.
 
 IoT Devices with Zephyr
 -----------------------
+IoT Devices with Zephyr
+-----------------------
 
 As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
 ``subsys/net/lib/lwm2m``. This LwM2M client sample application implements the
@@ -152,7 +152,7 @@ be build with the following command:
   host:lwm2m_server$ west flash --recover
 
 Simulation
-..........
+^^^^^^^^^^
 
 The Zephyr application can run in simulation mode. This allows to test all
 components locally. Once leshan and Zephyr are running, the Zephyr application
@@ -196,9 +196,10 @@ LAST UPDATED field contains a recent timestamp.
 
 Deployment
 ----------
+----------
 
 Container Environment
-.....................
+^^^^^^^^^^^^^^^^^^^^^
 
 Both components run in a Docker container. The Leshan server is running in a
 ``openjdk:17-slim`` container and the Django server is running in a
@@ -252,16 +253,16 @@ The container can be build and started with the following commands:
 
 .. code-block:: console
 
-  host:lwm2m_server/server$ docker compose up 
+  host:lwm2m_server/server$ docker compose up
   [+] Running 2/0
-   ✔ Container server-leshan-1  Created                                      0.0s 
-   ✔ Container server-django-1  Created                                      0.0s 
+   ✔ Container server-leshan-1  Created                                      0.0s
+   ✔ Container server-django-1  Created                                      0.0s
   Attaching to django-1, leshan-1
-  [..]  
+  [..]
   django-1  | Starting development server at http://0.0.0.0:8000/
   leshan-1  | [main] INFO org.eclipse.leshan.server.LeshanServer - CoAP over UDP endpoint based on Californium library available at coap://0.0.0.0:5683.
   leshan-1  | LeshanServer started
   ^CGracefully stopping... (press Ctrl+C again to force)
   [+] Stopping 2/2
-   ✔ Container server-django-1  Stopped                                     10.3s 
-   ✔ Container server-leshan-1  Stopped                                     10.5s 
+   ✔ Container server-django-1  Stopped                                     10.3s
+   ✔ Container server-leshan-1  Stopped                                     10.5s
