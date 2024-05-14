@@ -48,9 +48,8 @@ exclude_patterns = []
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-#html_theme = 'alabaster'
 html_theme = 'sphinx_rtd_theme'
+html_title = 'LwM2M Server'
 
 html_theme_options = {
     'logo_only': False,
@@ -59,13 +58,12 @@ html_theme_options = {
 
 html_context = {
     "display_github": True,
-    "github_repo": "zephyr-ksp0704",
+    "github_repo": "jonas-rem/lwm2m_server",
     "github_version": "main",
-    "conf_py_path": "/source/",
+    "conf_py_path": "/doc/source/",
 }
 
 # latex_logo = 'sphinx-static/logo.png'
-
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -74,11 +72,6 @@ html_context = {
 
 # -- Options for PDF output -------------------------------------------------
 
-# Add to preamble to make it a draft version
-#        \usepackage{draftwatermark}
-#        \SetWatermarkText{DRAFT}
-#        \SetWatermarkScale{1}
-#        \SetWatermarkColor[gray]{0.9}
 latex_elements = {
     'fontpkg': '\\usepackage{lmodern}',
     'papersize': 'a4paper',
@@ -104,8 +97,8 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     ('documentation',
-     'waterlevel_monitor_architecture_'+version+'.tex',
-     u'Waterlevel Monitor',
+     'lwm2m_server_'+version+'.tex',
+     u'LwM2M Server',
      author,
      'manual'),
 ]
