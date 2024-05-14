@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Motivation &mdash; LwM2M Server  documentation</title>
+  <title>Motivation &mdash; LwM2M Server</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -21,7 +21,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="&lt;no title&gt;" href="index.html" /> 
+    <link rel="prev" title="LwM2M Server Documentation" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,7 +43,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">LwM2M Server</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Motivation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#general-requirements">General Requirements</a></li>
@@ -51,25 +51,22 @@
 <li class="toctree-l2"><a class="reference internal" href="#iot-device">IoT Device</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="#technical-documentation">Technical Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#django-server">Django Server</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#migrate-database-model">Migrate Database Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#run-django-unit-tests">Run Django Unit Tests</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#entity-relationship-diagram-erd">Entity Relationship Diagram (ERD)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#django">Django</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#migrate-database-model">Migrate Database Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run-django-unit-tests">Run Django Unit Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#entity-relationship-diagram-erd">Entity Relationship Diagram (ERD)</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#lwm2m-server">LwM2M Server</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#overview-and-interfaces">Overview and Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#leshan-lwm2m">Leshan LwM2M</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview-and-interfaces">Overview and Interfaces</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#zephyr-iot-device">Zephyr (IoT Device)</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#zephyr-simulation">Zephyr (Simulation)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#simulation">Simulation</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#deployment">Deployment</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#container-environment">Container Environment</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="#deployment">Deployment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#container-environment">Container Environment</a></li>
 </ul>
 </li>
 </ul>
@@ -90,7 +87,7 @@
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">Motivation</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com//zephyr-ksp0704/blob/main/source/documentation.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com//jonas-rem/lwm2m_server/blob/main/doc/source/documentation.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -140,10 +137,8 @@ sleeping for extended periods (TCP would require a new connection setup
 typically after a few minutes).</p>
 </section>
 </section>
-<section id="technical-documentation">
-<h1>Technical Documentation<a class="headerlink" href="#technical-documentation" title="Link to this heading"></a></h1>
-<section id="django-server">
-<h2>Django Server<a class="headerlink" href="#django-server" title="Link to this heading"></a></h2>
+<section id="django">
+<h1>Django<a class="headerlink" href="#django" title="Link to this heading"></a></h1>
 <p>The Django server can also run locally, without the need of a docker container.
 Make sure to create a virtual environment and install the requirements:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/django$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
@@ -156,14 +151,14 @@ Make sure to create a virtual environment and install the requirements:</p>
 server. The Django server should now be up and running under the following URL:
 <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin</span></code>.</p>
 <section id="migrate-database-model">
-<h3>Migrate Database Model<a class="headerlink" href="#migrate-database-model" title="Link to this heading"></a></h3>
+<h2>Migrate Database Model<a class="headerlink" href="#migrate-database-model" title="Link to this heading"></a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
 <span class="gp">host:lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>migrate
 </pre></div>
 </div>
 </section>
 <section id="run-django-unit-tests">
-<h3>Run Django Unit Tests<a class="headerlink" href="#run-django-unit-tests" title="Link to this heading"></a></h3>
+<h2>Run Django Unit Tests<a class="headerlink" href="#run-django-unit-tests" title="Link to this heading"></a></h2>
 <p>There are unit tests defined, which test the deserializer in Django, which
 parses the json payload from the Rest API. You can run the unit tests with the
 following command:</p>
@@ -179,7 +174,7 @@ following command:</p>
 </div>
 </section>
 <section id="entity-relationship-diagram-erd">
-<h3>Entity Relationship Diagram (ERD)<a class="headerlink" href="#entity-relationship-diagram-erd" title="Link to this heading"></a></h3>
+<h2>Entity Relationship Diagram (ERD)<a class="headerlink" href="#entity-relationship-diagram-erd" title="Link to this heading"></a></h2>
 <p>An Entity Relationship Diagram (ERD) is a visual representation of the database
 schema. It is be automatically generated from the Django models.</p>
 <p><code class="docutils literal notranslate"><span class="pre">sensordata</span></code> is the Django app that contains the application logic.</p>
@@ -190,15 +185,15 @@ schema. It is be automatically generated from the Django models.</p>
 </figure>
 </section>
 </section>
-<section id="lwm2m-server">
-<h2>LwM2M Server<a class="headerlink" href="#lwm2m-server" title="Link to this heading"></a></h2>
+<section id="leshan-lwm2m">
+<h1>Leshan LwM2M<a class="headerlink" href="#leshan-lwm2m" title="Link to this heading"></a></h1>
 <p>For testing the Lwm2m server can run locally, without the need of a docker
 container:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/leshan$ </span>./leshan_build_run.sh
 </pre></div>
 </div>
 <section id="overview-and-interfaces">
-<h3>Overview and Interfaces<a class="headerlink" href="#overview-and-interfaces" title="Link to this heading"></a></h3>
+<h2>Overview and Interfaces<a class="headerlink" href="#overview-and-interfaces" title="Link to this heading"></a></h2>
 <p>The server consists of two components. The LwM2M server and the Django server.
 The LwM2M server is responsible for the communication with the IoT device. The
 Django server is responsible for the REST API, database and visualization. The
@@ -234,8 +229,8 @@ Leshan -right-&gt; Django : REST API\nSensor Val, States..
 </div></blockquote>
 </section>
 </section>
-<section id="zephyr-iot-device">
-<h2>Zephyr (IoT Device)<a class="headerlink" href="#zephyr-iot-device" title="Link to this heading"></a></h2>
+<section id="iot-devices-with-zephyr">
+<h1>IoT Devices with Zephyr<a class="headerlink" href="#iot-devices-with-zephyr" title="Link to this heading"></a></h1>
 <p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
 <code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
 LwM2M library and establishes a connection to an LwM2M server. The example can
@@ -244,8 +239,8 @@ be build with the following command:</p>
 <span class="gp">host:lwm2m_server$ </span>west<span class="w"> </span>flash<span class="w"> </span>--recover
 </pre></div>
 </div>
-<section id="zephyr-simulation">
-<h3>Zephyr (Simulation)<a class="headerlink" href="#zephyr-simulation" title="Link to this heading"></a></h3>
+<section id="simulation">
+<h2>Simulation<a class="headerlink" href="#simulation" title="Link to this heading"></a></h2>
 <p>The Zephyr application can run in simulation mode. This allows to test all
 components locally. Once leshan and Zephyr are running, the Zephyr application
 can be started in emulation with the following command:</p>
@@ -286,9 +281,9 @@ LAST UPDATED field contains a recent timestamp.</p>
 </section>
 </section>
 <section id="deployment">
-<h2>Deployment<a class="headerlink" href="#deployment" title="Link to this heading"></a></h2>
+<h1>Deployment<a class="headerlink" href="#deployment" title="Link to this heading"></a></h1>
 <section id="container-environment">
-<h3>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading"></a></h3>
+<h2>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading"></a></h2>
 <p>Both components run in a Docker container. The Leshan server is running in a
 <code class="docutils literal notranslate"><span class="pre">openjdk:17-slim</span></code> container and the Django server is running in a
 <code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
@@ -356,13 +351,12 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 </div>
 </section>
 </section>
-</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="&lt;no title&gt;" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral float-left" title="LwM2M Server Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

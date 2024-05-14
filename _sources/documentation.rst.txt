@@ -41,11 +41,8 @@ protocol as it allows to keep devices connected even when the device is
 sleeping for extended periods (TCP would require a new connection setup
 typically after a few minutes).
 
-Technical Documentation
------------------------
-
-Django Server
-.............
+Django
+------
 
 The Django server can also run locally, without the need of a docker container.
 Make sure to create a virtual environment and install the requirements:
@@ -62,7 +59,7 @@ server. The Django server should now be up and running under the following URL:
 ``http://localhost:8000/admin``.
 
 Migrate Database Model
-~~~~~~~~~~~~~~~~~~~~~~
+......................
 
 .. code-block:: console
 
@@ -70,7 +67,7 @@ Migrate Database Model
    host:lwm2m_server/server/django$ python manage.py migrate
 
 Run Django Unit Tests
-~~~~~~~~~~~~~~~~~~~~~
+.....................
 
 There are unit tests defined, which test the deserializer in Django, which
 parses the json payload from the Rest API. You can run the unit tests with the
@@ -88,7 +85,7 @@ following command:
   Destroying test database for alias 'default'...
 
 Entity Relationship Diagram (ERD)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.................................
 
 An Entity Relationship Diagram (ERD) is a visual representation of the database
 schema. It is be automatically generated from the Django models.
@@ -99,8 +96,8 @@ schema. It is be automatically generated from the Django models.
 
   Entity Relationship Diagram generated from Django models
 
-LwM2M Server
-............
+Leshan LwM2M
+------------
 
 For testing the Lwm2m server can run locally, without the need of a docker
 container:
@@ -110,7 +107,7 @@ container:
    host:lwm2m_server/server/leshan$ ./leshan_build_run.sh
 
 Overview and Interfaces
-~~~~~~~~~~~~~~~~~~~~~~~
+.......................
 
 The server consists of two components. The LwM2M server and the Django server.
 The LwM2M server is responsible for the communication with the IoT device. The
@@ -141,8 +138,8 @@ two components are connected via a REST API.
    :User: -up-> Django : HTTPS
    @enduml
 
-Zephyr (IoT Device)
-...................
+IoT Devices with Zephyr
+-----------------------
 
 As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
 ``subsys/net/lib/lwm2m``. This LwM2M client sample application implements the
@@ -154,8 +151,8 @@ be build with the following command:
   host:lwm2m_server$ west build -b nrf9161dk_nrf9160_ns fw_test/lwm2m_client -p
   host:lwm2m_server$ west flash --recover
 
-Zephyr (Simulation)
-~~~~~~~~~~~~~~~~~~~
+Simulation
+..........
 
 The Zephyr application can run in simulation mode. This allows to test all
 components locally. Once leshan and Zephyr are running, the Zephyr application
@@ -198,10 +195,10 @@ LAST UPDATED field contains a recent timestamp.
   Endpoints table in Django
 
 Deployment
-..........
+----------
 
 Container Environment
-~~~~~~~~~~~~~~~~~~~~~
+.....................
 
 Both components run in a Docker container. The Leshan server is running in a
 ``openjdk:17-slim`` container and the Django server is running in a
@@ -268,5 +265,3 @@ The container can be build and started with the following commands:
   [+] Stopping 2/2
    ✔ Container server-django-1  Stopped                                     10.3s 
    ✔ Container server-leshan-1  Stopped                                     10.5s 
-
-
