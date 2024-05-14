@@ -1,5 +1,8 @@
+LwM2M Server Documentation
+==========================
+
 .. toctree::
    :maxdepth: 2
-   :caption: LwM2M Server
+   :caption: Contents
 
    documentation.rst
