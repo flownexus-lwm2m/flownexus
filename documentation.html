@@ -55,6 +55,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#django-server">Django Server</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#migrate-database-model">Migrate Database Model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#run-django-unit-tests">Run Django Unit Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entity-relationship-diagram-erd">Entity Relationship Diagram (ERD)</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#lwm2m-server">LwM2M Server</a><ul>
@@ -177,6 +178,17 @@ following command:</p>
 </pre></div>
 </div>
 </section>
+<section id="entity-relationship-diagram-erd">
+<h3>Entity Relationship Diagram (ERD)<a class="headerlink" href="#entity-relationship-diagram-erd" title="Link to this heading"></a></h3>
+<p>An Entity Relationship Diagram (ERD) is a visual representation of the database
+schema. It is be automatically generated from the Django models.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sensordata</span></code> is the Django app that contains the application logic.</p>
+<figure class="align-default" id="id1">
+<img alt="_images/erd.svg" src="_images/erd.svg" /><figcaption>
+<p><span class="caption-text">Entity Relationship Diagram generated from Django models</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
 </section>
 <section id="lwm2m-server">
 <h2>LwM2M Server<a class="headerlink" href="#lwm2m-server" title="Link to this heading"></a></h2>
@@ -192,7 +204,7 @@ The LwM2M server is responsible for the communication with the IoT device. The
 Django server is responsible for the REST API, database and visualization. The
 two components are connected via a REST API.</p>
 <blockquote>
-<div><figure class="align-default" id="id1">
+<div><figure class="align-default" id="id2">
 <p class="plantuml">
 <img src="_images/plantuml-c7df7a74750b54c9f3cca56d61c7d605baa4d490.png" alt="&#64;startuml
 left to right direction
@@ -216,7 +228,7 @@ Leshan -right-&gt; Django : REST API\nSensor Val, States..
 &#64;enduml"/>
 </p>
 <figcaption>
-<p><span class="caption-text">Both components running in one machine</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
+<p><span class="caption-text">Both components running in one machine</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 </div></blockquote>
@@ -265,10 +277,10 @@ log file in <code class="docutils literal notranslate"><span class="pre">server/
 <p>Additionally you can see the device in the Django server under
 <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin/sensordata/endpoint/</span></code>. You should see that the
 LAST UPDATED field contains a recent timestamp.</p>
-<figure class="align-default" id="id2">
+<figure class="align-default" id="id3">
 <img alt="_images/django_local.png" src="_images/django_local.png" />
 <figcaption>
-<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 </section>
@@ -282,7 +294,7 @@ LAST UPDATED field contains a recent timestamp.</p>
 <code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
 of the server.</p>
 <blockquote>
-<div><figure class="align-default" id="id3">
+<div><figure class="align-default" id="id4">
 <p class="plantuml">
 <img src="_images/plantuml-c3d163448b0d70a04ec6e7af1c18c8884ef6c5fe.png" alt="&#64;startuml
 package &quot;Docker Compose Environment&quot;  #DDDDDD {
@@ -295,7 +307,7 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 &#64;enduml"/>
 </p>
 <figcaption>
-<p><span class="caption-text">Both components running in one machine using Docker Compose</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
+<p><span class="caption-text">Both components running in one machine using Docker Compose</span><a class="headerlink" href="#id4" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 </div></blockquote>
