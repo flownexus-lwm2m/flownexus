@@ -1,0 +1,26 @@
+name: Compliance Checks
+
+on:
+  pull_request:
+
+jobs:
+  compliance-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run compliance checks with tox
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+            export ZEPHYR_BASE=$PWD
+            git fetch origin $BASE_REF
+            tox -c utils/ci/tox.ini -e compliance -- -c origin/$BASE_REF..
