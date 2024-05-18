@@ -1,0 +1,9 @@
+flake8
+pylint
+black
+python-magic
+python-magic-bin; sys_platform == "win32"
+lxml
+junitparser>=2
+west
+gitlint
