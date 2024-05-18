@@ -39,3 +39,9 @@ ext/lib/bin/libsupl.zip
 
 # Entity Relationship Diagram is a generated file, do not add to version control
 doc/source/images/erd.svg
+
+# Generated files from check_compliance.py
+Pylint.txt
+compliance.xml
+GitDiffCheck.txt
+Gitlint.txt
