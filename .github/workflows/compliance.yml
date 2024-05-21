@@ -34,10 +34,10 @@ jobs:
       - name: Download Checkstyle configuration
         run: curl -LJO https://raw.githubusercontent.com/checkstyle/checkstyle/master/src/main/resources/google_checks.xml
 
-      - name: Download and Run Checkstyle
+      - name: Run Checkstyle
         run: |
-          curl -LJO https://github.com/checkstyle/checkstyle/releases/download/checkstyle-9.3/checkstyle-9.3-all.jar
-          java -jar checkstyle-9.3-all.jar -c google_checks.xml server/leshan/src/main/java/lwm2m
+          curl -LJO https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.8.0/checkstyle-10.8.0-all.jar
+          java -jar checkstyle-10.8.0-all.jar -c google_checks.xml server/leshan/src/main/java/lwm2m
 
       - name: Install Codespell
         run: pip install codespell
