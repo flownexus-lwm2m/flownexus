@@ -196,7 +196,6 @@ LAST UPDATED field contains a recent timestamp.
 
 Deployment
 ----------
-----------
 
 Container Environment
 ^^^^^^^^^^^^^^^^^^^^^
