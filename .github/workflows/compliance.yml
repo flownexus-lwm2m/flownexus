@@ -32,7 +32,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Download Checkstyle configuration
-        run: curl -LJO https://raw.githubusercontent.com/checkstyle/checkstyle/master/src/main/resources/google_checks.xml
+        run: curl -LJO https://raw.githubusercontent.com/checkstyle/checkstyle/checkstyle-10.8.0/src/main/resources/google_checks.xml
 
       - name: Run Checkstyle
         run: |
