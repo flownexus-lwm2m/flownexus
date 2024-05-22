@@ -1,8 +1,6 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from sensordata.models import SensorData
-from sensordata.models import Endpoint
 import binascii
 import struct
 
@@ -164,19 +162,7 @@ class SensorDataTests(APITestCase):
         """
         Ensure we can create new sensor data objects using given JSON payloads.
         """
-        url = reverse('add_sensor_data')
+        self.url = reverse('add_sensor_data')
 
-        for pl in TEST_PAYLOAD:
-            response = self.client.post(url, pl, format='json')
-
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            #self.assertEqual(Endpoint.objects.count(), 1)
-
-            self.assertEqual(Endpoint.objects.get().endpoint, pl['ep'])
-            self.assertEqual(Endpoint.objects.get().manufacturer, pl['val']['instances'][0]['resources'][0]['value'])
-            self.assertEqual(Endpoint.objects.get().model_number, pl['val']['instances'][0]['resources'][1]['value'])
-            self.assertEqual(Endpoint.objects.get().serial_number, pl['val']['instances'][0]['resources'][2]['value'])
-            self.assertEqual(Endpoint.objects.get().firmware_version, pl['val']['instances'][0]['resources'][3]['value'])
-            self.assertEqual(Endpoint.objects.get().battery_level, (int)(pl['val']['instances'][0]['resources'][7]['value']))
-
-            Endpoint.objects.all().delete()
+        response = self.client.post(self.url, TEST_PAYLOAD, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

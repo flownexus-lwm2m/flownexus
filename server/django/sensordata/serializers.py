@@ -1,139 +1,137 @@
 from rest_framework import serializers
-from .models import SensorData, Endpoint
+from .models import Device, ResourceType, Resource
+from django.utils import timezone
+from .lwm2m_mappings import LWM2M_RESOURCE_MAP
 import binascii
 import struct
 import logging
-import json
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
-class GenericLWM2MSerializer(serializers.Serializer):
-    """
-    A serializer for generic handling and persistence of sensor data received from an
-    LwM2M server. Primarily designed to iterate over the varying data representation
-    sent by different types of sensors and store them in the SensorData model.
+def decode_opaque_data(hex_value, data_type):
+    if hex_value == '':
+        return None
+    if data_type == 'float':
+        decoded = binascii.unhexlify(hex_value)
+        return struct.unpack('>d', decoded)[0]
+    elif data_type == 'long':
+        decoded = binascii.unhexlify(hex_value)
+        return struct.unpack('>l', decoded)[0]
+    elif data_type == 'int':
+        decoded = binascii.unhexlify(hex_value)
+        return struct.unpack('>h', decoded)[0]
+    elif data_type == 'string':
+        return hex_value
+    else:
+        logger.error(f"Unsupported data type: {data_type}, data: {hex_value}")
+        raise ValueError(f"Unsupported data type: {data_type}")
 
-    Check test_restapi.py for example payloads.
-    """
 
-    ep = serializers.CharField()
-    res = serializers.CharField()
-    val = serializers.JSONField()
+class ResourceDataSerializer(serializers.Serializer):
+    kind = serializers.CharField(max_length=50)
+    id = serializers.IntegerField()
+    type = serializers.CharField(max_length=50)
+    value = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    values = serializers.DictField(child=serializers.CharField(), required=False, allow_null=True)
 
-    # Define the path to property and type mapping. Others will be ignored.
-    path_mapping = {
-        '3': {  # Device Object ID
-            '0': {'field': 'manufacturer', 'type': 'string'},
-            '1': {'field': 'model_number', 'type': 'string'},
-            '2': {'field': 'serial_number', 'type': 'string'},
-            '3': {'field': 'firmware_version', 'type': 'string'},
-            '4': {'field': 'reboot', 'type': 'int'},
-            '5': {'field': 'factory_reset', 'type': 'int'},
-            '9': {'field': 'battery_level', 'type': 'int'},
-            '10': {'field': 'memory_free', 'type': 'int'},
-        },
-        '3303': {  # Temperature Object ID
-            '5700': {'field': 'temperature', 'type': 'float'},
-        },
-    }
 
-    def deserialize_sensor_data(self, json_string):
-        logger.debug("deserializer: deserialize_sensor_data\n" + json_string)
+class InstanceSerializer(serializers.Serializer):
+    kind = serializers.CharField(max_length=50)
+    id = serializers.IntegerField()
+    resources = ResourceDataSerializer(many=True)
 
-        data = json.loads(json_string)
-        sensor_data = {}
 
-        sensor_data['endpoint'] = data['ep']
+class ValueSerializer(serializers.Serializer):
+    instances = InstanceSerializer(many=True, required=False)
+    kind = serializers.CharField(max_length=50)
+    id = serializers.IntegerField()
+    type = serializers.CharField(max_length=50, required=False)
+    value = serializers.CharField(max_length=255, required=False)
 
-        resource_path = data['res']
 
-        if '/' in resource_path:
-            paths = resource_path.strip('/').split('/')
-            object_id = paths[0]
-            # Handle possible index, e.g., /3303/0/5700 -> Object ID: 3303, Index: 0, Resource ID: 5700
-            resource_id = paths[-1]
+class LwM2MSerializer(serializers.Serializer):
+    ep = serializers.CharField(max_length=255)
+    res = serializers.CharField(max_length=255)
+    val = ValueSerializer()
+
+    def create(self, validated_data):
+        ep = validated_data['ep']
+        res = validated_data['res']
+        val = validated_data['val']
+
+        # ep maps to Device.device_id
+        device, _ = Device.objects.get_or_create(device_id=ep, defaults={'name': ep})
+
+        # Check if value is an object with instances
+        if val['kind'] == 'obj' and 'instances' in val:
+            for instance in val['instances']:
+                for resource in instance['resources']:
+                    self.handle_resource(device, res, resource)
         else:
-            object_id = resource_path
+            # Single resource handling
+            self.handle_resource(device, res, val)
 
-        object_path_mapping = self.path_mapping.get(object_id, {})
+        return device
 
-        if 'val' in data and isinstance(data['val'], dict):
-            data_resources = data['val'].get('instances', [data['val']])
-            #logger.debug(f"deserializer: Data resources: {data_resources}")
-
-            for instance in data_resources:
-                resources = instance.get('resources', []) if instance.get('resources') else [instance]
-                for resource in resources:
-                    resource_id = str(resource['id'])
-                    if resource_id in object_path_mapping:
-                        field_info = object_path_mapping[resource_id]
-                        field_name = field_info['field']
-                        # If the resource kind is 'singleResource' or the value is directly available
-                        if resource.get('kind') == 'singleResource' or 'value' in resource:
-                            if field_info['type'] == 'float':
-                                sensor_data[field_name] = self.decode_value(resource['value'],
-                                                                            field_info['type'])
-                            elif field_info['type'] == 'int':
-                                sensor_data[field_name] = (int)(resource['value'])
-                            else:
-                                sensor_data[field_name] = resource['value']
-
-        return sensor_data
+    def handle_resource(self, device, res, resource):
+        # Parse resource path to get object_id and resource_id
+        resource_path_parts = res.strip('/').split('/')
+        if len(resource_path_parts) == 3:
+            object_id = int(resource_path_parts[0])
+            resource_id = int(resource_path_parts[2])
+        elif resource_path_parts[0].isdigit():
+            object_id = int(resource_path_parts[0])
+            resource_id = resource['id']
+        else:
+            logger.error(f"Invalid resource path: {res}")
+            raise serializers.ValidationError("Invalid resource path")
 
 
-    def decode_value(self, hex_value, data_type):
+        # Fetch resource information from static mapping
+        resource_info = LWM2M_RESOURCE_MAP.get((object_id, resource_id))
+        if not resource_info:
+            raise serializers.ValidationError(f"Resource type {object_id}/{resource_id} not found")
+
+        resource_type, _ = ResourceType.objects.get_or_create(
+            object_id=object_id,
+            resource_id=resource_id,
+            defaults={'name': resource_info['name'], 'data_type': resource_info['data_type']}
+        )
+
+        data_type = resource_info['data_type']
+
+        # Some LwM2M Resources have a OPAQUE type, which needs decoding
+        if resource['kind'] == 'singleResource':
+            if resource['type'] == 'OPAQUE':
+                decoded_value = decode_opaque_data(resource['value'], data_type)
+            else:
+                decoded_value = resource['value']
+        elif resource['kind'] == 'multiResource':
+            logging.error(f"multiResource currently not supported, skipping...")
+            decoded_value = None
+        else:
+            #TODO: Handle multiResource (Maybe json field in DB)
+            logger.error(f"Unsupported resource kind: {resource['kind']}")
+            raise serializers.ValidationError(f"Unsupported resource kind: {resource['kind']}")
+
+        # Create the Resource instance based on value type
+        resource_data = {
+            'device': device,
+            'resource_type': resource_type,
+            'timestamp': timezone.now()
+        }
+
+        # Assign the decoded value to the appropriate field
         if data_type == 'float':
-            # Assuming 8 bytes for double precision, big-endian byte order
-            decoded = binascii.unhexlify(hex_value)
-            return struct.unpack('>d', decoded)[0]
-        elif data_type == 'long':
-            # Assuming 4 bytes for long int, big-endian byte order
-            decoded = binascii.unhexlify(hex_value)
-            return struct.unpack('>l', decoded)[0]
+            resource_data['float_value'] = decoded_value
+        elif data_type == 'int':
+            resource_data['int_value'] = decoded_value
         elif data_type == 'string':
-            # Assuming hex-encoded ASCII string
-            return binascii.unhexlify(hex_value).decode('ascii')
+            resource_data['str_value'] = decoded_value
+        elif data_type == 'time':
+            resource_data['str_value'] = decoded_value
         else:
-            raise ValueError(f"Unsupported data type: {data_type}")
+            logger.error(f"Unsupported data type: {data_type}")
+            raise serializers.ValidationError(f"Unsupported data type")
 
-
-    def create(self, data):
-        data_deser = self.deserialize_sensor_data(json.dumps(data, indent=4))
-
-        sensor_data = {}
-        endpoint_data = {}
-
-        # Decide based on the individual field name whether it is  a SensorData or
-        # Endpoint object and create it. Generic method to handle both types of objects.
-        sensor_data_field_names = [field.name for field in SensorData._meta.get_fields()]
-        endpoint_data_field_names = [field.name for field in Endpoint._meta.get_fields()]
-
-        for field_name, field_value in data_deser.items():
-            if field_name in sensor_data_field_names:
-                sensor_data[field_name] = field_value
-            if field_name in endpoint_data_field_names:
-                endpoint_data[field_name] = field_value
-
-        # Only add if more than the endpoint could be mapped (actual sensor data)
-        if len(endpoint_data) > 1:
-            logger.debug(f"deserializer: Endpoint data: {json.dumps(endpoint_data, indent=4)}")
-
-            unique_field = 'endpoint'
-            unique_field_value = endpoint_data.pop(unique_field)
-
-            ep_ret = Endpoint.objects.update_or_create(
-                **{unique_field: unique_field_value},
-                defaults=endpoint_data
-            )
-        else:
-            ep_ret = None
-
-        # Only add if more than the endpoint could be mapped (actual sensor data)
-        if len(sensor_data) > 1:
-            sd_ret = SensorData.objects.create(**sensor_data)
-            logger.debug(f"deserializer: Sensor data: {json.dumps(sensor_data, indent=4)}")
-        else:
-            sd_ret = None
-
-        return (sd_ret, ep_ret)
+        Resource.objects.create(**resource_data)
