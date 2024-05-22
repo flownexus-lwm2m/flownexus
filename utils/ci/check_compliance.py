@@ -23,6 +23,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 logger = None
 
+def run_command(command):
+    try:
+        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return result.returncode, result.stdout.decode('utf-8'), result.stderr.decode('utf-8')
+    except subprocess.CalledProcessError as e:
+        return e.returncode, e.stdout.decode('utf-8'), e.stderr.decode('utf-8')
+
 def git(*args, cwd=None, ignore_non_zero=False):
     # Helper for running a Git command. Returns the rstrip()ed stdout output.
     # Called like git("diff"). Exits with SystemError (raised by sys.exit()) on
@@ -501,6 +508,43 @@ class ImageSize(ComplianceTest):
                 self.failure(f"Image file too large: {file} reduce size to "
                              f"less than {limit >> 10}kB")
 
+class CheckstyleTest(ComplianceTest):
+    name = "Checkstyle"
+    doc = "Runs Checkstyle on Java files."
+    path_hint = "<git-top>"
+
+    def run(self):
+        checkstyle_jar = 'checkstyle-10.8.0-all.jar'
+        config_file = 'google_checks.xml'
+
+        if not Path(checkstyle_jar).exists():
+            run_command(f'curl -LJO https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.8.0/{checkstyle_jar}')
+
+        if not Path(config_file).exists():
+            run_command(f'curl -LJO https://raw.githubusercontent.com/checkstyle/checkstyle/master/src/main/resources/{config_file}')
+
+        java_files = [file for file in get_files() if file.endswith('.java')]
+        if java_files:
+            command = f'java -jar {checkstyle_jar} -c {config_file} {" ".join(java_files)}'
+            returncode, stdout, stderr = run_command(command)
+            print(stdout)
+            if returncode != 0:
+                self.failure(f"Checkstyle errors:\n{stderr}")
+
+class CodespellTest(ComplianceTest):
+    name = "Codespell"
+    doc = "Runs Codespell on changed files."
+    path_hint = "<git-top>"
+
+    def run(self):
+        run_command('pip install codespell')
+        changed_files = get_files()
+        if changed_files:
+            command = f'codespell {" ".join(changed_files)}'
+            returncode, stdout, stderr = run_command(command)
+            print(stdout)
+            if returncode != 0:
+                self.failure(f"Codespell errors:\n{stderr}")
 
 def init_logs(cli_arg):
     # Initializes logging

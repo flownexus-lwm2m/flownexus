@@ -24,23 +24,3 @@ jobs:
             export ZEPHYR_BASE=$PWD
             git fetch origin $BASE_REF
             tox -c utils/ci/tox.ini -e compliance -- -c origin/$BASE_REF..
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-
-      - name: Download Checkstyle configuration
-        run: curl -LJO https://raw.githubusercontent.com/checkstyle/checkstyle/checkstyle-10.8.0/src/main/resources/google_checks.xml
-
-      - name: Run Checkstyle
-        run: |
-          curl -LJO https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.8.0/checkstyle-10.8.0-all.jar
-          java -jar checkstyle-10.8.0-all.jar -c google_checks.xml server/leshan/src/main/java/lwm2m
-
-      - name: Install Codespell
-        run: pip install codespell
-
-      - name: Run Codespell
-        run: codespell --quiet-level=2
