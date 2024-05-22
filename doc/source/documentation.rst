@@ -3,8 +3,9 @@ Documentation
 
 Overview
 --------
+
 General Requirements
-^^^^^^^^^^^^^^^^^^^^
+....................
 
 * No dependencies of external services like AWS, MQTT brokers or similar. The
   system has to be able to run in a local environment.
@@ -15,7 +16,7 @@ General Requirements
 * The web application has to support a secure login and basic user management.
 
 Platform Features
-^^^^^^^^^^^^^^^^^
+.................
 
 * Certificate based authentication and encryption.
 * Server to read and observe resources from IoT Device.
@@ -24,7 +25,7 @@ Platform Features
 * Receive logs from IoT Devices.
 
 IoT Device
-^^^^^^^^^^
+..........
 
 An IoT device is a resource constrained (energy, flash..) that is connected to
 the internet. The IoT device has to support LwM2M. Mainly systems that run
@@ -35,8 +36,6 @@ protocol as it allows to keep devices connected even when the device is
 sleeping for extended periods (TCP would require a new connection setup
 typically after a few minutes).
 
-Django
-------
 Django
 ------
 
@@ -52,10 +51,18 @@ Make sure to create a virtual environment and install the requirements:
 
 Unless you add new files, you can keep the server running while modifying the
 server. The Django server should now be up and running under the following URL:
-``http://localhost:8000/admin``.
+``http://localhost:8000/admin``. The admin login is ``admin`` and the password
+is ``password`` for testing.
+
+
+.. warning::
+
+  Do not forget to change the password to the admin console as well as other
+  settings like SECRET_KEY, DEBUG flag in a production environment!
+
 
 Migrate Database Model
-^^^^^^^^^^^^^^^^^^^^^^^
+......................
 
 .. code-block:: console
 
@@ -63,7 +70,7 @@ Migrate Database Model
    host:lwm2m_server/server/django$ python manage.py migrate
 
 Run Django Unit Tests
-^^^^^^^^^^^^^^^^^^^^^
+.....................
 
 There are unit tests defined, which test the deserializer in Django, which
 parses the json payload from the Rest API. You can run the unit tests with the
@@ -80,20 +87,60 @@ following command:
   OK
   Destroying test database for alias 'default'...
 
-Entity Relationship Diagram (ERD)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Database Model
+..............
+
+The database model is the core of the Django server. It aims to store
+information according to the LwM2M resource model. The advantage is that data
+can be stored in a generic way and the server can be extended with new
+resources without changing the database schema.
+
+The server application logic only has to handle higher level events. Those
+events are situations where multiple resources are associated (e.g.
+Temperature, Pressure, Humidity, Acceleration). Those multiple resources are
+linked in the event, together with a timestamp. The event itself is represented
+by the database model in a generic way, several custom event types can be
+created by the application logic.
 
 An Entity Relationship Diagram (ERD) is a visual representation of the database
-schema. It is be automatically generated from the Django models.
-
-``sensordata`` is the Django app that contains the application logic.
+schema. It is automatically generated from the Django models. ``sensordata`` is
+the Django app that contains the application logic.
 
 .. figure:: images/erd.svg
 
   Entity Relationship Diagram generated from Django models
 
-Leshan LwM2M
-------------
+**Device:** Represents IoT devices using the LwM2M protocol in the network,
+identifiable by a universally unique ID alongside a human-readable name.
+
+**ResourceType:** Defines resource data points comprehensively, annotating each
+with a unique object-resource ID combination, a descriptive name, and
+specifying the expected data type.
+
+**Resource:** Captures individual data values from IoT devices, annotated with
+timestamps, applicable data types, and linked to both the device and resource
+type for which the data pertains.
+
+**Event:** Serves as a collection point for significant occurrences reported by
+devices, including composite events defined by enclosing object IDs. The server
+application logic has to generate events based on matching timestamps or
+received composite notifications from devices. Although individual resources
+within an event may have different timestamps, the event itself encapsulates a
+single timestamp.
+
+**EventResource:** Acts as a junction table forming a many-to-many relationship
+between events and their constituent resources, enabling flexible association
+without direct modification to the core events or resources tables.
+
+**DeviceOperation:** Represents actionable commands or processes targeted at
+devices, tracking the operation type, status, and scheduling through
+timestamps, also detailing the transmission attempts and last action.
+
+**Firmware:** Stores metadata about firmware binaries that are available for
+devices to download and install. Each record includes a version identifier, the
+name of the file, a URL from where the device can retrieve the firmware, and
+timestamps for tracking when each firmware record was created and last updated.
+
 Leshan LwM2M
 ------------
 
@@ -105,7 +152,7 @@ container:
    host:lwm2m_server/server/leshan$ ./leshan_build_run.sh
 
 Overview and Interfaces
-^^^^^^^^^^^^^^^^^^^^^^^
+.......................
 
 The server consists of two components. The LwM2M server and the Django server.
 The LwM2M server is responsible for the communication with the IoT device. The
@@ -138,8 +185,6 @@ two components are connected via a REST API.
 
 IoT Devices with Zephyr
 -----------------------
-IoT Devices with Zephyr
------------------------
 
 As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
 ``subsys/net/lib/lwm2m``. This LwM2M client sample application implements the
@@ -152,7 +197,7 @@ be build with the following command:
   host:lwm2m_server$ west flash --recover
 
 Simulation
-^^^^^^^^^^
+..........
 
 The Zephyr application can run in simulation mode. This allows to test all
 components locally. Once leshan and Zephyr are running, the Zephyr application
@@ -198,7 +243,7 @@ Deployment
 ----------
 
 Container Environment
-^^^^^^^^^^^^^^^^^^^^^
+.....................
 
 Both components run in a Docker container. The Leshan server is running in a
 ``openjdk:17-slim`` container and the Django server is running in a
