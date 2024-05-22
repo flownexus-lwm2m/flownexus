@@ -1,0 +1,30 @@
+{% block content %}
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Endpoint</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tt in resource_list %}
+      <tr>
+        <td>{{ tt.timestamp }}</td>
+        <td>{{ tt.device.device_id }}</td>
+        <td>
+          {% if tt.int_value is not None %}
+            {{ tt.int_value }}
+          {% elif tt.float_value is not None %}
+            {{ tt.float_value }}
+          {% elif tt.str_value is not None %}
+            {{ tt.str_value }}
+          {% elif tt.bool_value is not None %}
+            {{ tt.bool_value }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

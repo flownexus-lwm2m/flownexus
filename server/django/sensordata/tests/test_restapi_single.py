@@ -1,9 +1,13 @@
+import binascii
+import struct
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from sensordata.models import SensorData
-import binascii
-import struct
+from sensordata.models import (
+    Device,
+    ResourceType,
+    Resource,
+)
 
 
 TEST_PAYLOAD = [
@@ -21,28 +25,39 @@ TEST_PAYLOAD = [
 
 class SensorDataTests(APITestCase):
 
-    def convert_hex_to_double(self, hex_value):
-        try:
-            return struct.unpack('>d', binascii.unhexlify(hex_value))[0]
-        except binascii.Error as e:
-            raise ValueError(f"Hexadecimal to binary conversion failed: {e}")
-        except struct.error as e:
-            raise ValueError(f"Binary to double unpacking failed: {e}")
-
     def test_create_sensor_data_from_json_payloads(self):
         """
         Ensure we can create new sensor data objects using given JSON payloads.
         """
-        url = reverse('add_sensor_data')
+        self.url = reverse('add_sensor_data')
+
+        response = self.client.post(self.url, TEST_PAYLOAD, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         for pl in TEST_PAYLOAD:
-            response = self.client.post(url, pl, format='json')
+            ep = pl['ep']
+            res = pl['res']
+            val = pl['val']
 
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            # Verify the Device was created
+            device = Device.objects.get(device_id=ep)
+            self.assertIsNotNone(device)
+            self.assertEqual(device.name, ep)
 
-            self.assertEqual(SensorData.objects.count(), 1)
-            self.assertEqual(SensorData.objects.get().endpoint, pl['ep'])
-            expected_temperature = self.convert_hex_to_double(pl['val']['value'])
-            self.assertEqual(SensorData.objects.get().temperature, expected_temperature)
+            # Parse resource path to get object_id and resource_id
+            resource_path_parts = res.strip('/').split('/')
+            object_id = int(resource_path_parts[0])
+            resource_id = int(resource_path_parts[2])
 
-            SensorData.objects.all().delete()
+            # Verify the ResourceType was created
+            resource_type = ResourceType.objects.get(object_id=object_id, resource_id=resource_id)
+            self.assertIsNotNone(resource_type)
+
+            # Verify the Resource was created
+            resource = Resource.objects.get(device=device, resource_type=resource_type)
+            self.assertIsNotNone(resource)
+
+            # Check values based on the type
+            self.assertEqual(resource.resource_type.data_type, 'float')
+            decoded_value = struct.unpack('>d', binascii.unhexlify(val['value']))[0]
+            self.assertEqual(resource.float_value, decoded_value)
