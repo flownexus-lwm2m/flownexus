@@ -45,3 +45,6 @@ Pylint.txt
 compliance.xml
 GitDiffCheck.txt
 Gitlint.txt
+
+# Database files
+*.sqlite3
