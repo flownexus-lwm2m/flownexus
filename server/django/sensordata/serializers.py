@@ -58,8 +58,8 @@ class LwM2MSerializer(serializers.Serializer):
         res = validated_data['res']
         val = validated_data['val']
 
-        # ep maps to Device.device_id
-        device, _ = Device.objects.get_or_create(device_id=ep, defaults={'name': ep})
+        # ep maps to Device.endpoint
+        device, _ = Device.objects.get_or_create(endpoint=ep)
 
         # Check if value is an object with instances
         if val['kind'] == 'obj' and 'instances' in val:
