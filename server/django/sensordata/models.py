@@ -10,7 +10,16 @@ class ResourceType(models.Model):
     object_id = models.IntegerField()
     resource_id = models.IntegerField()
     name = models.CharField(max_length=255)
-    data_type = models.CharField(max_length=50)  # 'int', 'float', 'str', 'bool'
+    # LwM2M data types:
+    # - string: UTF-8 encoded sequence of characters
+    # - integer: 16-bit signed integer
+    # - float: 64-bit IEEE 754 floating point
+    # - boolean: 0 or 1
+    # - opaque: sequence of binary data
+    # - time: POSIX time, number of s since 1970 in UTC (signed integer)
+    # - objlnk: link to another object instance
+    # - none (''): no data, used for executable resources
+    data_type = models.CharField(max_length=50, blank=True)
 
     class Meta:
         unique_together = ('object_id', 'resource_id')
