@@ -10,6 +10,8 @@ services:
       - "8000:8000"
     networks:
       - mynetwork
+    environment:
+      - LESHAN_URI=http://leshan:8080
 
   leshan:
     build:
