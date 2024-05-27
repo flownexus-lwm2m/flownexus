@@ -2,8 +2,8 @@ from django.db import models
 
 class Device(models.Model):
     """Represents a specific device in the IoT ecosystem."""
-    device_id = models.CharField(max_length=255, primary_key=True)
-    name = models.CharField(max_length=255)
+    endpoint = models.CharField(max_length=255, primary_key=True)
+
 
 class ResourceType(models.Model):
     """Map LwM2M object/resource IDs to human-readable names and data types."""
