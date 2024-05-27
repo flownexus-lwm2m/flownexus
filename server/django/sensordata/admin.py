@@ -23,12 +23,29 @@ LESHAN_URI = os.getenv('LESHAN_URI', 'http://0.0.0.0:8080') + '/api'
 class DeviceAdmin(admin.ModelAdmin):
     list_display = ('device_id', 'name')
     search_fields = ('device_id', 'name')
+    readonly_fields = ('device_id', 'name')
 
+    def get_model_perms(self, request):
+        return {
+            'add': False,
+            'change': False,
+            'delete': False,
+            'view': True,
+        }
 
 @admin.register(ResourceType)
 class ResourceTypeAdmin(admin.ModelAdmin):
     list_display = ('object_id', 'resource_id', 'name', 'data_type')
     search_fields = ('object_id', 'resource_id', 'name')
+    readonly_fields = ('object_id', 'resource_id', 'name', 'data_type')
+
+    def get_model_perms(self, request):
+        return {
+            'add': False,
+            'change': False,
+            'delete': False,
+            'view': True,
+        }
 
 
 @admin.register(Resource)
@@ -49,7 +66,7 @@ class EventAdmin(admin.ModelAdmin):
 class EventResourceAdmin(admin.ModelAdmin):
     list_display = ('event', 'resource')
     search_fields = ('event__event_type', 'resource__resource_type__name')
-    list_filter = ('event', 'resource')
+    list_filter = ('event', 'resource__resource_type')
 
 
 @admin.register(DeviceOperation)
@@ -57,7 +74,7 @@ class DeviceOperationAdmin(admin.ModelAdmin):
     list_display = ('resource', 'operation_type', 'status', 'timestamp_sent',
                     'retransmit_counter', 'last_attempt')
     search_fields = ('resource__device__device_id', 'operation_type', 'status')
-    list_filter = ('resource', 'operation_type', 'status', 'timestamp_sent')
+    list_filter = ('resource__resource_type', 'operation_type', 'status', 'timestamp_sent')
     readonly_fields = ('status', 'timestamp_sent', 'retransmit_counter',
                        'last_attempt', 'operation_type')
 
@@ -120,5 +137,3 @@ class DeviceOperationAdmin(admin.ModelAdmin):
 @admin.register(Firmware)
 class FirmwareAdmin(admin.ModelAdmin):
     list_display = ('version', 'file_name', 'download_url', 'created_at')
-    search_fields = ('version', 'file_name')
-    list_filter = ('created_at',)
