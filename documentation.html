@@ -381,20 +381,17 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-device">IoT Device</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#django">Django</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Django</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#django">Django</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#migrate-database-model">Migrate Database Model</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#run-django-unit-tests">Run Django Unit Tests</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#entity-relationship-diagram-erd">Entity Relationship Diagram (ERD)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#leshan-lwm2m">Leshan LwM2M</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Leshan LwM2M</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#leshan-lwm2m">Leshan LwM2M</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#overview-and-interfaces">Overview and Interfaces</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">IoT Devices with Zephyr</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation">Simulation</a></li>
 </ul>
 </li>
@@ -453,9 +450,6 @@ typically after a few minutes).</p>
 </section>
 <section id="django">
 <h2>Django<a class="headerlink" href="#django" title="Link to this heading">#</a></h2>
-</section>
-<section id="id1">
-<h2>Django<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
 <p>The Django server can also run locally, without the need of a docker container.
 Make sure to create a virtual environment and install the requirements:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/django$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
@@ -466,7 +460,13 @@ Make sure to create a virtual environment and install the requirements:</p>
 </div>
 <p>Unless you add new files, you can keep the server running while modifying the
 server. The Django server should now be up and running under the following URL:
-<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin</span></code>. The admin login is <code class="docutils literal notranslate"><span class="pre">admin</span></code> and the password
+is <code class="docutils literal notranslate"><span class="pre">password</span></code> for testing.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Do not forget to change the password to the admin console as well as other
+settings like SECRET_KEY, DEBUG flag in a production environment!</p>
+</div>
 <section id="migrate-database-model">
 <h3>Migrate Database Model<a class="headerlink" href="#migrate-database-model" title="Link to this heading">#</a></h3>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span>makemigrations<span class="w"> </span>sensordata
@@ -490,23 +490,54 @@ following command:</p>
 </pre></div>
 </div>
 </section>
-<section id="entity-relationship-diagram-erd">
-<h3>Entity Relationship Diagram (ERD)<a class="headerlink" href="#entity-relationship-diagram-erd" title="Link to this heading">#</a></h3>
+<section id="database-model">
+<h3>Database Model<a class="headerlink" href="#database-model" title="Link to this heading">#</a></h3>
+<p>The database model is the core of the Django server. It aims to store
+information according to the LwM2M resource model. The advantage is that data
+can be stored in a generic way and the server can be extended with new
+resources without changing the database schema.</p>
+<p>The server application logic only has to handle higher level events. Those
+events are situations where multiple resources are associated (e.g.
+Temperature, Pressure, Humidity, Acceleration). Those multiple resources are
+linked in the event, together with a timestamp. The event itself is represented
+by the database model in a generic way, several custom event types can be
+created by the application logic.</p>
 <p>An Entity Relationship Diagram (ERD) is a visual representation of the database
-schema. It is be automatically generated from the Django models.</p>
-<p><code class="docutils literal notranslate"><span class="pre">sensordata</span></code> is the Django app that contains the application logic.</p>
-<figure class="align-default" id="id4">
+schema. It is automatically generated from the Django models. <code class="docutils literal notranslate"><span class="pre">sensordata</span></code> is
+the Django app that contains the application logic.</p>
+<figure class="align-default" id="id1">
 <img alt="_images/erd.svg" src="_images/erd.svg" /><figcaption>
-<p><span class="caption-text">Entity Relationship Diagram generated from Django models</span><a class="headerlink" href="#id4" title="Link to this image">#</a></p>
+<p><span class="caption-text">Entity Relationship Diagram generated from Django models</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
+<p><strong>Device:</strong> Represents IoT devices using the LwM2M protocol in the network,
+identifiable by a universally unique ID alongside a human-readable name.</p>
+<p><strong>ResourceType:</strong> Defines resource data points comprehensively, annotating each
+with a unique object-resource ID combination, a descriptive name, and
+specifying the expected data type.</p>
+<p><strong>Resource:</strong> Captures individual data values from IoT devices, annotated with
+timestamps, applicable data types, and linked to both the device and resource
+type for which the data pertains.</p>
+<p><strong>Event:</strong> Serves as a collection point for significant occurrences reported by
+devices, including composite events defined by enclosing object IDs. The server
+application logic has to generate events based on matching timestamps or
+received composite notifications from devices. Although individual resources
+within an event may have different timestamps, the event itself encapsulates a
+single timestamp.</p>
+<p><strong>EventResource:</strong> Acts as a junction table forming a many-to-many relationship
+between events and their constituent resources, enabling flexible association
+without direct modification to the core events or resources tables.</p>
+<p><strong>DeviceOperation:</strong> Represents actionable commands or processes targeted at
+devices, tracking the operation type, status, and scheduling through
+timestamps, also detailing the transmission attempts and last action.</p>
+<p><strong>Firmware:</strong> Stores metadata about firmware binaries that are available for
+devices to download and install. Each record includes a version identifier, the
+name of the file, a URL from where the device can retrieve the firmware, and
+timestamps for tracking when each firmware record was created and last updated.</p>
 </section>
 </section>
 <section id="leshan-lwm2m">
 <h2>Leshan LwM2M<a class="headerlink" href="#leshan-lwm2m" title="Link to this heading">#</a></h2>
-</section>
-<section id="id2">
-<h2>Leshan LwM2M<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
 <p>For testing the Lwm2m server can run locally, without the need of a docker
 container:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/server/leshan$ </span>./leshan_build_run.sh
@@ -519,7 +550,7 @@ The LwM2M server is responsible for the communication with the IoT device. The
 Django server is responsible for the REST API, database and visualization. The
 two components are connected via a REST API.</p>
 <blockquote>
-<div><figure class="align-default" id="id5">
+<div><figure class="align-default" id="id2">
 <p class="plantuml">
 <img src="_images/plantuml-c7df7a74750b54c9f3cca56d61c7d605baa4d490.png" alt="&#64;startuml
 left to right direction
@@ -543,7 +574,7 @@ Leshan -right-&gt; Django : REST API\nSensor Val, States..
 &#64;enduml"/>
 </p>
 <figcaption>
-<p><span class="caption-text">Both components running in one machine</span><a class="headerlink" href="#id5" title="Link to this image">#</a></p>
+<p><span class="caption-text">Both components running in one machine</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </div></blockquote>
@@ -551,9 +582,6 @@ Leshan -right-&gt; Django : REST API\nSensor Val, States..
 </section>
 <section id="iot-devices-with-zephyr">
 <h2>IoT Devices with Zephyr<a class="headerlink" href="#iot-devices-with-zephyr" title="Link to this heading">#</a></h2>
-</section>
-<section id="id3">
-<h2>IoT Devices with Zephyr<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
 <p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
 <code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
 LwM2M library and establishes a connection to an LwM2M server. The example can
@@ -595,10 +623,10 @@ log file in <code class="docutils literal notranslate"><span class="pre">server/
 <p>Additionally you can see the device in the Django server under
 <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin/sensordata/endpoint/</span></code>. You should see that the
 LAST UPDATED field contains a recent timestamp.</p>
-<figure class="align-default" id="id6">
+<figure class="align-default" id="id3">
 <img alt="_images/django_local.png" src="_images/django_local.png" />
 <figcaption>
-<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id6" title="Link to this image">#</a></p>
+<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </section>
@@ -612,7 +640,7 @@ LAST UPDATED field contains a recent timestamp.</p>
 <code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
 of the server.</p>
 <blockquote>
-<div><figure class="align-default" id="id7">
+<div><figure class="align-default" id="id4">
 <p class="plantuml">
 <img src="_images/plantuml-c3d163448b0d70a04ec6e7af1c18c8884ef6c5fe.png" alt="&#64;startuml
 package &quot;Docker Compose Environment&quot;  #DDDDDD {
@@ -625,7 +653,7 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 &#64;enduml"/>
 </p>
 <figcaption>
-<p><span class="caption-text">Both components running in one machine using Docker Compose</span><a class="headerlink" href="#id7" title="Link to this image">#</a></p>
+<p><span class="caption-text">Both components running in one machine using Docker Compose</span><a class="headerlink" href="#id4" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </div></blockquote>
@@ -727,20 +755,17 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-device">IoT Device</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#django">Django</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Django</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#django">Django</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#migrate-database-model">Migrate Database Model</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#run-django-unit-tests">Run Django Unit Tests</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#entity-relationship-diagram-erd">Entity Relationship Diagram (ERD)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#leshan-lwm2m">Leshan LwM2M</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Leshan LwM2M</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#leshan-lwm2m">Leshan LwM2M</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#overview-and-interfaces">Overview and Interfaces</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">IoT Devices with Zephyr</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation">Simulation</a></li>
 </ul>
 </li>
