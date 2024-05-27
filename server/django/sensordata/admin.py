@@ -92,19 +92,22 @@ class DeviceOperationAdmin(admin.ModelAdmin):
 
         # Determine the value based on the type of resource value
         value = None
-        if resource_type.data_type == 'int':
+        if resource_type.data_type == 'integer':
             value = resource.int_value
         elif resource_type.data_type == 'float':
             value = resource.float_value
         elif resource_type.data_type == 'string':
             value = resource.str_value
         elif resource_type.data_type == 'bool':
-            value = resource.bool_value
+            value = resource.int_value
+        elif resource_type.data_type == 'time':
+            value = resource.int_value
+        # Execute operation
+        elif resource_type.data_type == '':
+            pass
         else:
-            # TODO: maybe an execute operation?
             log.error('Resource value not found')
             return
-
 
         # Construct the URL based on the device, object_id, and resource_id
         url = (

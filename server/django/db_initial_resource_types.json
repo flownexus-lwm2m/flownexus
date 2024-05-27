@@ -1,0 +1,290 @@
+[
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3303,
+      "resource_id": 5700,
+      "name": "temperature",
+      "data_type": "float"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3304,
+      "resource_id": 5700,
+      "name": "humidity",
+      "data_type": "float"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 0,
+      "name": "manufacturer",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 1,
+      "name": "model_number",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 2,
+      "name": "serial_number",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 3,
+      "name": "firmware_version",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 4,
+      "name": "reboot",
+      "data_type": ""
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 5,
+      "name": "factory_reset",
+      "data_type": ""
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 6,
+      "name": "power_source",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 7,
+      "name": "power_source_v",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 8,
+      "name": "power_source_i",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 9,
+      "name": "battery_level",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 10,
+      "name": "memory_free",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 11,
+      "name": "error_code",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 12,
+      "name": "reset_error_code",
+      "data_type": ""
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 13,
+      "name": "current_time",
+      "data_type": "time"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 14,
+      "name": "utc_offset",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 15,
+      "name": "timezone",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 16,
+      "name": "binding_mode",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 17,
+      "name": "device_type",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 18,
+      "name": "hardware_version",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 19,
+      "name": "software_version",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 20,
+      "name": "battery_status",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 21,
+      "name": "memory_total",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 3,
+      "resource_id": 22,
+      "name": "ext_dev_info",
+      "data_type": "objlnk"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 5,
+      "resource_id": 0,
+      "name": "package",
+      "data_type": "opaque"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 5,
+      "resource_id": 1,
+      "name": "package_uri",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 5,
+      "resource_id": 2,
+      "name": "update",
+      "data_type": ""
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 5,
+      "resource_id": 3,
+      "name": "state",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 5,
+      "resource_id": 4,
+      "name": "update_result",
+      "data_type": "integer"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 5,
+      "resource_id": 5,
+      "name": "package_name",
+      "data_type": "string"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 5,
+      "resource_id": 6,
+      "name": "package_version",
+      "data_type": "string"
+    }
+  }
+]

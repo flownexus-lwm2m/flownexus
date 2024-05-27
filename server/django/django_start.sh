@@ -11,5 +11,7 @@ echo "Running migrate..."
 python manage.py migrate 2>&1 | tee -a $logfile
 echo "Loading initial data..."
 python manage.py loaddata db_initial_data.json 2>&1 | tee -a $logfile
+echo "Loading lwm2m resource types data..."
+python manage.py loaddata db_initial_resource_types.json 2>&1 | tee -a $logfile
 echo "Starting the server..."
 python manage.py runserver 0.0.0.0:8000 2>&1 | tee -a "$logfile"

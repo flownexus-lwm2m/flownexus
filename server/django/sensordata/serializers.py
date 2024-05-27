@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Device, ResourceType, Resource
 from django.utils import timezone
-from .lwm2m_mappings import LWM2M_RESOURCE_MAP
 import binascii
 import struct
 import logging
@@ -86,19 +85,14 @@ class LwM2MSerializer(serializers.Serializer):
             logger.error(f"Invalid resource path: {res}")
             raise serializers.ValidationError("Invalid resource path")
 
-
-        # Fetch resource information from static mapping
-        resource_info = LWM2M_RESOURCE_MAP.get((object_id, resource_id))
-        if not resource_info:
+        # Fetch resource information from Database
+        resource_type = ResourceType.objects.get(object_id=object_id,
+                                                 resource_id=resource_id)
+        if not resource_type:
             raise serializers.ValidationError(f"Resource type {object_id}/{resource_id} not found")
 
-        resource_type, _ = ResourceType.objects.get_or_create(
-            object_id=object_id,
-            resource_id=resource_id,
-            defaults={'name': resource_info['name'], 'data_type': resource_info['data_type']}
-        )
-
-        data_type = resource_info['data_type']
+        logger.debug(f"Adding resource_type: {resource_type}")
+        data_type = resource_type.data_type
 
         # Some LwM2M Resources have a OPAQUE type, which needs decoding
         if resource['kind'] == 'singleResource':
@@ -124,12 +118,14 @@ class LwM2MSerializer(serializers.Serializer):
         # Assign the decoded value to the appropriate field
         if data_type == 'float':
             resource_data['float_value'] = decoded_value
-        elif data_type == 'int':
+        elif data_type == 'integer':
             resource_data['int_value'] = decoded_value
         elif data_type == 'string':
             resource_data['str_value'] = decoded_value
         elif data_type == 'time':
-            resource_data['str_value'] = decoded_value
+            resource_data['int_value'] = decoded_value
+        elif data_type == 'boolean':
+            resource_data['int_value'] = decoded_value
         else:
             logger.error(f"Unsupported data type: {data_type}")
             raise serializers.ValidationError(f"Unsupported data type")
