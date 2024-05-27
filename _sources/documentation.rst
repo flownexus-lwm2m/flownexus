@@ -205,8 +205,7 @@ can be started in emulation with the following command:
 
 .. code-block:: console
 
-  host:lwm2m_server/server$ zephyr_build_run_sim.sh
-
+  host:lwm2m_server$ zephyr_build_run_sim.sh
   *** Booting nRF Connect SDK zephyr-v3.5.0-3024-g7c3e830729b7 ***
   [00:00:00.000,000] <dbg> net_lwm2m_engine: lwm2m_engine_init: LWM2M engine socket receive thread started
   [00:00:00.000,000] <dbg> net_lwm2m_obj_security: security_create: Create LWM2M security instance: 0
