@@ -12,7 +12,7 @@ trap cleanup EXIT
 ../tools/net-tools/net-setup.sh start
 
 ## Build and run Zephyr
-west build -p=auto -b qemu_x86 ../zephyr/samples/net/lwm2m_client -- -DCONF=overlay-lwm2m-1.1.conf
+west build -p=auto -b qemu_x86 fw_test/lwm2m_client -- -DCONF=overlay-lwm2m-1.1.conf
 west build -t run
 
 cleanup
