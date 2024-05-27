@@ -40,7 +40,7 @@ class SensorDataTests(APITestCase):
             val = pl['val']
 
             # Verify the Device was created
-            device = Device.objects.get(device_id=ep)
+            device = Device.objects.get(endpoint=ep)
             self.assertIsNotNone(device)
             self.assertEqual(device.name, ep)
 

@@ -21,9 +21,9 @@ LESHAN_URI = os.getenv('LESHAN_URI', 'http://0.0.0.0:8080') + '/api'
 
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
-    list_display = ('device_id', 'name')
-    search_fields = ('device_id', 'name')
-    readonly_fields = ('device_id', 'name')
+    list_display = ('endpoint',)
+    search_fields = ('endpoint',)
+    readonly_fields = ('endpoint',)
 
     def get_model_perms(self, request):
         return {
@@ -51,14 +51,14 @@ class ResourceTypeAdmin(admin.ModelAdmin):
 @admin.register(Resource)
 class ResourceAdmin(admin.ModelAdmin):
     list_display = ('device', 'resource_type', 'timestamp')
-    search_fields = ('device__device_id', 'resource_type__name')
+    search_fields = ('device__endpoint', 'resource_type__name')
     list_filter = ('device', 'resource_type', 'timestamp')
 
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = ('device', 'event_type', 'start_time', 'end_time')
-    search_fields = ('device__device_id', 'event_type')
+    search_fields = ('device__endpoint', 'event_type')
     list_filter = ('device', 'event_type')
 
 
@@ -73,7 +73,7 @@ class EventResourceAdmin(admin.ModelAdmin):
 class DeviceOperationAdmin(admin.ModelAdmin):
     list_display = ('resource', 'operation_type', 'status', 'timestamp_sent',
                     'retransmit_counter', 'last_attempt')
-    search_fields = ('resource__device__device_id', 'operation_type', 'status')
+    search_fields = ('resource__device__endpoint', 'operation_type', 'status')
     list_filter = ('resource__resource_type', 'operation_type', 'status', 'timestamp_sent')
     readonly_fields = ('status', 'timestamp_sent', 'retransmit_counter',
                        'last_attempt', 'operation_type')
@@ -111,7 +111,7 @@ class DeviceOperationAdmin(admin.ModelAdmin):
 
         # Construct the URL based on the device, object_id, and resource_id
         url = (
-            f'{LESHAN_URI}/clients/{device.device_id}/'
+            f'{LESHAN_URI}/clients/{device.endpoint}/'
             f'{resource_type.object_id}/0/{resource_type.resource_id}'
         )
         params = {'timeout': 5, 'format': 'CBOR'}
@@ -127,7 +127,7 @@ class DeviceOperationAdmin(admin.ModelAdmin):
         response = requests.put(url, params=params, headers=headers, json=data)
 
         if response.status_code == 200:
-            log.debug(f'Data sent to device {device.device_id} successfully')
+            log.debug(f'Data sent to device {device.endpoint} successfully')
             log.debug(f'Response: {response.status_code} - {response.json()}')
             obj.status = 'completed'
         else:
