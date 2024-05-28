@@ -4,3 +4,4 @@ plantuml==0.3.0
 sphinxcontrib-plantuml
 sphinx-autobuild
 codespell
+tox

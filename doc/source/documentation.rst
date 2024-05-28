@@ -4,9 +4,14 @@ Documentation
 Overview
 --------
 
-General Requirements
-....................
+This documentation describes a local server-based IoT system that leverages
+the Lightweight Machine to Machine (LwM2M) protocol to communicate between
+IoT devices running Zephyr OS and a backend server using Django. The
+system does not depend on external cloud services and is designed to operate
+fully within a local environment.
 
+Features
+........
 * No dependencies of external services like AWS, MQTT brokers or similar. The
   system has to be able to run in a local environment.
 * The main focus is the LwM2M protocol and the communication between Zephyr and
@@ -14,78 +19,61 @@ General Requirements
 * The system should show how to add data to a database and visualize it in a
   web application.
 * The web application has to support a secure login and basic user management.
-
-Platform Features
-.................
-
 * Certificate based authentication and encryption.
 * Server to read and observe resources from IoT Device.
 * Server to write resources to IoT Devices.
 * OTA Update.
 * Receive logs from IoT Devices.
 
-IoT Device
-..........
 
-An IoT device is a resource constrained (energy, flash..) that is connected to
-the internet. The IoT device has to support LwM2M. Mainly systems that run
+.. figure:: _static/FlowNexus-Architecture.png
+
+Key Components
+--------------
+
+IoT Devices
+...........
+These are typically resource-constrained devices
+(limited energy and storage capabilities) that run Zephyr OS. They communicate
+with the server using the UDP protocol to ensure constant connectivity,
+even in low power states. These devices are programmed to handle tasks
+like temperature sensing, location tracking, or any other telemetry
+based on Zephyr applications. They communicate via the UDP protocol to
+maintain a continuous link without needing frequent reconnections.
+The IoT device has to support LwM2M. Mainly systems that run
 Zephyr should be compatible. The application can e.g. be used with a dedicated
 nRF9160 device or via a simulation like native_sim or in Renode. The nRF9160 is
 a low power LTE-M and NB-IoT SoC that runs Zephyr OS. UDP is used as transport
 protocol as it allows to keep devices connected even when the device is
 sleeping for extended periods (TCP would require a new connection setup
-typically after a few minutes).
+typically after a few minutes)
 
-Django
-------
+LwM2M Server
+............
+The LwM2M server plays a critical role in managing communications with IoT devices.
+It handles data transmission, device monitoring, and control commands, ensuring
+that devices can report their telemetry data, receive configuration updates, and
+execute commands sent by the server. The server's efficient management of these
+tasks is essential for maintaining reliable communication with numerous IoT devices,
+especially those with limited power and processing resources.
 
-The Django server can also run locally, without the need of a docker container.
-Make sure to create a virtual environment and install the requirements:
+Django Server
+.............
+The Django server hosts the REST API, manages the database, and provides a web interface
+for data visualization and user management. This server acts as the backend
+infrastructure that supports the entire IoT ecosystem by:
 
-.. code-block:: console
+* **REST API**: Facilitates communication between the IoT devices and the server.
+  The API endpoints handle requests for data uploads from devices, send control commands,
+  and provide access to stored telemetry data.
 
-  host:lwm2m_server/server/django$ python3 -m venv venv
-  host:lwm2m_server/server/django$ source venv/bin/activate
-  host:lwm2m_server/server/django$ pip install -r requirements.txt
-  host:lwm2m_server/server/django$ python manage.py runserver
+* **Database Management**: Stores all the telemetry data, device information, user
+  accounts, and configuration settings. The database ensures that data is organized,
+  searchable, and retrievable in an efficient manner.
 
-Unless you add new files, you can keep the server running while modifying the
-server. The Django server should now be up and running under the following URL:
-``http://localhost:8000/admin``. The admin login is ``admin`` and the password
-is ``password`` for testing.
-
-
-.. warning::
-
-  Do not forget to change the password to the admin console as well as other
-  settings like SECRET_KEY, DEBUG flag in a production environment!
-
-
-Migrate Database Model
-......................
-
-.. code-block:: console
-
-   host:lwm2m_server/server/django$ python manage.py makemigrations sensordata
-   host:lwm2m_server/server/django$ python manage.py migrate
-
-Run Django Unit Tests
-.....................
-
-There are unit tests defined, which test the deserializer in Django, which
-parses the json payload from the Rest API. You can run the unit tests with the
-following command:
-
-.. code-block:: console
-
-  host:lwm2m_server/server/django$ python3 manage.py test sensordata
-  Found 2 test(s).
-  Creating test database for alias 'default'...
-  ----------------------------------------------------------------------
-  Ran 2 tests in 0.008s
-
-  OK
-  Destroying test database for alias 'default'...
+* **Web Interface**: Offers a user-friendly interface for data visualization and
+  management. Through this interface, users can monitor device status, visualize
+  telemetry data in real-time, manage user accounts, and configure device settings.
 
 Database Model
 ..............
@@ -141,50 +129,116 @@ devices to download and install. Each record includes a version identifier, the
 name of the file, a URL from where the device can retrieve the firmware, and
 timestamps for tracking when each firmware record was created and last updated.
 
-Leshan LwM2M
-------------
+Getting Started
+---------------
+.. warning::
 
-For testing the Lwm2m server can run locally, without the need of a docker
-container:
+  The following setup guide is for a native Linux Machine. For MacOS or Windows
+  consider creating a docker container build. One of the developers uses the following
+  `devcontainer.json` build environment:
+
+  .. code-block:: json
+
+    {
+      "name": "Ubuntu",
+      "image": "mcr.microsoft.com/devcontainers/base:jammy",
+      "runArgs": [
+        "--cap-add=NET_ADMIN",
+        "--cap-add=MKNOD",
+        "--device=/dev/net/tun",
+        "--sysctl=net.ipv6.conf.all.disable_ipv6=0",
+        "--sysctl=net.ipv6.conf.default.disable_ipv6=0"
+      ],
+      "postCreateCommand": "apt-get update && apt-get install -y iproute2 && echo 'IPv6 is enabled.'",
+      "remoteUser": "root"
+    }
+
+Before you we start with any development here are a few things you should get configured:
+
+* Get the Zephyr SDK downloaded and configured in your root directory. You can find the instructions
+  `here <https://docs.zephyrproject.org/latest/develop/toolchains/zephyr_sdk.html>`_.
+
+* Setup a virtual environment for the project.
 
 .. code-block:: console
 
-   host:lwm2m_server/server/leshan$ ./leshan_build_run.sh
+  host:~$ sudo apt update && sudo apt upgrade
+  host:~$ sudo apt install python3-pip python3.10-venv
+  host:~$ python3.10 -m venv venv
+  host:~$ source venv/bin/activate
+  host:~$ pip install --upgrade pip && pip install west
+  host:~$ west init -m https://github.com/jonas-rem/lwm2m_server --mr main flownexus_workspace
+  host:~$ cd flownexus_workspace
+  host:~/flownexus_workspace$ west update
 
-Overview and Interfaces
-.......................
+Contributing to the Documentation
+.................................
 
-The server consists of two components. The LwM2M server and the Django server.
-The LwM2M server is responsible for the communication with the IoT device. The
-Django server is responsible for the REST API, database and visualization. The
-two components are connected via a REST API.
+.. code-block:: console
 
-  .. uml::
-   :caption: Both components running in one machine
+  host:~$ sudo apt-get install default-jre plantuml graphviz
+  host:~$ source venv/bin/activate
+  host:~$ cd flownexus_workspace/lwm2m_server/doc
+  host:lwm2m_server/doc$ pip install -r requirements.txt
+  host:lwm2m_server/doc$ tox -e py3-html
 
-   @startuml
-   left to right direction
-   !define LESHAN
-   !define DJANGO
-   !define NODE
-   package "Server" #DDDDDD {
-     [Leshan LwM2M Server] as Leshan
-     [Django Server\n- serves REST API\n- maintains db Model\n- DB] as Django
-   }
+Open the generated index.html in the doc/build directory in your browser.
 
-   [External Zephyr Node 1] as Node1
-   [External Zephyr Node 2] as Node2
-   [External Zephyr Node N] as NodeN
+Contributing to Django
+......................
+The Django server can also run locally, without the need of a docker container.
+Make sure to create a virtual environment and install the requirements:
 
-   Node1 --> Leshan : LwM2M over UDP
-   Node2 --> Leshan : LwM2M over UDP
-   NodeN --> Leshan : LwM2M over UDP
-   Leshan -right-> Django : REST API\nSensor Val, States..
-   :User: -up-> Django : HTTPS
-   @enduml
+.. code-block:: console
+
+  host:~$ source venv/bin/activate
+  host:~$ cd flownexus_workspace/lwm2m_server/server/django
+  host:lwm2m_server/server/django$ pip install -r requirements.txt
+  host:lwm2m_server/server/django$ ./django_start.sh
+
+The Django server should now be up and running under the following URL:
+``http://localhost:8000/admin``. The admin login is ``admin`` and the password
+
+.. warning::
+
+  Do not forget to change the password to the admin console as well as other
+  settings like SECRET_KEY, DEBUG flag in a production environment!
+
+
+There are also unit tests defined, which test the deserializer in Django, which
+parses the json payload from the Rest API. You can run the unit tests with the
+following command:
+
+.. code-block:: console
+
+  host:~/flownexus_workspace/lwm2m_server/server/django$ python manage.py test sensordata
+  Found 2 test(s).
+  Creating test database for alias 'default'...
+  ----------------------------------------------------------------------
+  Ran 2 tests in 0.008s
+
+  OK
+  Destroying test database for alias 'default'...
+
+
+
+Contributing to Leshan
+......................
+The Leshan server can also run locally, without the need of a docker container.
+
+.. code-block:: console
+
+  host:~$ sudo apt update
+  host:~$ sudo apt install openjdk-17-jdk maven
+  host:~$ source venv/bin/activate
+  host:~$ cd flownexus_workspace/lwm2m_server/server/leshan
+  host:lwm2m_server/server/leshan$ ./leshan_build_run.sh
+
+The Leshan server should now be up and running under the following URL: ``http://localhost:8080``.
+
 
 IoT Devices with Zephyr
------------------------
+.......................
 
 As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
 ``subsys/net/lib/lwm2m``. This LwM2M client sample application implements the
@@ -193,11 +247,11 @@ be build with the following command:
 
 .. code-block:: console
 
-  host:lwm2m_server$ west build -b nrf9161dk_nrf9160_ns fw_test/lwm2m_client -p
-  host:lwm2m_server$ west flash --recover
+  host:~/flownexus_workspace/lwm2m_server$ west build -b nrf9161dk_nrf9160_ns fw_test/lwm2m_client -p
+  host:~/flownexus_workspace/lwm2m_server$ west flash --recover
 
-Simulation
-..........
+LwM2M Client Simulation
+.......................
 
 The Zephyr application can run in simulation mode. This allows to test all
 components locally. Once leshan and Zephyr are running, the Zephyr application
@@ -205,7 +259,7 @@ can be started in emulation with the following command:
 
 .. code-block:: console
 
-  host:lwm2m_server$ zephyr_build_run_sim.sh
+  host:~/flownexus_workspace/lwm2m_server$ ./zephyr_build_run_sim.sh
   *** Booting nRF Connect SDK zephyr-v3.5.0-3024-g7c3e830729b7 ***
   [00:00:00.000,000] <dbg> net_lwm2m_engine: lwm2m_engine_init: LWM2M engine socket receive thread started
   [00:00:00.000,000] <dbg> net_lwm2m_obj_security: security_create: Create LWM2M security instance: 0
@@ -271,7 +325,7 @@ The container can be build and started with the following commands:
 
 .. code-block:: console
 
-  host:lwm2m_server/server$ docker compose build
+  host:~/flownexus_workspace/lwm2m_server/server$ docker compose build
   [+] Building 0.5s (20/20) FINISHED                               docker:default
    => [leshan internal] load build definition from Dockerfile.leshan         0.0s
    => [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s
@@ -296,7 +350,7 @@ The container can be build and started with the following commands:
 
 .. code-block:: console
 
-  host:lwm2m_server/server$ docker compose up
+  host:~/flownexus_workspace/lwm2m_server/server$ docker compose up
   [+] Running 2/0
    ✔ Container server-leshan-1  Created                                      0.0s
    ✔ Container server-django-1  Created                                      0.0s
