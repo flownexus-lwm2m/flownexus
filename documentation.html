@@ -14,28 +14,28 @@
   
   <script data-cfasync="false">
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
-    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
-<link href="_static/styles/bootstrap.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
 
   
-  <link href="_static/vendor/fontawesome/6.5.1/css/all.min.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.1/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.1/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.1/webfonts/fa-regular-400.woff2" />
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=384b581d" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=ac1fc1b8" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae" />
-  <script src="_static/vendor/fontawesome/6.5.1/js/all.min.js?digest=8d27b9dea8ad943066ae"></script>
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=3ee479438cf8b5e0d341"></script>
 
     <script src="_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
@@ -55,27 +55,23 @@
 
   
   
-  <a id="pst-skip-link" class="skip-link" href="#main-content">Skip to main content</a>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
-    <i class="fa-solid fa-arrow-up"></i>
-    Back to top
-  </button>
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
 
   
   <input type="checkbox"
           class="sidebar-toggle"
-          name="__primary"
-          id="__primary"/>
-  <label class="overlay overlay-primary" for="__primary"></label>
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
   <input type="checkbox"
           class="sidebar-toggle"
-          name="__secondary"
-          id="__secondary"/>
-  <label class="overlay overlay-secondary" for="__secondary"></label>
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
   <div class="search-button__wrapper">
     <div class="search-button__overlay"></div>
@@ -97,8 +93,13 @@
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
 </form></div>
   </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
     </header>
   
 
@@ -178,7 +179,7 @@
 
       </div>
       
-      <main id="main-content" class="bd-main">
+      <main id="main-content" class="bd-main" role="main">
         
         
 
@@ -187,7 +188,7 @@
           <div class="bd-content">
             <div class="bd-article-container">
               
-              <div class="bd-header-article">
+              <div class="bd-header-article d-print-none">
 <div class="header-article-items header-article__inner">
   
     <div class="header-article-items__start">
@@ -382,6 +383,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#key-components">Key Components</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices">IoT Devices</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-server">LwM2M Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#terminology">Terminology</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#django-server">Django Server</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
 </ul>
@@ -390,6 +392,12 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-the-documentation">Contributing to the Documentation</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-django">Contributing to Django</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-leshan">Contributing to Leshan</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#communication-interfaces">Communication &amp; Interfaces</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-device">Data Flow: Backend -&gt; Device</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-client-simulation">LwM2M Client Simulation</a></li>
 </ul>
@@ -466,6 +474,19 @@ that devices can report their telemetry data, receive configuration updates, and
 execute commands sent by the server. The server’s efficient management of these
 tasks is essential for maintaining reliable communication with numerous IoT devices,
 especially those with limited power and processing resources.</p>
+</section>
+<section id="terminology">
+<h3>Terminology<a class="headerlink" href="#terminology" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>LwM2M:</strong> Lightweight Machine to Machine protocol.</p></li>
+<li><p><strong>Leshan:</strong> LwM2M server implementation as one main component of the system.</p></li>
+<li><p><strong>Backend</strong>: Django instance that is responsible for the REST API, database
+and visualization.</p></li>
+<li><p><strong>Frontend</strong>: Web application that visualizes the data from the backend,
+integrated into Django.</p></li>
+<li><p><strong>Endpoint</strong>: IoT device that is connected to Leshan, represented by a unique
+Endpoint name.</p></li>
+</ul>
 </section>
 <section id="django-server">
 <h3>Django Server<a class="headerlink" href="#django-server" title="Link to this heading">#</a></h3>
@@ -623,6 +644,75 @@ following command:</p>
 </div>
 <p>The Leshan server should now be up and running under the following URL: <code class="docutils literal notranslate"><span class="pre">http://localhost:8080</span></code>.</p>
 </section>
+</section>
+<section id="communication-interfaces">
+<h2>Communication &amp; Interfaces<a class="headerlink" href="#communication-interfaces" title="Link to this heading">#</a></h2>
+<p>The communication between IoT devices and Leshan is specified by the OMA LwM2M
+standard:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.openmobilealliance.org/release/LightweightM2M/V1_1_1-20190617-A/OMA-TS-LightweightM2M_Core-V1_1_1-20190617-A.pdf">LwM2M core specification v1.1.1</a></p></li>
+<li><p><a class="reference external" href="https://www.openmobilealliance.org/release/LightweightM2M/V1_1_1-20190617-A/OMA-TS-LightweightM2M_Transport-V1_1_1-20190617-A.pdf">LwM2M transport binding v1.1.1</a></p></li>
+</ul>
+<p>The standard describes how the LwM2M server (Leshan) works, however, it does
+not describe how to connect a backend server to Leshan. The backend is
+responsible for storing the data in a database and implementing application
+logic. A frontend can access the data in the database and visualize outward
+facing user interfaces. Leshan acts as a gateway between Endpoints and the
+backend. There should be no application specific logic implemented in Leshan.</p>
+<p>In order to communicate and exchange data, both components (Leshan LwM2M Server
+and Django) post data to each other’s ReST APIs. Communication is typically
+triggered by IoT devices sending data or the user/application requesting data
+from devices.</p>
+<section id="data-flow-backend-device">
+<h3>Data Flow: Backend -&gt; Device<a class="headerlink" href="#data-flow-backend-device" title="Link to this heading">#</a></h3>
+<p>IoT devices usually operate in queue mode, meaning they are not always online.
+The LwM2M Server is aware of the current status of a device (Online/Offline)
+and communicates this status to the backend server. Leshan does not queue
+pending data that should be sent to the device when it comes online. The
+backend server must handle this by itself so it has to have a representation of
+the current status of each device as well as the data to be send. The resource
+table <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> is used to store pending operations that should be
+sent to the endpoint while it is online.</p>
+<p>Once an endpoint updates it’s registration (LwM2M Update Operation) Leshan
+notifies the backend. The backend checks the <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> table for
+pending operations and sends them to the device by posting to the Leshan hosted
+ReST API. Leshan keeps the post call open until the device acknowledges the
+operation or a timeout is generated. Endpoints can be slow to respond (several
+Seconds), so the backend has to handle the ReST API call in an asynchronous
+manner. By only sending data to endpoints while they are online, the backend
+can be sure that the ReST API calls are not open for a long time.</p>
+</section>
+<section id="asynchronous-communication">
+<h3>Asynchronous Communication<a class="headerlink" href="#asynchronous-communication" title="Link to this heading">#</a></h3>
+<p>Given that endpoints are comparably slow to respond, handling communication
+asynchronously is essention for efficient operation. This can be effectively
+managed using Celery, a distributed task queue. When Leshan notifies the
+backend of an endpoint status update, Celery can be used to handle the
+long-running API calls, ensuring that the backend remains responsive and
+scalable. Once the API call is complete the database will be updated with the
+result (e.g. <code class="docutils literal notranslate"><span class="pre">completed</span></code>, <code class="docutils literal notranslate"><span class="pre">pending</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code>). Retransmissions can be
+implemented based on the result and the requirements of the application. As the
+backend communicates with many endpoints simultaneously, an efficient queing
+mechanism is essential to ensure that the system remains responsive and
+scalable.</p>
+</section>
+<section id="example-communication">
+<h3>Example Communication<a class="headerlink" href="#example-communication" title="Link to this heading">#</a></h3>
+<p>The following example shows how the backend server can send a firmware download
+link resource <code class="docutils literal notranslate"><span class="pre">Package</span> <span class="pre">URI</span> <span class="pre">5/0/1</span></code> to an endpoint:</p>
+<ol class="arabic simple">
+<li><p>User creates new <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code>: resource path <code class="docutils literal notranslate"><span class="pre">5/0/1</span></code>, value
+<code class="docutils literal notranslate"><span class="pre">https://url.com/fw.bin</span></code>.</p></li>
+<li><p>Backend checks endpoint online status.</p></li>
+<li><p>If endpoint is offline, no further action is taken right away.</p></li>
+<li><p>Endoint comes online, Leshan sends update to the backend.</p></li>
+<li><p>Backend checks <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> table for pending operations for the
+endpoint.</p></li>
+<li><p>Finds pending operation, send resource to endpoint via the Leshan ReST API.</p></li>
+<li><p>Pending operation is marked <code class="docutils literal notranslate"><span class="pre">completed</span></code> if the endpoint acknowledges the
+operation.</p></li>
+</ol>
+</section>
 <section id="iot-devices-with-zephyr">
 <h3>IoT Devices with Zephyr<a class="headerlink" href="#iot-devices-with-zephyr" title="Link to this heading">#</a></h3>
 <p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
@@ -755,7 +845,7 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
               
               
               
-                <footer class="prev-next-footer">
+                <footer class="prev-next-footer d-print-none">
                   
 <div class="prev-next-area">
     <a class="left-prev"
@@ -799,6 +889,7 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#key-components">Key Components</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices">IoT Devices</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-server">LwM2M Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#terminology">Terminology</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#django-server">Django Server</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
 </ul>
@@ -807,6 +898,12 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-the-documentation">Contributing to the Documentation</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-django">Contributing to Django</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-leshan">Contributing to Leshan</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#communication-interfaces">Communication &amp; Interfaces</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-device">Data Flow: Backend -&gt; Device</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-client-simulation">LwM2M Client Simulation</a></li>
 </ul>
@@ -863,8 +960,8 @@ By Jonas Remmert, Akarshan Kapoor
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae"></script>
-<script src="_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae"></script>
+  <script src="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341"></script>
 
   <footer class="bd-footer">
   </footer>
