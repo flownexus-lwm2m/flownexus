@@ -73,7 +73,7 @@ public class LeshanSvr{
     private LeshanServer server;
     private ObjectMapper mapper;
     private SimpleModule module;
-    private static final Logger logger = LoggerFactory.getLogger(LeshanSvr.class);
+    private static final Logger log = LoggerFactory.getLogger(LeshanSvr.class);
 
     public LeshanSvr() {
         LeshanServerBuilder builder = new LeshanServerBuilder();
@@ -101,18 +101,18 @@ public class LeshanSvr{
         try {
             lwm2mServer.start();
             webServer.start();
-            logger.info("Web server started at {}.", webServer.getURI());
+            log.info("Web server started at {}.", webServer.getURI());
 
         } catch (Exception e) {
 
-            logger.error("Unable to create and start server ...", e);
+            log.error("Unable to create and start server ...", e);
             System.exit(1);
         }
     }
 
     public void start() {
         server.start();
-        logger.info("LeshanServer started");
+        log.info("LeshanServer started");
     }
 
     public void stop() {
@@ -126,7 +126,7 @@ public class LeshanSvr{
                 this.onboardingExecutor.shutdownNow();
 
                 if (!this.onboardingExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Pool did not terminate");
+                    log.error("Pool did not terminate");
                 }
             }
         } catch (InterruptedException ie) {
@@ -162,7 +162,7 @@ public class LeshanSvr{
     }
 
     private void onboardingDevice(Registration registration) {
-        logger.info("Onboarding " + registration.getEndpoint());
+        log.debug("Onboarding " + registration.getEndpoint());
         onboardingExecutor.submit(() -> {
             LwM2mLink[] res;
             try {
@@ -171,16 +171,16 @@ public class LeshanSvr{
                 if (discoverResponse.isSuccess()) {
                     res = discoverResponse.getObjectLinks();
                     if (res != null) {
-                        logger.debug("Resources:");
+                        log.trace("Resources:");
                         for (LwM2mLink link : res) {
-                            logger.debug(link.toString());
+                            log.trace(link.toString());
                         }
                     } else {
-                        logger.error("No resources found.");
+                        log.error("No resources found.");
                     }
                 } else {
-                    System.err.println("Failed to discover resources: " +
-                                             discoverResponse.getErrorMessage());
+                    log.error("Failed to discover resources: " +
+                                 discoverResponse.getErrorMessage());
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -196,7 +196,6 @@ public class LeshanSvr{
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
-                    logger.debug(jsonContent);
                     String data = new StringBuilder("{\"ep\":\"") //
                             .append(registration.getEndpoint()) //
                             .append("\",\"res\":\"3\"") //
@@ -206,8 +205,8 @@ public class LeshanSvr{
                             .toString();
                     dataSenderRest.sendData(data);
                 } else {
-                    System.err.println("Failed to read resources: " +
-                                             readResp.getErrorMessage());
+                    log.error("Failed to read resources: " +
+                                 readResp.getErrorMessage());
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -228,7 +227,7 @@ public class LeshanSvr{
 
     public class MyRegistrationListener implements RegistrationListener {
         private final LeshanSvr server;
-        private static final Logger logger = LoggerFactory.getLogger(MyRegistrationListener.class);
+        private static final Logger log = LoggerFactory.getLogger(MyRegistrationListener.class);
 
         public MyRegistrationListener(LeshanSvr server) {
             this.server = server;
@@ -237,7 +236,7 @@ public class LeshanSvr{
         @Override
         public void registered(Registration registration, Registration previousReg,
                                Collection<Observation> previousObsersations) {
-            logger.info("new device registered: " + registration.getEndpoint());
+            log.debug("new device registered: " + registration.getEndpoint());
             /* Onboarding: read and subscribe to device resources initially.*/
             server.onboardingDevice(registration);
         }
@@ -245,7 +244,7 @@ public class LeshanSvr{
         @Override
         public void updated(RegistrationUpdate update, Registration updatedReg,
                             Registration previousReg) {
-            logger.info("Device updated: " + updatedReg.getEndpoint());
+            log.debug("Device updated: " + updatedReg.getEndpoint());
         }
 
         @Override
@@ -253,14 +252,14 @@ public class LeshanSvr{
                                  Collection<Observation> observations,
                                  boolean expired,
                                  Registration newReg) {
-            logger.info("Device left: " + registration.getEndpoint());
+            log.debug("Device left: " + registration.getEndpoint());
         }
     }
 
 
     public class MyObservationListener implements ObservationListener {
         private final LeshanSvr server;
-        private static final Logger logger = LoggerFactory.getLogger(MyObservationListener.class);
+        private static final Logger log = LoggerFactory.getLogger(MyObservationListener.class);
 
         public MyObservationListener(LeshanSvr server) {
             this.server = server;
@@ -275,7 +274,6 @@ public class LeshanSvr{
                                Registration registration,
                                ObserveResponse response) {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            //logger.info("onResponse (single): " + response);
             String jsonContent = null;
             try {
                 jsonContent = mapper.writeValueAsString(response.getContent());
@@ -330,8 +328,8 @@ public class LeshanSvr{
 
         @Override
         public void onError(Observation observation, Registration registration, Exception error) {
-            logger.error("onError: " + registration.getEndpoint());
-            logger.error("onError: " + error);
+            log.error("onError: " + registration.getEndpoint());
+            log.error("onError: " + error);
         }
 
         @Override
@@ -341,7 +339,7 @@ public class LeshanSvr{
 
     public class MySendListener implements SendListener {
         private final LeshanSvr server;
-        private static final Logger logger = LoggerFactory.getLogger(MySendListener.class);
+        private static final Logger log = LoggerFactory.getLogger(MySendListener.class);
 
         public MySendListener(LeshanSvr server) {
             this.server = server;
@@ -351,17 +349,17 @@ public class LeshanSvr{
         public void dataReceived(Registration registration,
                                  TimestampedLwM2mNodes data,
                                  SendRequest request) {
-            logger.info("dataReceived from: " + registration.getEndpoint());
-            logger.info("data: " + data);
+            log.debug("dataReceived from: " + registration.getEndpoint());
+            log.debug("data: " + data);
         }
 
         @Override
         public void onError(Registration registration,
                             String errorMessage,
                             Exception error) {
-            logger.error("Unable to handle Send Request from: " + registration.getEndpoint());
-            logger.error(errorMessage);
-            logger.error(error.toString());
+            log.error("Unable to handle Send Request from: " + registration.getEndpoint());
+            log.error(errorMessage);
+            log.error(error.toString());
         }
     }
 }
