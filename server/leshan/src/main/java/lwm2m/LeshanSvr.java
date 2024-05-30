@@ -151,8 +151,10 @@ public class LeshanSvr{
         ServletHolder clientServletHolder = new ServletHolder(clientServlet);
         root.addServlet(clientServletHolder, "/api/clients/*");
 
-        ObjectSpecServlet objectSpecServlet = new ObjectSpecServlet(lwServer.getModelProvider(),
-                                                                    lwServer.getRegistrationService());
+        ObjectSpecServlet objectSpecServlet = new ObjectSpecServlet(
+                                                    lwServer.getModelProvider(),
+                                                    lwServer.getRegistrationService()
+                                                    );
         ServletHolder objectSpecServletHolder = new ServletHolder(objectSpecServlet);
         root.addServlet(objectSpecServletHolder, "/api/objectspecs/*");
 
@@ -234,7 +236,7 @@ public class LeshanSvr{
 
         @Override
         public void registered(Registration registration, Registration previousReg,
-                                      Collection<Observation> previousObsersations) {
+                               Collection<Observation> previousObsersations) {
             logger.info("new device registered: " + registration.getEndpoint());
             /* Onboarding: read and subscribe to device resources initially.*/
             server.onboardingDevice(registration);
@@ -242,14 +244,15 @@ public class LeshanSvr{
 
         @Override
         public void updated(RegistrationUpdate update, Registration updatedReg,
-                                  Registration previousReg) {
+                            Registration previousReg) {
             logger.info("Device updated: " + updatedReg.getEndpoint());
         }
 
         @Override
-        public void unregistered(Registration registration, Collection<Observation> observations,
-                                         boolean expired,
-                                         Registration newReg) {
+        public void unregistered(Registration registration,
+                                 Collection<Observation> observations,
+                                 boolean expired,
+                                 Registration newReg) {
             logger.info("Device left: " + registration.getEndpoint());
         }
     }
@@ -268,8 +271,9 @@ public class LeshanSvr{
         }
 
         @Override
-        public void onResponse(SingleObservation observation, Registration registration,
-                                      ObserveResponse response) {
+        public void onResponse(SingleObservation observation,
+                               Registration registration,
+                               ObserveResponse response) {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
             //logger.info("onResponse (single): " + response);
             String jsonContent = null;
@@ -293,8 +297,9 @@ public class LeshanSvr{
         }
 
         @Override
-        public void onResponse(CompositeObservation observation, Registration registration,
-                                      ObserveCompositeResponse response) {
+        public void onResponse(CompositeObservation observation,
+                               Registration registration,
+                               ObserveCompositeResponse response) {
             String jsonContent = null;
             String jsonListOfPath = null;
             try {
@@ -344,17 +349,19 @@ public class LeshanSvr{
 
         @Override
         public void dataReceived(Registration registration,
-                                         TimestampedLwM2mNodes data, SendRequest request) {
+                                 TimestampedLwM2mNodes data,
+                                 SendRequest request) {
             logger.info("dataReceived from: " + registration.getEndpoint());
             logger.info("data: " + data);
         }
 
         @Override
         public void onError(Registration registration,
-                                 String errorMessage, Exception error) {
-          logger.error("Unable to handle Send Request from: " + registration.getEndpoint());
-          logger.error(errorMessage);
-          logger.error(error.toString());
+                            String errorMessage,
+                            Exception error) {
+            logger.error("Unable to handle Send Request from: " + registration.getEndpoint());
+            logger.error(errorMessage);
+            logger.error(error.toString());
         }
     }
 }
