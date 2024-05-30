@@ -10,8 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DataSenderRest {
-
-    private static final Logger logger = LoggerFactory.getLogger(DataSenderRest.class);
+    private static final Logger log = LoggerFactory.getLogger(DataSenderRest.class);
     private HttpClient client;
     private static final String BASE_URI = System.getenv("DATA_SENDER_URI");
 
@@ -29,20 +28,20 @@ public class DataSenderRest {
                 .POST(BodyPublishers.ofString(data))
                 .build();
 
-        logger.debug("DataSenderRest: {}", data);
+        log.debug("POST: {}", data);
 
         client.sendAsync(request, BodyHandlers.ofString())
               .thenApply(response -> {
                   if (response.statusCode() >= 200 && response.statusCode() < 300) {
                       return response.body();
                   } else {
-                      logger.error("Request failed with: {}", response.statusCode());
-                      logger.error("Payload: {}", data);
+                      log.error("Request failed with: {}", response.statusCode());
+                      log.error("Payload: {}", data);
                       return null;
                   }
               })
               .exceptionally(e -> {
-                  logger.error("Request failed", e);
+                  log.error("Request failed", e);
                   return null;
               });
     }
