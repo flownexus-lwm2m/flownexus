@@ -53,10 +53,10 @@
 <text text-anchor="start" x="307" y="-78.6" font-family="Roboto" font-weight="bold" font-size="8.00">BigAutoField</text>
 <text text-anchor="start" x="366" y="-78.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="213" y="-65.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="227" y="-65.6" font-family="Roboto" font-size="8.00">data_type</text>
+<text text-anchor="start" x="227" y="-65.6" font-family="Roboto" font-size="8.00" fill="#7b7b7b">data_type</text>
 <text text-anchor="start" x="268" y="-65.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="293" y="-65.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="307" y="-65.6" font-family="Roboto" font-size="8.00">CharField</text>
+<text text-anchor="start" x="307" y="-65.6" font-family="Roboto" font-size="8.00" fill="#7b7b7b">CharField</text>
 <text text-anchor="start" x="345" y="-65.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="213" y="-52.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="227" y="-52.6" font-family="Roboto" font-size="8.00">name</text>
