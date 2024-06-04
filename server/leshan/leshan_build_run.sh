@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Ensure logs directory exists
+mkdir -p logs
+
 logfile="logs/leshan_$(date +%Y-%m-%d_%H-%M-%S).log"
 touch "$logfile"
 
