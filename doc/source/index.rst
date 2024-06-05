@@ -30,4 +30,5 @@ Table of Contents
    :maxdepth: 1
 
    documentation
+   api
    weblog

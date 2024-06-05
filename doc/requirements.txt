@@ -2,6 +2,8 @@ Sphinx==7.3.7
 sphinx-book-theme==1.1.2
 plantuml==0.3.0
 sphinxcontrib-plantuml
+sphinxcontrib-httpdomain
+sphinxcontrib-redoc
 sphinx-autobuild
 codespell
 tox

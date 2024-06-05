@@ -7,7 +7,6 @@ import struct
 TEST_PAYLOAD = [
     {
         "ep": "qemu_x86",
-        "res": "3",
         "val": {
             "instances": [
                 {

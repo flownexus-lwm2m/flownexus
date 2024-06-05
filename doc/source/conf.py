@@ -31,6 +31,7 @@ extensions = [
     'sphinxcontrib.plantuml',
     'sphinx.ext.imgconverter',
     'sphinx.ext.todo',
+    'sphinxcontrib.redoc',
 ]
 
 templates_path = ['_templates']
@@ -44,6 +45,17 @@ html_logo = '_static/LogoForReadme.png'
 html_css_files = [
   'custom.css',
 ]
+
+# Automatically generate ReST API documentation
+redoc = [
+    {
+    'spec': '../build/generated/openapi-schema.yaml',
+    'page': 'api',
+    'embed': True,
+    },
+]
+# Specify a more recent version for API Doc v
+redoc_uri = 'https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js'
 
 html_theme_options = {
     'repository_url': 'https://github.com/jonas-rem/lwm2m_server',
