@@ -162,7 +162,7 @@ public class LeshanSvr{
     }
 
     private void onboardingDevice(Registration registration) {
-        log.debug("Onboarding " + registration.getEndpoint());
+        log.trace("Onboarding " + registration.getEndpoint());
         onboardingExecutor.submit(() -> {
             LwM2mLink[] res;
             try {
@@ -190,25 +190,17 @@ public class LeshanSvr{
                 ReadResponse readResp = server.send(registration, new ReadRequest(3));
                 if (readResp.isSuccess()) {
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
-                    String jsonContent = null;
-                    try {
-                        jsonContent = mapper.writeValueAsString(readResp.getContent());
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                    String data = new StringBuilder("{\"ep\":\"") //
-                            .append(registration.getEndpoint()) //
-                            .append("\",\"res\":\"3\"") //
-                            .append(",\"val\":") //
-                            .append(jsonContent) //
-                            .append("}") //
-                            .toString();
-                    dataSenderRest.sendData(data);
+                    ObjectNode node = mapper.createObjectNode();
+                    node.put("ep", registration.getEndpoint());
+                    node.set("val", mapper.valueToTree(readResp.getContent()));
+
+                    dataSenderRest.sendData(ApiPath.RESOURCE, node);
                 } else {
                     log.error("Failed to read resources: " +
                                  readResp.getErrorMessage());
                 }
             } catch (InterruptedException e) {
+                log.error("Failed to read resources: " + e.getMessage());
                 e.printStackTrace();
             }
 
@@ -236,15 +228,42 @@ public class LeshanSvr{
         @Override
         public void registered(Registration registration, Registration previousReg,
                                Collection<Observation> previousObsersations) {
-            log.debug("new device registered: " + registration.getEndpoint());
-            /* Onboarding: read and subscribe to device resources initially.*/
+            log.trace("new device registered: " + registration.getEndpoint());
+
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", registration.getEndpoint());
+            node.put("obj_id", 10240);
+            ObjectNode valNode = mapper.createObjectNode();
+            valNode.put("kind", "singleResource");
+            valNode.put("id", 0);
+            valNode.put("type", "TIME");
+            valNode.put("value", registration.getRegistrationDate().getTime());
+            node.set("val", valNode);
+
+            dataSenderRest.sendData(ApiPath.RESOURCE, node);
+
+            /* Onboarding: read and subscribe to device resources initially.
+             * TODO: Remove this onboarding, it should be triggered by Django
+             */
             server.onboardingDevice(registration);
         }
 
         @Override
         public void updated(RegistrationUpdate update, Registration updatedReg,
                             Registration previousReg) {
-            log.debug("Device updated: " + updatedReg.getEndpoint());
+            log.trace("Device updated: " + updatedReg.getEndpoint());
+
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", updatedReg.getEndpoint());
+            node.put("obj_id", 10240);
+            ObjectNode valNode = mapper.createObjectNode();
+            valNode.put("kind", "singleResource");
+            valNode.put("id", 2);
+            valNode.put("type", "TIME");
+            valNode.put("value", updatedReg.getRegistrationDate().getTime());
+            node.set("val", valNode);
+
+            dataSenderRest.sendData(ApiPath.RESOURCE, node);
         }
 
         @Override
@@ -252,7 +271,19 @@ public class LeshanSvr{
                                  Collection<Observation> observations,
                                  boolean expired,
                                  Registration newReg) {
-            log.debug("Device left: " + registration.getEndpoint());
+            log.trace("Device left: " + registration.getEndpoint());
+
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", registration.getEndpoint());
+            node.put("obj_id", 10240);
+            ObjectNode valNode = mapper.createObjectNode();
+            valNode.put("kind", "singleResource");
+            valNode.put("id", 1);
+            valNode.put("type", "TIME");
+            valNode.put("value", registration.getRegistrationDate().getTime());
+            node.set("val", valNode);
+
+            dataSenderRest.sendData(ApiPath.RESOURCE, node);
         }
     }
 
@@ -274,23 +305,13 @@ public class LeshanSvr{
                                Registration registration,
                                ObserveResponse response) {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            String jsonContent = null;
-            try {
-                jsonContent = mapper.writeValueAsString(response.getContent());
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-
             if (registration != null) {
-                String data = new StringBuilder("{\"ep\":\"") //
-                        .append(registration.getEndpoint()) //
-                        .append("\",\"res\":\"") //
-                        .append(observation.getPath()).append("\",\"val\":") //
-                        .append(jsonContent) //
-                        .append("}") //
-                        .toString();
+                ObjectNode node = mapper.createObjectNode();
+                node.put("ep", registration.getEndpoint());
+                node.put("obj_id", observation.getPath().getObjectId());
+                node.set("val", mapper.valueToTree(response.getContent()));
 
-                dataSenderRest.sendData(data);
+                dataSenderRest.sendData(ApiPath.RESOURCE, node);
             }
         }
 
@@ -298,31 +319,14 @@ public class LeshanSvr{
         public void onResponse(CompositeObservation observation,
                                Registration registration,
                                ObserveCompositeResponse response) {
-            String jsonContent = null;
-            String jsonListOfPath = null;
-            try {
-                jsonContent = mapper.writeValueAsString(response.getContent());
-                List<String> paths = new ArrayList<String>();
-                for (LwM2mPath path : response.getObservation().getPaths()) {
-                    paths.add(path.toString());
-                }
-                jsonListOfPath = mapper.writeValueAsString(paths);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            log.trace("onResponse: " + response.getObservation());
 
-            if (registration != null) {
-                String data = new StringBuilder("{\"ep\":\"") //
-                        .append(registration.getEndpoint()) //
-                        .append("\",\"val\":") //
-                        .append(jsonContent) //
-                        .append(",\"paths\":") //
-                        .append(jsonListOfPath) //
-                        .append("}") //
-                        .toString();
+            mapper.enable(SerializationFeature.INDENT_OUTPUT);
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", registration.getEndpoint());
+            node.set("val", mapper.valueToTree(response.getContent()));
 
-                dataSenderRest.sendData(data);
-            }
+            dataSenderRest.sendData(ApiPath.RESOURCE, node);
         }
 
 
@@ -349,8 +353,8 @@ public class LeshanSvr{
         public void dataReceived(Registration registration,
                                  TimestampedLwM2mNodes data,
                                  SendRequest request) {
-            log.debug("dataReceived from: " + registration.getEndpoint());
-            log.debug("data: " + data);
+            log.trace("dataReceived from: " + registration.getEndpoint());
+            log.trace("data: " + data);
         }
 
         @Override
@@ -363,4 +367,3 @@ public class LeshanSvr{
         }
     }
 }
-
