@@ -1,6 +1,8 @@
 from django.urls import path
-from .views import PostResourceView
+from .views import PostSingleResourceView, PostCompositeResourceView
+
 
 urlpatterns = [
-    path('resource', PostResourceView.as_view(), name='post_resource'),
+    path('resource/single', PostSingleResourceView.as_view(), name='post-single-resource'),
+    path('resource/composite', PostCompositeResourceView.as_view(), name='post-composite-resource'),
 ]
