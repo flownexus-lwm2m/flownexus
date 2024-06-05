@@ -194,7 +194,7 @@ public class LeshanSvr{
                     node.put("ep", registration.getEndpoint());
                     node.set("val", mapper.valueToTree(readResp.getContent()));
 
-                    dataSenderRest.sendData(ApiPath.RESOURCE, node);
+                    dataSenderRest.sendData(ApiPath.COMPOSITE_RES, node);
                 } else {
                     log.error("Failed to read resources: " +
                                  readResp.getErrorMessage());
@@ -240,7 +240,7 @@ public class LeshanSvr{
             valNode.put("value", registration.getRegistrationDate().getTime());
             node.set("val", valNode);
 
-            dataSenderRest.sendData(ApiPath.RESOURCE, node);
+            dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
 
             /* Onboarding: read and subscribe to device resources initially.
              * TODO: Remove this onboarding, it should be triggered by Django
@@ -263,7 +263,7 @@ public class LeshanSvr{
             valNode.put("value", updatedReg.getRegistrationDate().getTime());
             node.set("val", valNode);
 
-            dataSenderRest.sendData(ApiPath.RESOURCE, node);
+            dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
         }
 
         @Override
@@ -283,7 +283,7 @@ public class LeshanSvr{
             valNode.put("value", registration.getRegistrationDate().getTime());
             node.set("val", valNode);
 
-            dataSenderRest.sendData(ApiPath.RESOURCE, node);
+            dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
         }
     }
 
@@ -311,7 +311,7 @@ public class LeshanSvr{
                 node.put("obj_id", observation.getPath().getObjectId());
                 node.set("val", mapper.valueToTree(response.getContent()));
 
-                dataSenderRest.sendData(ApiPath.RESOURCE, node);
+                dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
             }
         }
 
@@ -326,7 +326,7 @@ public class LeshanSvr{
             node.put("ep", registration.getEndpoint());
             node.set("val", mapper.valueToTree(response.getContent()));
 
-            dataSenderRest.sendData(ApiPath.RESOURCE, node);
+            dataSenderRest.sendData(ApiPath.COMPOSITE_RES, node);
         }
 
 
