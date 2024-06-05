@@ -50,46 +50,42 @@ class ValueSerializer(serializers.Serializer):
 
 class LwM2MSerializer(serializers.Serializer):
     ep = serializers.CharField(max_length=255)
-    res = serializers.CharField(max_length=255)
+    obj_id = serializers.IntegerField(required=False)
     val = ValueSerializer()
+
 
     def create(self, validated_data):
         ep = validated_data['ep']
-        res = validated_data['res']
         val = validated_data['val']
 
         # ep maps to Device.endpoint
         device, _ = Device.objects.get_or_create(endpoint=ep)
 
-        # Check if value is an object with instances
-        if val['kind'] == 'obj' and 'instances' in val:
+        # Check if value is an object with instances (Composite resource)
+        if val['kind'] == 'obj':
+            obj_id = val.get('id')
             for instance in val['instances']:
                 for resource in instance['resources']:
-                    self.handle_resource(device, res, resource)
+                    self.handle_resource(device, obj_id, resource)
         else:
             # Single resource handling
-            self.handle_resource(device, res, val)
+            try:
+                obj_id = validated_data.get('obj_id')
+            except KeyError as e:
+                logger.error(f"Missing required fields: {e}")
+                raise serializers.ValidationError(f"Missing required fields: {e}")
+            self.handle_resource(device, obj_id, val)
 
         return device
 
-    def handle_resource(self, device, res, resource):
-        # Parse resource path to get object_id and resource_id
-        resource_path_parts = res.strip('/').split('/')
-        if len(resource_path_parts) == 3:
-            object_id = int(resource_path_parts[0])
-            resource_id = int(resource_path_parts[2])
-        elif resource_path_parts[0].isdigit():
-            object_id = int(resource_path_parts[0])
-            resource_id = resource['id']
-        else:
-            logger.error(f"Invalid resource path: {res}")
-            raise serializers.ValidationError("Invalid resource path")
 
+    def handle_resource(self, device, obj_id, resource):
+        res_id = resource['id']
         # Fetch resource information from Database
-        resource_type = ResourceType.objects.get(object_id=object_id,
-                                                 resource_id=resource_id)
+        resource_type = ResourceType.objects.get(object_id=obj_id,
+                                                 resource_id=res_id)
         if not resource_type:
-            raise serializers.ValidationError(f"Resource type {object_id}/{resource_id} not found")
+            raise serializers.ValidationError(f"Resource type {obj_id}/{res_id} not found")
 
         logger.debug(f"Adding resource_type: {resource_type}")
         data_type = resource_type.data_type
