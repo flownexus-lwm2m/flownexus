@@ -23,7 +23,8 @@ final class ApiPath {
     }
 
     /* Static factory method for creating instance of ApiPath */
-    public static final ApiPath RESOURCE = new ApiPath("/leshan_api/resource");
+    public static final ApiPath SINGLE_RES = new ApiPath("/leshan_api/resource/single");
+    public static final ApiPath COMPOSITE_RES = new ApiPath("/leshan_api/resource/composite");
 
     @Override
     public String toString() {
