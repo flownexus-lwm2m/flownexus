@@ -1,11 +1,12 @@
 from rest_framework import serializers
-from .models import Device, ResourceType, Resource
+from ..models import ResourceType, Resource
 from django.utils import timezone
 import binascii
 import struct
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def decode_opaque_data(hex_value, data_type):
     if hex_value == '':
@@ -27,63 +28,41 @@ def decode_opaque_data(hex_value, data_type):
 
 
 class ResourceDataSerializer(serializers.Serializer):
-    kind = serializers.CharField(max_length=50)
-    id = serializers.IntegerField()
-    type = serializers.CharField(max_length=50)
-    value = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    values = serializers.DictField(child=serializers.CharField(), required=False, allow_null=True)
+    KIND_CHOICES = [
+        'singleResource',
+        'multiResource',
+    ]
+    kind = serializers.ChoiceField(choices=KIND_CHOICES)
+    id = serializers.IntegerField(help_text="Resource ID")
+    TYPE_CHOICES = [
+        ('TIME', 'Timestamp as integer'),
+        ('STRING', 'String'),
+        ('OPAQUE', 'Undefined data type'),
+        ('INTEGER', 'Integer'),
+        ('FLOAT', 'Float'),
+        ('BOOLEAN', 'Boolean, internally stored as integer'),
+    ]
+    type = serializers.ChoiceField(choices=TYPE_CHOICES)
+    value = serializers.CharField(max_length=255,
+                                  required=False,
+                                  allow_blank=True,
+                                  help_text="The value associated with the resource,\
+                                             type-dependent. Provide either the field\
+                                             value or values"
+    )
+    values = serializers.DictField(child=serializers.CharField(max_length=255),
+                                   required=False,
+                                   allow_empty=True,
+                                   help_text="The list of values associated with the resource.\
+                                              Provide either the field value or values."
+    )
 
 
-class InstanceSerializer(serializers.Serializer):
-    kind = serializers.CharField(max_length=50)
-    id = serializers.IntegerField()
-    resources = ResourceDataSerializer(many=True)
-
-
-class ValueSerializer(serializers.Serializer):
-    instances = InstanceSerializer(many=True, required=False)
-    kind = serializers.CharField(max_length=50)
-    id = serializers.IntegerField()
-    type = serializers.CharField(max_length=50, required=False)
-    value = serializers.CharField(max_length=255, required=False)
-
-
-class LwM2MSerializer(serializers.Serializer):
-    ep = serializers.CharField(max_length=255)
-    obj_id = serializers.IntegerField(required=False)
-    val = ValueSerializer()
-
-
-    def create(self, validated_data):
-        ep = validated_data['ep']
-        val = validated_data['val']
-
-        # ep maps to Device.endpoint
-        device, _ = Device.objects.get_or_create(endpoint=ep)
-
-        # Check if value is an object with instances (Composite resource)
-        if val['kind'] == 'obj':
-            obj_id = val.get('id')
-            for instance in val['instances']:
-                for resource in instance['resources']:
-                    self.handle_resource(device, obj_id, resource)
-        else:
-            # Single resource handling
-            try:
-                obj_id = validated_data.get('obj_id')
-            except KeyError as e:
-                logger.error(f"Missing required fields: {e}")
-                raise serializers.ValidationError(f"Missing required fields: {e}")
-            self.handle_resource(device, obj_id, val)
-
-        return device
-
-
+class HandleResourceMixin:
     def handle_resource(self, device, obj_id, resource):
         res_id = resource['id']
         # Fetch resource information from Database
-        resource_type = ResourceType.objects.get(object_id=obj_id,
-                                                 resource_id=res_id)
+        resource_type = ResourceType.objects.get(object_id=obj_id, resource_id=res_id)
         if not resource_type:
             raise serializers.ValidationError(f"Resource type {obj_id}/{res_id} not found")
 
@@ -100,7 +79,7 @@ class LwM2MSerializer(serializers.Serializer):
             logging.error(f"multiResource currently not supported, skipping...")
             decoded_value = None
         else:
-            #TODO: Handle multiResource (Maybe json field in DB)
+            # TODO: Handle multiResource (Maybe json field in DB)
             logger.error(f"Unsupported resource kind: {resource['kind']}")
             raise serializers.ValidationError(f"Unsupported resource kind: {resource['kind']}")
 
