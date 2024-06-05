@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import CreateSensorDataView
+from .views import PostResourceView
 
 urlpatterns = [
-    path('endpointdata/', CreateSensorDataView.as_view(), name='add_sensor_data'),
+    path('resource', PostResourceView.as_view(), name='post_resource'),
 ]
