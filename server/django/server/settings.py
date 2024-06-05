@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_extensions",
     "rest_framework",
+    "drf_spectacular",
     "sensordata",
 ]
 
@@ -89,6 +90,19 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Add this
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Automatic ReST API documentation
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Leshan ReST API',
+    'DESCRIPTION': 'The leshan_api is hosted by Django. The API allows the\
+                    Leshan server to add LwM2M resource data to Django. It is \
+                    an internal API and must not be exposed to the internet.',
+    'VERSION': '1.0.0',
+}
 
 ROOT_URLCONF = "server.urls"
 

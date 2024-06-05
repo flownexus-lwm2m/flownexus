@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class PostResourceView(APIView):
+    serializer_class = LwM2MSerializer
 
     def post(self, request):
         serializer = LwM2MSerializer(data=request.data, many=False)
