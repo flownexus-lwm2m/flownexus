@@ -286,5 +286,32 @@
       "name": "package_version",
       "data_type": "string"
     }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 10240,
+      "resource_id": 0,
+      "name": "ep_registered",
+      "data_type": "time"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 10240,
+      "resource_id": 1,
+      "name": "ep_unregistered",
+      "data_type": "time"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 10240,
+      "resource_id": 2,
+      "name": "ep_registration_update",
+      "data_type": "time"
+    }
   }
 ]
