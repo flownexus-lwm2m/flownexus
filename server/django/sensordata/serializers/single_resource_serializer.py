@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .base import HandleResourceMixin, ResourceDataSerializer
-from ..models import Device
+from ..models import Endpoint
 
 
 class SingleResourceSerializer(HandleResourceMixin, serializers.Serializer):
@@ -13,8 +13,7 @@ class SingleResourceSerializer(HandleResourceMixin, serializers.Serializer):
         obj_id = validated_data['obj_id']
         val = validated_data['val']
 
-        # ep maps to Device.endpoint
-        device, _ = Device.objects.get_or_create(endpoint=ep)
-        self.handle_resource(device, obj_id, val)
+        endpoint, _ = Endpoint.objects.get_or_create(endpoint=ep)
+        self.handle_resource(endpoint, obj_id, val)
 
-        return device
+        return endpoint
