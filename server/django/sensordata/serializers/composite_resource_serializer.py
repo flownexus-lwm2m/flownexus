@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .base import HandleResourceMixin, ResourceDataSerializer
-from ..models import Device
+from ..models import Endpoint
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,17 +32,16 @@ class CompositeResourceSerializer(HandleResourceMixin, serializers.Serializer):
         ep = validated_data['ep']
         val = validated_data['val']
 
-        # ep maps to Device.endpoint
-        device, _ = Device.objects.get_or_create(endpoint=ep)
+        endpoint, _ = Endpoint.objects.get_or_create(endpoint=ep)
 
         # Check if value is an object with instances (Composite resource)
         if val['kind'] == 'obj':
             obj_id = val.get('id')
             for instance in val['instances']:
                 for resource in instance['resources']:
-                    self.handle_resource(device, obj_id, resource)
+                    self.handle_resource(endpoint, obj_id, resource)
         else:
             logger.error("Expected composite resource data.")
             raise serializers.ValidationError("Expected composite resource data.")
 
-        return device
+        return endpoint
