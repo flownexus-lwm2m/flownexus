@@ -4,12 +4,12 @@ import os
 from django.utils import timezone
 from django.contrib import admin
 from .models import (
-    Device,
+    Endpoint,
     ResourceType,
     Resource,
     Event,
     EventResource,
-    DeviceOperation,
+    EndpointOperation,
     Firmware
 )
 
@@ -19,11 +19,11 @@ log = logging.getLogger('sensordata')
 LESHAN_URI = os.getenv('LESHAN_URI', 'http://0.0.0.0:8080') + '/api'
 
 
-@admin.register(Device)
-class DeviceAdmin(admin.ModelAdmin):
-    list_display = ('endpoint',)
-    search_fields = ('endpoint',)
-    readonly_fields = ('endpoint',)
+@admin.register(Endpoint)
+class EndpointAdmin(admin.ModelAdmin):
+    list_display = ('endpoint', 'registered')
+    search_fields = ('endpoint', 'registered')
+    readonly_fields = ('endpoint', 'registered')
 
     def get_model_perms(self, request):
         return {
@@ -50,16 +50,16 @@ class ResourceTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Resource)
 class ResourceAdmin(admin.ModelAdmin):
-    list_display = ('device', 'resource_type', 'timestamp')
-    search_fields = ('device__endpoint', 'resource_type__name')
-    list_filter = ('device', 'resource_type', 'timestamp')
+    list_display = ('endpoint', 'resource_type', 'timestamp')
+    search_fields = ('endpoint__endpoint', 'resource_type__name')
+    list_filter = ('endpoint', 'resource_type', 'timestamp')
 
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('device', 'event_type', 'start_time', 'end_time')
-    search_fields = ('device__endpoint', 'event_type')
-    list_filter = ('device', 'event_type')
+    list_display = ('endpoint', 'event_type', 'start_time', 'end_time')
+    search_fields = ('endpoint__endpoint', 'event_type')
+    list_filter = ('endpoint', 'event_type')
 
 
 @admin.register(EventResource)
@@ -69,11 +69,11 @@ class EventResourceAdmin(admin.ModelAdmin):
     list_filter = ('event', 'resource__resource_type')
 
 
-@admin.register(DeviceOperation)
-class DeviceOperationAdmin(admin.ModelAdmin):
+@admin.register(EndpointOperation)
+class EndpointOperationAdmin(admin.ModelAdmin):
     list_display = ('resource', 'operation_type', 'status', 'timestamp_sent',
                     'retransmit_counter', 'last_attempt')
-    search_fields = ('resource__device__endpoint', 'operation_type', 'status')
+    search_fields = ('resource__endpoint__endpoint', 'operation_type', 'status')
     list_filter = ('resource__resource_type', 'operation_type', 'status', 'timestamp_sent')
     readonly_fields = ('status', 'timestamp_sent', 'retransmit_counter',
                        'last_attempt', 'operation_type')
@@ -85,9 +85,9 @@ class DeviceOperationAdmin(admin.ModelAdmin):
         obj.timestamp_sent = timezone.now()
         super().save_model(request, obj, form, change)
 
-        # Get the resource associated with the device operation
+        # Get the resource associated with the endpoint operation
         resource = obj.resource
-        device = resource.device
+        endpoint = resource.endpoint
         resource_type = resource.resource_type
 
         # Determine the value based on the type of resource value
@@ -109,9 +109,9 @@ class DeviceOperationAdmin(admin.ModelAdmin):
             log.error('Resource value not found')
             return
 
-        # Construct the URL based on the device, object_id, and resource_id
+        # Construct the URL based on the endpoint, object_id, and resource_id
         url = (
-            f'{LESHAN_URI}/clients/{device.endpoint}/'
+            f'{LESHAN_URI}/clients/{endpoint.endpoint}/'
             f'{resource_type.object_id}/0/{resource_type.resource_id}'
         )
         params = {'timeout': 5, 'format': 'CBOR'}
@@ -127,7 +127,7 @@ class DeviceOperationAdmin(admin.ModelAdmin):
         response = requests.put(url, params=params, headers=headers, json=data)
 
         if response.status_code == 200:
-            log.debug(f'Data sent to device {device.endpoint} successfully')
+            log.debug(f'Data sent to endpoint {endpoint.endpoint} successfully')
             log.debug(f'Response: {response.status_code} - {response.json()}')
             obj.status = 'completed'
         else:

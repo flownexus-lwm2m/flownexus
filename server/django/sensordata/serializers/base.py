@@ -59,7 +59,8 @@ class ResourceDataSerializer(serializers.Serializer):
 
 
 class HandleResourceMixin:
-    def handle_resource(self, device, obj_id, resource):
+
+    def handle_resource(self, endpoint, obj_id, resource):
         res_id = resource['id']
         # Fetch resource information from Database
         resource_type = ResourceType.objects.get(object_id=obj_id, resource_id=res_id)
@@ -85,7 +86,7 @@ class HandleResourceMixin:
 
         # Create the Resource instance based on value type
         resource_data = {
-            'device': device,
+            'endpoint': endpoint,
             'resource_type': resource_type,
             'timestamp': timezone.now()
         }
@@ -104,5 +105,13 @@ class HandleResourceMixin:
         else:
             logger.error(f"Unsupported data type: {data_type}")
             raise serializers.ValidationError(f"Unsupported data type")
+
+        # Update the registration status if the resource is a registration resource
+        if resource_type.name == 'ep_registered':
+            endpoint.registered = True
+            endpoint.save()
+        elif resource_type.name == 'ep_unregistered':
+            endpoint.registered = False
+            endpoint.save()
 
         Resource.objects.create(**resource_data)
