@@ -14,6 +14,10 @@ class SingleResourceSerializer(HandleResourceMixin, serializers.Serializer):
         val = validated_data['val']
 
         endpoint, _ = Endpoint.objects.get_or_create(endpoint=ep)
-        self.handle_resource(endpoint, obj_id, val)
+        try:
+            self.handle_resource(endpoint, obj_id, val)
+        except serializers.ValidationError as e:
+            # Re-raise the validation error to be handled by Django's validation system
+            raise e
 
         return endpoint
