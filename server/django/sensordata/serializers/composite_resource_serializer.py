@@ -39,7 +39,12 @@ class CompositeResourceSerializer(HandleResourceMixin, serializers.Serializer):
             obj_id = val.get('id')
             for instance in val['instances']:
                 for resource in instance['resources']:
-                    self.handle_resource(endpoint, obj_id, resource)
+                    try:
+                        self.handle_resource(endpoint, obj_id, resource)
+                    except serializers.ValidationError as e:
+                        # Re-raise the validation error to be handled by
+                        # Django's validation system
+                        raise e
         else:
             logger.error("Expected composite resource data.")
             raise serializers.ValidationError("Expected composite resource data.")
