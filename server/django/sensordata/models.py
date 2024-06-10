@@ -35,6 +35,9 @@ class ResourceType(models.Model):
     def __str__(self):
         return f"{self.object_id}/{self.resource_id} - {self.name}"
 
+    def get_value_field(self):
+        return dict(ResourceType.TYPE_CHOICES).get(self.data_type)
+
 class Resource(models.Model):
     """Stores individual resource data, such as sensor readings, from an endpoint."""
     endpoint = models.ForeignKey(Endpoint, on_delete=models.PROTECT)
@@ -49,6 +52,13 @@ class Resource(models.Model):
 
     def __str__(self):
         return f"{self.endpoint} - {self.resource_type} - {self.timestamp}"
+
+    # Gets the correct value field, based on the linked ResourceType
+    def get_value(self):
+        value_field = self.resource_type.get_value_field()
+        if value_field:
+            return getattr(self, value_field)
+        return None
 
 class Event(models.Model):
     """
@@ -88,8 +98,8 @@ class EndpointOperation(models.Model):
         default=Status.QUEUED,
     )
     transmit_counter = models.IntegerField(default=0)
-    timestamp_created = models.DateTimeField()
-    last_attempt = models.DateTimeField(auto_now=True)
+    timestamp_created = models.DateTimeField(auto_now_add=True)
+    last_attempt = models.DateTimeField(auto_now_add=False, null=True)
 
 class Firmware(models.Model):
     """Represents a firmware update file that can be downloaded by an endpoint."""

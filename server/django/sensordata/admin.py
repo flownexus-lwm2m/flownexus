@@ -1,8 +1,7 @@
-import requests
 import logging
-import os
 from django.utils import timezone
 from django.contrib import admin
+from .tasks import process_pending_operations
 from .models import (
     Endpoint,
     ResourceType,
@@ -14,9 +13,6 @@ from .models import (
 )
 
 log = logging.getLogger('sensordata')
-
-# Check if we run in a container or locally
-LESHAN_URI = os.getenv('LESHAN_URI', 'http://0.0.0.0:8080') + '/api'
 
 
 @admin.register(Endpoint)
@@ -79,63 +75,13 @@ class EndpointOperationAdmin(admin.ModelAdmin):
                        'last_attempt', 'operation_type')
 
     def save_model(self, request, obj, form, change):
-        # Update both timestamps, as we handle a manual entry. Automatic
-        # retries would only update the last_attempt
-        obj.last_attempt = timezone.now()
+        # Update created timestamp, as we handle a manual entry.
         obj.timestamp_created = timezone.now()
         super().save_model(request, obj, form, change)
 
-        # Get the resource associated with the endpoint operation
-        resource = obj.resource
-        endpoint = resource.endpoint
-        resource_type = resource.resource_type
+        # Trigger the async task to process the operation
+        process_pending_operations.delay(obj.resource.endpoint.endpoint)
 
-        # Determine the value based on the type of resource value
-        value = None
-        if resource_type.data_type == 'integer':
-            value = resource.int_value
-        elif resource_type.data_type == 'float':
-            value = resource.float_value
-        elif resource_type.data_type == 'string':
-            value = resource.str_value
-        elif resource_type.data_type == 'bool':
-            value = resource.int_value
-        elif resource_type.data_type == 'time':
-            value = resource.int_value
-        # Execute operation
-        elif resource_type.data_type == '':
-            pass
-        else:
-            log.error('Resource value not found')
-            return
-
-        # Construct the URL based on the endpoint, object_id, and resource_id
-        url = (
-            f'{LESHAN_URI}/clients/{endpoint.endpoint}/'
-            f'{resource_type.object_id}/0/{resource_type.resource_id}'
-        )
-        params = {'timeout': 5, 'format': 'CBOR'}
-        headers = {'Content-Type': 'application/json'}
-        data = {
-            "id": resource_type.resource_id,
-            "kind": "singleResource",
-            "value": value,
-            "type": resource_type.data_type
-        }
-
-        # Send the request
-        response = requests.put(url, params=params, headers=headers, json=data)
-
-        if response.status_code == 200:
-            log.debug(f'Data sent to endpoint {endpoint.endpoint} successfully')
-            log.debug(f'Response: {response.status_code} - {response.json()}')
-            obj.status = 'completed'
-        else:
-            log.error(f'Failed to send data: {response.status_code}')
-            obj.status = 'pending'
-            obj.transmit_counter += 1
-
-        obj.save()
 
 @admin.register(Firmware)
 class FirmwareAdmin(admin.ModelAdmin):
