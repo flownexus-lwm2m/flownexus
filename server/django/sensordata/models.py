@@ -8,10 +8,26 @@ class Endpoint(models.Model):
 
 class ResourceType(models.Model):
     """Map LwM2M object/resource IDs to human-readable names and data types."""
+
+    TIME = 'TIME'
+    STRING = 'STRING'
+    OPAQUE = 'OPAQUE'
+    INTEGER = 'INTEGER'
+    FLOAT = 'FLOAT'
+    BOOLEAN = 'BOOLEAN'
+
+    TYPE_CHOICES = [
+        (TIME, 'int_value'),
+        (STRING, 'str_value'),
+        (INTEGER, 'int_value'),
+        (FLOAT, 'float_value'),
+        (BOOLEAN, 'int_value'),
+    ]
+
     object_id = models.IntegerField()
     resource_id = models.IntegerField()
     name = models.CharField(max_length=255)
-    data_type = models.CharField(max_length=50, blank=True)
+    data_type = models.CharField(max_length=50, choices=TYPE_CHOICES)
 
     class Meta:
         unique_together = ('object_id', 'resource_id')
@@ -57,11 +73,22 @@ class EventResource(models.Model):
 
 class EndpointOperation(models.Model):
     """Operation to be performed on an endpoint"""
+
+    class Status(models.TextChoices):
+        SENDING = 'SENDING'
+        QUEUED = 'QUEUED'
+        CONFIRMED = 'CONFIRMED'
+        FAILED = 'FAILED'
+
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     operation_type = models.CharField(max_length=100)  # e.g., 'send', 'update'
-    status = models.CharField(max_length=100)  # e.g., 'pending', 'completed', 'failed'
-    timestamp_sent = models.DateTimeField()  # When the operation was performed
-    retransmit_counter = models.IntegerField(default=0)
+    status = models.CharField(
+        max_length=100,
+        choices=Status.choices,
+        default=Status.QUEUED,
+    )
+    transmit_counter = models.IntegerField(default=0)
+    timestamp_created = models.DateTimeField()
     last_attempt = models.DateTimeField(auto_now=True)
 
 class Firmware(models.Model):
