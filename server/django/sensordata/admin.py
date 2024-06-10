@@ -71,18 +71,18 @@ class EventResourceAdmin(admin.ModelAdmin):
 
 @admin.register(EndpointOperation)
 class EndpointOperationAdmin(admin.ModelAdmin):
-    list_display = ('resource', 'operation_type', 'status', 'timestamp_sent',
-                    'retransmit_counter', 'last_attempt')
+    list_display = ('resource', 'operation_type', 'status', 'timestamp_created',
+                    'transmit_counter', 'last_attempt')
     search_fields = ('resource__endpoint__endpoint', 'operation_type', 'status')
-    list_filter = ('resource__resource_type', 'operation_type', 'status', 'timestamp_sent')
-    readonly_fields = ('status', 'timestamp_sent', 'retransmit_counter',
+    list_filter = ('resource__resource_type', 'operation_type', 'status', 'timestamp_created')
+    readonly_fields = ('status', 'timestamp_created', 'transmit_counter',
                        'last_attempt', 'operation_type')
 
     def save_model(self, request, obj, form, change):
         # Update both timestamps, as we handle a manual entry. Automatic
         # retries would only update the last_attempt
         obj.last_attempt = timezone.now()
-        obj.timestamp_sent = timezone.now()
+        obj.timestamp_created = timezone.now()
         super().save_model(request, obj, form, change)
 
         # Get the resource associated with the endpoint operation
@@ -133,7 +133,7 @@ class EndpointOperationAdmin(admin.ModelAdmin):
         else:
             log.error(f'Failed to send data: {response.status_code}')
             obj.status = 'pending'
-            obj.retransmit_counter += 1
+            obj.transmit_counter += 1
 
         obj.save()
 
