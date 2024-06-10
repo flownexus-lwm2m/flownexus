@@ -298,16 +298,21 @@ Asynchronous Communication
 ...........................
 
 Given that endpoints are comparably slow to respond, handling communication
-asynchronously is essention for efficient operation. This can be effectively
+asynchronously is essential for efficient operation. This can be effectively
 managed using Celery, a distributed task queue. When Leshan notifies the
 backend of an endpoint status update, Celery can be used to handle the
 long-running API calls, ensuring that the backend remains responsive and
-scalable. Once the API call is complete the database will be updated with the
-result (e.g. ``completed``, ``pending``, ``failed``). Retransmissions can be
-implemented based on the result and the requirements of the application. As the
-backend communicates with many endpoints simultaneously, an efficient queing
-mechanism is essential to ensure that the system remains responsive and
-scalable.
+scalable. As the backend communicates with many endpoints simultaneously, an
+efficient queing mechanism is essential to ensure that the system remains
+responsive and scalable.
+
+Before the backend executes the API call, it updates the endpointOperation
+status to ``SENDING``, indicating an ongoing operation.
+
+Once the API call is complete the database will be updated with the result
+(e.g. ``CONFIRMED``, ``FAILED``, ``QUEUED``) depending on the result of the
+request. The ``FAILED`` status is assigned after 3 attempts. Retransmissions are
+triggered when the endpoint updates it's registration the next time.
 
 Example Communication
 .....................
