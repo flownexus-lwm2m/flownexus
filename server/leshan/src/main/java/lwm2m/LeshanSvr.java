@@ -12,8 +12,10 @@ import org.eclipse.leshan.core.observation.Observation;
 import org.eclipse.leshan.core.observation.CompositeObservation;
 import org.eclipse.leshan.core.observation.SingleObservation;
 import org.eclipse.leshan.core.request.ObserveRequest;
+import org.eclipse.leshan.core.request.ObserveCompositeRequest;
 import org.eclipse.leshan.core.response.ObserveCompositeResponse;
 import org.eclipse.leshan.core.response.ObserveResponse;
+import org.eclipse.leshan.core.request.ContentFormat;
 import org.eclipse.leshan.server.send.SendListener;
 import org.eclipse.leshan.core.request.SendRequest;
 import org.eclipse.leshan.core.request.ReadRequest;
@@ -189,10 +191,13 @@ public class LeshanSvr{
             try {
                 ReadResponse readResp = server.send(registration, new ReadRequest(3));
                 if (readResp.isSuccess()) {
+                    /* Match the additional hierachiy of the observe response format */
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     ObjectNode node = mapper.createObjectNode();
                     node.put("ep", registration.getEndpoint());
-                    node.set("val", mapper.valueToTree(readResp.getContent()));
+                    ObjectNode valNode = mapper.createObjectNode();
+                    valNode.set("/3", mapper.valueToTree(readResp.getContent()));
+                    node.set("val", valNode);
 
                     dataSenderRest.sendData(ApiPath.COMPOSITE_RES, node);
                 } else {
@@ -204,12 +209,49 @@ public class LeshanSvr{
                 e.printStackTrace();
             }
 
-            /* Subscribe to individual objects */
-            int[][] objectLinks = {{3303, 0, 5700}, {3304, 0, 5701}, {3305, 0, 5702}};
-            for (int[] link : objectLinks) {
-                ObserveRequest observeRequest = new ObserveRequest(link[0], link[1], link[2]);
+            /* Subscribe to single resource instances as an example
+             * 3303: Temperature Sensor
+             */
+            int[][] singleObjectLinks = {
+                {3303, 0, 5700}
+            };
+
+            for (int[] link : singleObjectLinks) {
                 try {
-                    server.send(registration, observeRequest);
+                    ObserveRequest singleRequest = new ObserveRequest(link[0], link[2]);
+
+                    log.trace("Sending ObserveRequest: " + singleRequest);
+                    server.send(registration, singleRequest);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            /* Subscribe to composite object instances as an example
+             * 10300: Custom Object Instance
+             */
+            int[][] compositeObjectLinks = {
+                {10300}
+            };
+
+            for (int[] link : compositeObjectLinks) {
+                try {
+                    List<LwM2mPath> paths = new ArrayList<>();
+                    paths.add(new LwM2mPath(link[0]));
+
+                    // Specify the content formats
+                    ContentFormat requestContentFormat = ContentFormat.SENML_CBOR;
+                    ContentFormat responseContentFormat = ContentFormat.SENML_CBOR;
+
+                    // Create the ObserveCompositeRequest for the whole object instance
+                    ObserveCompositeRequest observeCompositeRequest = new ObserveCompositeRequest(
+                        requestContentFormat,
+                        responseContentFormat,
+                        paths
+                    );
+
+                    log.trace("Sending ObserveCompositeRequest: " + observeCompositeRequest);
+                    server.send(registration, observeCompositeRequest);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
