@@ -15,13 +15,36 @@ class InstanceSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Instance Counter")
 
 
-class ValueSerializer(serializers.Serializer):
+class ObjectSerializer(serializers.Serializer):
     instances = InstanceSerializer(many=True, required=False)
     KIND_CHOICES = [
         'obj',
     ]
     kind = serializers.ChoiceField(choices=KIND_CHOICES)
     id = serializers.IntegerField(help_text="Object ID")
+
+
+class ValueSerializer(serializers.Serializer):
+    # Annotation for Django Rest Framework for documentation generation
+    objects = serializers.ListField(
+        child=ObjectSerializer(),
+        help_text="List of LwM2M objects"
+    )
+
+    def to_representation(self, instance):
+        ret = {}
+        for key, value in instance.items():
+            serializer = ObjectSerializer(value, context=self.context)
+            ret[key] = serializer.data
+        return ret
+
+    def to_internal_value(self, data):
+        ret = {}
+        for key, value in data.items():
+            serializer = ObjectSerializer(data=value, context=self.context)
+            serializer.is_valid(raise_exception=True)
+            ret[key] = serializer.validated_data
+        return ret
 
 
 class CompositeResourceSerializer(HandleResourceMixin, serializers.Serializer):
@@ -34,10 +57,9 @@ class CompositeResourceSerializer(HandleResourceMixin, serializers.Serializer):
 
         endpoint, _ = Endpoint.objects.get_or_create(endpoint=ep)
 
-        # Check if value is an object with instances (Composite resource)
-        if val['kind'] == 'obj':
-            obj_id = val.get('id')
-            for instance in val['instances']:
+        for _, obj in val.items():
+            obj_id = obj.get('id')
+            for instance in obj['instances']:
                 for resource in instance['resources']:
                     try:
                         self.handle_resource(endpoint, obj_id, resource)
@@ -45,8 +67,5 @@ class CompositeResourceSerializer(HandleResourceMixin, serializers.Serializer):
                         # Re-raise the validation error to be handled by
                         # Django's validation system
                         raise e
-        else:
-            logger.error("Expected composite resource data.")
-            raise serializers.ValidationError("Expected composite resource data.")
 
         return endpoint
