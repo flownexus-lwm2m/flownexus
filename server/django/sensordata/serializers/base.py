@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from ..models import ResourceType, Resource, Event, EventResource
-from django.utils import timezone
 from ..tasks import process_pending_operations
 import logging
 
@@ -44,7 +43,6 @@ class HandleResourceMixin:
         event_data = {
             'endpoint': endpoint,
             'event_type': event_type,
-            'time': timezone.now()
         }
         self.event = Event.objects.create(**event_data)
 
@@ -81,7 +79,6 @@ class HandleResourceMixin:
         resource_data = {
             'endpoint': endpoint,
             'resource_type': resource_type,
-            'timestamp': timezone.now(),
             data_type: res['value']
         }
 
