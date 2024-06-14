@@ -44,25 +44,34 @@ class ResourceTypeAdmin(admin.ModelAdmin):
         }
 
 
+class EventResourceInline(admin.TabularInline):
+    model = EventResource
+    extra = 0
+    can_delete = False
+    readonly_fields = ('resource',)
+
 @admin.register(Resource)
 class ResourceAdmin(admin.ModelAdmin):
     list_display = ('endpoint', 'resource_type', 'timestamp')
     search_fields = ('endpoint__endpoint', 'resource_type__name')
-    list_filter = ('endpoint', 'resource_type', 'timestamp')
-
+    list_filter = ('endpoint__endpoint', 'resource_type', 'timestamp')
+    readonly_fields = ('endpoint', 'resource_type', 'timestamp', 'int_value',
+                       'float_value', 'str_value')
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('endpoint', 'event_type', 'start_time', 'end_time')
-    search_fields = ('endpoint__endpoint', 'event_type')
+    list_display = ('endpoint', 'event_type', 'time')
+    search_fields = ('endpoint', 'event_type')
     list_filter = ('endpoint', 'event_type')
-
+    readonly_fields = ('endpoint', 'event_type', 'time')
+    inlines = [EventResourceInline]
 
 @admin.register(EventResource)
 class EventResourceAdmin(admin.ModelAdmin):
     list_display = ('event', 'resource')
     search_fields = ('event__event_type', 'resource__resource_type__name')
     list_filter = ('event', 'resource__resource_type')
+    readonly_fields = ('event', 'resource')
 
 
 @admin.register(EndpointOperation)

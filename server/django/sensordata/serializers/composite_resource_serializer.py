@@ -59,6 +59,7 @@ class CompositeResourceSerializer(HandleResourceMixin, serializers.Serializer):
 
         for _, obj in val.items():
             obj_id = obj.get('id')
+            self.create_event(endpoint, obj_id)
             for instance in obj['instances']:
                 for resource in instance['resources']:
                     try:
