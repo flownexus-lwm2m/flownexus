@@ -52,11 +52,10 @@ class EventResourceInline(admin.TabularInline):
 
 @admin.register(Resource)
 class ResourceAdmin(admin.ModelAdmin):
-    list_display = ('endpoint', 'resource_type', 'timestamp')
+    list_display = ('endpoint', 'resource_type', 'timestamp_created')
     search_fields = ('endpoint__endpoint', 'resource_type__name')
-    list_filter = ('endpoint__endpoint', 'resource_type', 'timestamp')
-    readonly_fields = ('endpoint', 'resource_type', 'timestamp', 'int_value',
-                       'float_value', 'str_value')
+    list_filter = ('endpoint__endpoint', 'resource_type', 'timestamp_created')
+    readonly_fields = ('timestamp_created',)
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):

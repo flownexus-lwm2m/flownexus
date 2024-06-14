@@ -45,13 +45,10 @@ class Resource(models.Model):
     int_value = models.IntegerField(null=True, blank=True)
     float_value = models.FloatField(null=True, blank=True)
     str_value = models.CharField(max_length=512, null=True, blank=True)
-    timestamp = models.DateTimeField()
-
-    class Meta:
-        unique_together = ('endpoint', 'resource_type', 'timestamp')
+    timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
 
     def __str__(self):
-        return f"{self.endpoint} - {self.resource_type} - {self.timestamp}"
+        return f"{self.endpoint} - {self.resource_type} - {self.timestamp_created}"
 
     # Gets the correct value field, based on the linked ResourceType
     def get_value(self):
@@ -67,7 +64,7 @@ class Event(models.Model):
     """
     endpoint = models.ForeignKey(Endpoint, on_delete=models.PROTECT)
     event_type = models.CharField(max_length=100)
-    time = models.DateTimeField()
+    time = models.DateTimeField(auto_now_add=True, blank=True)
 
     def __str__(self):
         return f"{self.endpoint} - {self.event_type} - {self.time}"
@@ -97,7 +94,7 @@ class EndpointOperation(models.Model):
         default=Status.QUEUED,
     )
     transmit_counter = models.IntegerField(default=0)
-    timestamp_created = models.DateTimeField(auto_now_add=True)
+    timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
     last_attempt = models.DateTimeField(auto_now_add=False, null=True)
 
 class Firmware(models.Model):
