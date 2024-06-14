@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import ResourceType, Resource
+from ..models import ResourceType, Resource, Event, EventResource
 from django.utils import timezone
 from ..tasks import process_pending_operations
 import logging
@@ -31,14 +31,31 @@ class ResourceDataSerializer(serializers.Serializer):
 
 
 class HandleResourceMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.event = None
 
-    def handle_resource(self, endpoint, obj_id, resource):
+
+    def create_event(self, endpoint, event_type):
+        """
+        Create an Event instance for the given endpoint and event type. If no event
+        is created, the resource data won't be associated with any event.
+        """
+        event_data = {
+            'endpoint': endpoint,
+            'event_type': event_type,
+            'time': timezone.now()
+        }
+        self.event = Event.objects.create(**event_data)
+
+
+    def handle_resource(self, endpoint, obj_id, res):
         # Some LwM2M Resources are currently unsupported, we can skip them for now.
-        if resource['kind'] == 'multiResource':
+        if res['kind'] == 'multiResource':
             logging.error(f"multiResource currently not supported, skipping...")
             return
 
-        res_id = resource['id']
+        res_id = res['id']
         # Fetch resource information from Database
         resource_type = ResourceType.objects.get(object_id=obj_id, resource_id=res_id)
         if not resource_type:
@@ -47,10 +64,10 @@ class HandleResourceMixin:
             raise serializers.ValidationError(err)
 
         # Validate that datatype is matching the resource type
-        data_type = dict(ResourceType.TYPE_CHOICES).get(resource['type'])
+        data_type = dict(ResourceType.TYPE_CHOICES).get(res['type'])
         res_data_type = dict(ResourceType.TYPE_CHOICES).get(resource_type.data_type)
         if not data_type:
-            err = f"Unsupported data type '{resource['type']}', skipping..."
+            err = f"Unsupported data type '{res['type']}', skipping..."
             logger.error(err)
             raise serializers.ValidationError(err)
         if data_type != res_data_type:
@@ -65,10 +82,15 @@ class HandleResourceMixin:
             'endpoint': endpoint,
             'resource_type': resource_type,
             'timestamp': timezone.now(),
-            data_type: resource['value']
+            data_type: res['value']
         }
 
-        Resource.objects.create(**resource_data)
+        created_res = Resource.objects.create(**resource_data)
+
+        # Create EventResource linking the event and the resource
+        if self.event is not None:
+            EventResource.objects.create(event=self.event, resource=created_res)
+            logger.debug(f"Added EventResource: {self.event} - {created_res}")
 
         # Update the registration status if the resource is a registration resource
         if resource_type.name == 'ep_registered':
