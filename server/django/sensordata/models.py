@@ -67,11 +67,10 @@ class Event(models.Model):
     """
     endpoint = models.ForeignKey(Endpoint, on_delete=models.PROTECT)
     event_type = models.CharField(max_length=100)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    time = models.DateTimeField()
 
     def __str__(self):
-        return f"{self.event_type} from {self.start_time} to {self.end_time} for {self.endpoint}"
+        return f"{self.endpoint} - {self.event_type} - {self.time}"
 
 class EventResource(models.Model):
     """Acts as a many-to-many bridge table that links resources to their respective events."""
