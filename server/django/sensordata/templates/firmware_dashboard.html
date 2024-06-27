@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Firmware Update Dashboard</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Version</th>
+            <th>File Name</th>
+            <th>Download URL</th>
+            <th>Created At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for update in firmware_updates %}
+        <tr>
+            <td>{{ update.version }}</td>
+            <td>{{ update.file_name }}</td>
+            <td><a href="{{ update.download_url }}">{{ update.download_url }}</a></td>
+            <td>{{ update.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
