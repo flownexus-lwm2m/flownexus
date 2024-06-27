@@ -458,7 +458,7 @@ class BinaryFiles(ComplianceTest):
     path_hint = "<git-top>"
 
     def run(self):
-        BINARY_ALLOW_PATHS = ("doc/", "boards/", "samples/")
+        BINARY_ALLOW_PATHS = ("doc/", "boards/", "samples/", "server/django/staticfiles/img/")
         # svg files are always detected as binary, see .gitattributes
         BINARY_ALLOW_EXT = (".jpg", ".jpeg", ".png", ".svg", ".webp")
 
