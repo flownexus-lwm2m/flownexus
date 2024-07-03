@@ -25,7 +25,6 @@
                 <nav class="mt-2">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
 
-
                         <li class="nav-item">
                             <a href="{% url 'admin_dashboard' %}"
                                 class="nav-link {% if request.path == '/admin_dashboard/' %}active{% endif %}">
@@ -90,6 +89,17 @@
                 <li class="nav-item d-none d-sm-inline-block">
                     <a href="https://jonas-rem.github.io/lwm2m_server/" class="nav-link">Documentation</a>
                 </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown2" role="button" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
+                        About
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown2">
+                        <a class="dropdown-item" href="{% url 'license_dashboard' %}">Licenses</a>
+                        <a class="dropdown-item" href="mailto:jremmertgmx@googlemail.com,ov@tech22.de,akarshankap@gmail.com">Contact</a>
+                    </div>
+                </li>
             </ul>
 
             <ul class="navbar-nav ml-auto">
@@ -141,10 +151,10 @@
         </div>
 
         <footer class="main-footer">
-            <strong>Copyright &copy; 2024 <a href="https://adminlte.io">AdminLTE.io</a>.</strong>
-            All rights reserved.
+            <strong>Made with ❤️ by <a href="https://github.com/jonas-rem/lwm2m_server">JoKar</a></strong>
+            Copyright &copy; 2024, OliVölck, JoRem & A-Karshan.
             <div class="float-right d-none d-sm-inline-block">
-                <b>Version</b> 3.2.0
+                <b>Version</b> 1.0.0-alpha
             </div>
         </footer>
 

@@ -10,5 +10,7 @@ urlpatterns = [
     path('event_dashboard/', views.event_dashboard_view, name='event_dashboard'),
     path('graph_dashboard/', views.graph_dashboard_view, name='graph_dashboard'),
     path('pending_communication_dashboard/', views.pending_communication_dashboard_view, name='pending_communication_dashboard'),
+    path('license/', views.license_dashboard_view, name='license_dashboard'),
     path('accounts/', include('django.contrib.auth.urls')),
+    path('', views.admin_dashboard_view, name='default')
 ]
