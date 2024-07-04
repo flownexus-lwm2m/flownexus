@@ -688,16 +688,19 @@ can be sure that the ReST API calls are not open for a long time.</p>
 <section id="asynchronous-communication">
 <h3>Asynchronous Communication<a class="headerlink" href="#asynchronous-communication" title="Link to this heading">#</a></h3>
 <p>Given that endpoints are comparably slow to respond, handling communication
-asynchronously is essention for efficient operation. This can be effectively
+asynchronously is essential for efficient operation. This can be effectively
 managed using Celery, a distributed task queue. When Leshan notifies the
 backend of an endpoint status update, Celery can be used to handle the
 long-running API calls, ensuring that the backend remains responsive and
-scalable. Once the API call is complete the database will be updated with the
-result (e.g. <code class="docutils literal notranslate"><span class="pre">completed</span></code>, <code class="docutils literal notranslate"><span class="pre">pending</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code>). Retransmissions can be
-implemented based on the result and the requirements of the application. As the
-backend communicates with many endpoints simultaneously, an efficient queing
-mechanism is essential to ensure that the system remains responsive and
-scalable.</p>
+scalable. As the backend communicates with many endpoints simultaneously, an
+efficient queing mechanism is essential to ensure that the system remains
+responsive and scalable.</p>
+<p>Before the backend executes the API call, it updates the endpointOperation
+status to <code class="docutils literal notranslate"><span class="pre">SENDING</span></code>, indicating an ongoing operation.</p>
+<p>Once the API call is complete the database will be updated with the result
+(e.g. <code class="docutils literal notranslate"><span class="pre">CONFIRMED</span></code>, <code class="docutils literal notranslate"><span class="pre">FAILED</span></code>, <code class="docutils literal notranslate"><span class="pre">QUEUED</span></code>) depending on the result of the
+request. The <code class="docutils literal notranslate"><span class="pre">FAILED</span></code> status is assigned after 3 attempts. Retransmissions are
+triggered when the endpoint updates it’s registration the next time.</p>
 </section>
 <section id="example-communication">
 <h3>Example Communication<a class="headerlink" href="#example-communication" title="Link to this heading">#</a></h3>
