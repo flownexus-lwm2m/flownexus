@@ -18,20 +18,26 @@
 <text text-anchor="start" x="375.5" y="-465.5" font-family="Roboto" font-size="10.00"> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="406.5" y="-465.5" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text>
 </g>
-<!-- sensordata_models_Device -->
+<!-- sensordata_models_Endpoint -->
 <g id="node1" class="node">
-<title>sensordata_models_Device</title>
-<polygon fill="white" stroke="transparent" points="445,-46 445,-82 597,-82 597,-46 445,-46"/>
-<polygon fill="#1b563f" stroke="transparent" points="446,-60 446,-81 596,-81 596,-60 446,-60"/>
-<text text-anchor="start" x="472" y="-69" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="486" y="-69" font-family="Roboto" font-weight="bold" font-size="10.00" fill="white"> &#160;&#160;&#160;&#160;&#160;Device &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="448" y="-52.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="462" y="-52.6" font-family="Roboto" font-weight="bold" font-size="8.00">endpoint</text>
-<text text-anchor="start" x="504" y="-52.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="522" y="-52.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="536" y="-52.6" font-family="Roboto" font-weight="bold" font-size="8.00">CharField</text>
-<text text-anchor="start" x="580" y="-52.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<polygon fill="none" stroke="black" points="445,-46 445,-82 597,-82 597,-46 445,-46"/>
+<title>sensordata_models_Endpoint</title>
+<polygon fill="white" stroke="transparent" points="444,-39.5 444,-88.5 606,-88.5 606,-39.5 444,-39.5"/>
+<polygon fill="#1b563f" stroke="transparent" points="445,-66 445,-87 605,-87 605,-66 445,-66"/>
+<text text-anchor="start" x="470" y="-75" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="484" y="-75" font-family="Roboto" font-weight="bold" font-size="10.00" fill="white"> &#160;&#160;&#160;&#160;&#160;Endpoint &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="447" y="-58.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="461" y="-58.6" font-family="Roboto" font-weight="bold" font-size="8.00">endpoint</text>
+<text text-anchor="start" x="503" y="-58.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="522" y="-58.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="536" y="-58.6" font-family="Roboto" font-weight="bold" font-size="8.00">CharField</text>
+<text text-anchor="start" x="580" y="-58.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="447" y="-45.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="461" y="-45.6" font-family="Roboto" font-size="8.00">registered</text>
+<text text-anchor="start" x="504" y="-45.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="522" y="-45.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="536" y="-45.6" font-family="Roboto" font-size="8.00">BooleanField</text>
+<text text-anchor="start" x="589" y="-45.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<polygon fill="none" stroke="black" points="444,-39.5 444,-88.5 606,-88.5 606,-39.5 444,-39.5"/>
 </g>
 <!-- sensordata_models_ResourceType -->
 <g id="node2" class="node">
@@ -86,8 +92,8 @@
 <text text-anchor="start" x="294" y="-245.6" font-family="Roboto" font-weight="bold" font-size="8.00">BigAutoField</text>
 <text text-anchor="start" x="353" y="-245.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="185" y="-232.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="199" y="-232.6" font-family="Roboto" font-weight="bold" font-size="8.00">device</text>
-<text text-anchor="start" x="229" y="-232.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="199" y="-232.6" font-family="Roboto" font-weight="bold" font-size="8.00">endpoint</text>
+<text text-anchor="start" x="241" y="-232.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="280" y="-232.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="294" y="-232.6" font-family="Roboto" font-weight="bold" font-size="8.00">ForeignKey (endpoint)</text>
 <text text-anchor="start" x="397" y="-232.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
@@ -123,12 +129,12 @@
 <text text-anchor="start" x="352" y="-167.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <polygon fill="none" stroke="black" points="182,-161 182,-275 414,-275 414,-161 182,-161"/>
 </g>
-<!-- sensordata_models_Resource&#45;&gt;sensordata_models_Device -->
+<!-- sensordata_models_Resource&#45;&gt;sensordata_models_Endpoint -->
 <g id="edge1" class="edge">
-<title>sensordata_models_Resource&#45;&gt;sensordata_models_Device</title>
-<path fill="none" stroke="black" d="M393.07,-152.2C427.89,-128.47 464.9,-103.24 490.1,-86.06"/>
-<ellipse fill="black" stroke="black" cx="389.44" cy="-154.67" rx="4" ry="4"/>
-<text text-anchor="middle" x="459" y="-132.6" font-family="Roboto" font-size="8.00"> device (resource)</text>
+<title>sensordata_models_Resource&#45;&gt;sensordata_models_Endpoint</title>
+<path fill="none" stroke="black" d="M394.37,-152.47C425.68,-131.51 458.77,-109.35 483.81,-92.58"/>
+<ellipse fill="black" stroke="black" cx="391.04" cy="-154.7" rx="4" ry="4"/>
+<text text-anchor="middle" x="467" y="-132.6" font-family="Roboto" font-size="8.00"> endpoint (resource)</text>
 </g>
 <!-- sensordata_models_Resource&#45;&gt;sensordata_models_ResourceType -->
 <g id="edge2" class="edge">
@@ -151,8 +157,8 @@
 <text text-anchor="start" x="544" y="-232.6" font-family="Roboto" font-weight="bold" font-size="8.00">BigAutoField</text>
 <text text-anchor="start" x="603" y="-232.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="452" y="-219.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="466" y="-219.6" font-family="Roboto" font-weight="bold" font-size="8.00">device</text>
-<text text-anchor="start" x="496" y="-219.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="466" y="-219.6" font-family="Roboto" font-weight="bold" font-size="8.00">endpoint</text>
+<text text-anchor="start" x="508" y="-219.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="530" y="-219.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="544" y="-219.6" font-family="Roboto" font-weight="bold" font-size="8.00">ForeignKey (endpoint)</text>
 <text text-anchor="start" x="647" y="-219.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
@@ -176,12 +182,12 @@
 <text text-anchor="start" x="602" y="-180.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <polygon fill="none" stroke="black" points="448.5,-174 448.5,-262 663.5,-262 663.5,-174 448.5,-174"/>
 </g>
-<!-- sensordata_models_Event&#45;&gt;sensordata_models_Device -->
+<!-- sensordata_models_Event&#45;&gt;sensordata_models_Endpoint -->
 <g id="edge3" class="edge">
-<title>sensordata_models_Event&#45;&gt;sensordata_models_Device</title>
-<path fill="none" stroke="black" d="M543.28,-161.75C537.26,-135.6 530.42,-105.89 525.92,-86.38"/>
-<ellipse fill="black" stroke="black" cx="544.22" cy="-165.84" rx="4" ry="4"/>
-<text text-anchor="middle" x="567.5" y="-132.6" font-family="Roboto" font-size="8.00"> device (event)</text>
+<title>sensordata_models_Event&#45;&gt;sensordata_models_Endpoint</title>
+<path fill="none" stroke="black" d="M544.76,-161.9C539.97,-138.41 534.59,-112.04 530.66,-92.74"/>
+<ellipse fill="black" stroke="black" cx="545.56" cy="-165.82" rx="4" ry="4"/>
+<text text-anchor="middle" x="574.5" y="-132.6" font-family="Roboto" font-size="8.00"> endpoint (event)</text>
 </g>
 <!-- sensordata_models_EventResource -->
 <g id="node5" class="node">
@@ -224,13 +230,13 @@
 <ellipse fill="black" stroke="black" cx="570.61" cy="-345.84" rx="4" ry="4"/>
 <text text-anchor="middle" x="602.5" y="-299.6" font-family="Roboto" font-size="8.00"> event (resources)</text>
 </g>
-<!-- sensordata_models_DeviceOperation -->
+<!-- sensordata_models_EndpointOperation -->
 <g id="node6" class="node">
-<title>sensordata_models_DeviceOperation</title>
+<title>sensordata_models_EndpointOperation</title>
 <polygon fill="white" stroke="transparent" points="237.5,-328 237.5,-442 452.5,-442 452.5,-328 237.5,-328"/>
 <polygon fill="#1b563f" stroke="transparent" points="239,-420 239,-441 452,-441 452,-420 239,-420"/>
-<text text-anchor="start" x="268.5" y="-429" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
-<text text-anchor="start" x="282.5" y="-429" font-family="Roboto" font-weight="bold" font-size="10.00" fill="white"> &#160;&#160;&#160;&#160;&#160;DeviceOperation &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="262.5" y="-429" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
+<text text-anchor="start" x="276.5" y="-429" font-family="Roboto" font-weight="bold" font-size="10.00" fill="white"> &#160;&#160;&#160;&#160;&#160;EndpointOperation &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="241" y="-412.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <text text-anchor="start" x="255" y="-412.6" font-family="Roboto" font-weight="bold" font-size="8.00">id</text>
 <text text-anchor="start" x="265" y="-412.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
@@ -275,12 +281,12 @@
 <text text-anchor="start" x="423" y="-334.6" font-family="Roboto" font-size="8.00"> &#160;&#160;&#160;&#160;&#160;</text>
 <polygon fill="none" stroke="black" points="237.5,-328 237.5,-442 452.5,-442 452.5,-328 237.5,-328"/>
 </g>
-<!-- sensordata_models_DeviceOperation&#45;&gt;sensordata_models_Resource -->
+<!-- sensordata_models_EndpointOperation&#45;&gt;sensordata_models_Resource -->
 <g id="edge6" class="edge">
-<title>sensordata_models_DeviceOperation&#45;&gt;sensordata_models_Resource</title>
-<path fill="none" stroke="black" d="M308.21,-315.92C307.02,-312.61 305.94,-309.29 305,-306 302.6,-297.55 300.92,-288.46 299.77,-279.46"/>
-<ellipse fill="black" stroke="black" cx="309.74" cy="-319.89" rx="4" ry="4"/>
-<text text-anchor="middle" x="362" y="-299.6" font-family="Roboto" font-size="8.00"> resource (deviceoperation)</text>
+<title>sensordata_models_EndpointOperation&#45;&gt;sensordata_models_Resource</title>
+<path fill="none" stroke="black" d="M302.28,-315.95C301.03,-312.65 299.93,-309.32 299,-306 296.6,-297.42 295.26,-288.17 294.61,-279.02"/>
+<ellipse fill="black" stroke="black" cx="303.91" cy="-319.91" rx="4" ry="4"/>
+<text text-anchor="middle" x="361" y="-299.6" font-family="Roboto" font-size="8.00"> resource (endpointoperation)</text>
 </g>
 <!-- sensordata_models_Firmware -->
 <g id="node7" class="node">
