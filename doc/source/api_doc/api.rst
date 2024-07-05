@@ -1,5 +1,5 @@
-Internal ReST APIs
-==================
+Internal Django
+===============
 
 .. The following text is only a placeholder in case the api can not be
    generated (e.g. for the pdf version)
