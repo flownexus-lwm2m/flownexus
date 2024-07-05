@@ -50,7 +50,7 @@ html_css_files = [
 redoc = [
     {
     'spec': '../build/generated/openapi-schema.yaml',
-    'page': 'api',
+    'page': 'api_doc/api',
     'embed': True,
     },
 ]
