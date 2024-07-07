@@ -9,15 +9,22 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Install Packages
-        run: sudo apt-get update && sudo apt-get install -y default-jre plantuml tox
+        run: |
+          sudo apt-get update
+          sudo apt-get install default-jre plantuml jq tox texlive-latex-extra texlive-xetex latexmk python3-pip -y
+
       - name: Build static site with Tox
         run: |
           cd doc
           tox -e py3-html
+          tox -e py3-pdf
           cd ..
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
