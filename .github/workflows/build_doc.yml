@@ -10,8 +10,24 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Install Packages
-      run: sudo apt-get update && sudo apt-get install -y default-jre plantuml tox
+      run: sudo apt-get update && sudo apt-get install -y default-jre plantuml jq tox
     - name: Build static site with Tox
       run: |
         cd doc
         tox -e py3-html
+
+    - name: Deploy Preview
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: doc/build/html
+        destination_dir: 'previews/${{ github.event.number }}'
+
+    - name: Create status check with preview link
+      run: |
+        PREVIEW_URL="https://jonas-rem.github.io/lwm2m_server/previews/${{ github.event.number }}"
+        PAYLOAD=$(echo '{}' | jq --arg name 'Documentation Preview' --arg url "${PREVIEW_URL}" '{"name": $name, "head_sha": "${{ github.event.pull_request.head.sha }}", "details_url": $url, "status": "completed", "conclusion": "success", "output": {"title": $name, "summary": "Preview available at", "text": $url}}')
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+             -H "Content-Type: application/json" \
+             -X POST -d "${PAYLOAD}" \
+             "https://api.github.com/repos/${{ github.repository }}/check-runs"
