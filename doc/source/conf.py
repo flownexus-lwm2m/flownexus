@@ -18,8 +18,7 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 master_doc = "index"
 
 project = 'Flow Nexus'
-copyright = '2024, Jonas Remmert, Akarshan Kapoor'
-author = 'Jonas Remmert, Akarshan Kapoor'
+copyright = '2024, Individual contributors to Flow Nexus'
 
 version = re.sub('', '', os.popen('git describe --tags').read().strip())
 release = version
@@ -33,8 +32,6 @@ extensions = [
     'sphinx.ext.todo',
     'sphinxcontrib.redoc',
 ]
-
-templates_path = ['_templates']
 
 exclude_patterns = []
 

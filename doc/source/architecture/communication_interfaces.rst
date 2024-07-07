@@ -22,10 +22,93 @@ and Django) post data to each other's ReST APIs. Communication is typically
 triggered by IoT devices sending data or the user/application requesting data
 from devices.
 
-Data Flow: Backend -> Device
-----------------------------
+Data Flow: Endpoint -> Backend
+------------------------------
 
-IoT devices usually operate in queue mode, meaning they are not always online.
+All communication from Endpoints to the server flows through Leshan. Leshan
+interprets this data according to the LwM2M protocol and generates a ReST API
+call to the backend server. The backend server then stores the data in the
+database.
+
+Django hosts the ReST API that Leshan posts to. Serializers, a part of Django,
+deserialize the incoming data and store it in the database according to the
+database model.
+
+Leshan Data Format
+..................
+
+There are two types of data that Leshan sends to the backend, single resource
+and composite resource format. The two ReST API endpoints that Leshan posts to
+are available under the following URLs:
+
+- ``/leshan_api/resource/single``: single resource format.
+- ``/leshan_api/resource/composite``: composite resource format.
+
+For more details, please theck the ``Internal Django`` API documentation.
+
+.. code-block:: json
+  :caption: Single Resource Format (3303/0/5700)
+
+  {
+     "ep": "qemu_x86",
+     "obj_id": 3303,
+     "val": {
+         "kind": "singleResource",
+         "id": 5700,
+         "type": "FLOAT",
+         "value": "24.899181214836236"
+     }
+  }
+
+.. code-block:: json
+  :caption: Composite Resource Format (3/0/0..17)
+  :emphasize-lines: 8,26,23
+
+  {
+      "ep" : "qemu_x86",
+      "val" : {
+          "instances" : [ {
+              "kind" : "instance",
+              "resources" : [ {
+                  "kind" : "singleResource",
+                  "id" : 0,
+                  "type" : "STRING",
+                  "value" : "Zephyr"
+              }, {
+                  "kind" : "multiResource",
+                  "values" : {
+                      "0" : "1",
+                      "1" : "5"
+                  },
+              },
+                  "kind" : "singleResource",
+                  "id" : 17,
+                  "type" : "STRING",
+                  "value" : "qemu_x86"
+              } ],
+              "id" : 0
+          } ],
+          "kind" : "obj",
+          "id" : 3
+      }
+  }
+
+The marked lines in the composite resource format show where Object ID,
+Instance ID and Resource ID are located. A composite resource format can
+consist of multiple Object IDs.
+
+.. warning::
+
+  Currently multiResources are not supported and will be ignored. MultiResource
+  dataypes  are e.g. used for Voltage range (min, max).
+
+Registration Updates
+....................
+
+Data Flow: Backend -> Endpoint
+------------------------------
+
+Endpoints often operate in queue mode, meaning they are not always online.
 The LwM2M Server is aware of the current status of a device (Online/Offline)
 and communicates this status to the backend server. Leshan does not queue
 pending data that should be sent to the device when it comes online. The
