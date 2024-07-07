@@ -65,8 +65,8 @@ html_theme_options = {
     'use_issues_button': True,
     'use_edit_page_button': True,
     'use_download_button': True,
-    'show_navbar_depth': 100,
-    'home_page_in_toc': True,
+    'collapse_navbar': False,
+    'home_page_in_toc': False,
     'navigation_with_keys': False,
 }
 
