@@ -76,33 +76,43 @@ the Django app that contains the application logic.
 
   Entity Relationship Diagram generated from Django models
 
-**Device:** Represents IoT devices using the LwM2M protocol in the network,
-identifiable by a universally unique ID alongside a human-readable name.
+.. glossary::
 
-**ResourceType:** Defines resource data points comprehensively, annotating each
-with a unique object-resource ID combination, a descriptive name, and
-specifying the expected data type.
+  Endpoint
+    IoT devices using the LwM2M protocol in the network, identifiable by a
+    unique name, e.g. ``urn:imei:123456789012345``.
 
-**Resource:** Captures individual data values from IoT devices, annotated with
-timestamps, applicable data types, and linked to both the device and resource
-type for which the data pertains.
+  ResourceType
+    Defines resource data points comprehensively, annotating each with a unique
+    object-resource ID combination, a descriptive name, and specifying the
+    expected data type.
 
-**Event:** Serves as a collection point for significant occurrences reported by
-devices, including composite events defined by enclosing object IDs. The server
-application logic has to generate events based on matching timestamps or
-received composite notifications from devices. Although individual resources
-within an event may have different timestamps, the event itself encapsulates a
-single timestamp.
+  Resource
+    Captures individual data values from IoT devices, annotated with
+    timestamps, applicable data types, and linked to both the device and
+    resource type for which the data pertains.
 
-**EventResource:** Acts as a junction table forming a many-to-many relationship
-between events and their constituent resources, enabling flexible association
-without direct modification to the core events or resources tables.
+  Event
+    Serves as a collection point for significant occurrences reported by
+    devices, including composite events defined by enclosing object IDs. The
+    server application logic has to generate events based on matching
+    timestamps or received composite notifications from devices. Although
+    individual resources within an event may have different timestamps, the
+    event itself encapsulates a single timestamp.
 
-**DeviceOperation:** Represents actionable commands or processes targeted at
-devices, tracking the operation type, status, and scheduling through
-timestamps, also detailing the transmission attempts and last action.
+  EventResource
+    Acts as a junction table forming a many-to-many relationship between events
+    and their constituent resources, enabling flexible association without
+    direct modification to the core events or resources tables.
 
-**Firmware:** Stores metadata about firmware binaries that are available for
-devices to download and install. Each record includes a version identifier, the
-name of the file, a URL from where the device can retrieve the firmware, and
-timestamps for tracking when each firmware record was created and last updated.
+  EndpointOperation
+    Represents actionable commands or processes targeted at endpoints, tracking
+    the operation type, status, and scheduling through timestamps, also
+    detailing the transmission attempts and last action.
+
+  Firmware
+    Stores metadata about firmware binaries that are available for devices to
+    download and install. Each record includes a version identifier, the name
+    of the file, a URL from where the device can retrieve the firmware, and
+    timestamps for tracking when each firmware record was created and last
+    updated.
