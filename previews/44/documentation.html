@@ -1,0 +1,975 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Documentation &#8212; Flow Nexus  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=384b581d" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=ac1fc1b8" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=efea14e4"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'documentation';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Internal ReST APIs" href="api.html" />
+    <link rel="prev" title="Flow Nexus: Open, Focused, Resilient" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/LogoForReadme.png" class="logo__image only-light" alt="Flow Nexus  documentation - Home"/>
+    <script>document.write(`<img src="_static/LogoForReadme.png" class="logo__image only-dark" alt="Flow Nexus  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="index.html">
+                    Flow Nexus: Open, Focused, Resilient
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Internal ReST APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="weblog.html">Weblog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><label class="sidebar-toggle primary-toggle btn btn-sm" for="__primary" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</label></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/jonas-rem/lwm2m_server" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/jonas-rem/lwm2m_server/edit/main/doc/source/documentation.rst" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/jonas-rem/lwm2m_server/issues/new?title=Issue%20on%20page%20%2Fdocumentation.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/documentation.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<label class="sidebar-toggle secondary-toggle btn btn-sm" for="__secondary"title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</label>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Documentation</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">Overview</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#key-components">Key Components</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices">IoT Devices</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-server">LwM2M Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#terminology">Terminology</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#django-server">Django Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-started">Getting Started</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-the-documentation">Contributing to the Documentation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-django">Contributing to Django</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-leshan">Contributing to Leshan</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#communication-interfaces">Communication &amp; Interfaces</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-device">Data Flow: Backend -&gt; Device</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-client-simulation">LwM2M Client Simulation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#deployment">Deployment</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">#</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h2>
+<p>This documentation describes a local server-based IoT system that leverages
+the Lightweight Machine to Machine (LwM2M) protocol to communicate between
+IoT devices running Zephyr OS and a backend server using Django. The
+system does not depend on external cloud services and is designed to operate
+fully within a local environment.</p>
+<section id="features">
+<h3>Features<a class="headerlink" href="#features" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>No dependencies of external services like AWS, MQTT brokers or similar. The
+system has to be able to run in a local environment.</p></li>
+<li><p>The main focus is the LwM2M protocol and the communication between Zephyr and
+the server.</p></li>
+<li><p>The system should show how to add data to a database and visualize it in a
+web application.</p></li>
+<li><p>The web application has to support a secure login and basic user management.</p></li>
+<li><p>Certificate based authentication and encryption.</p></li>
+<li><p>Server to read and observe resources from IoT Device.</p></li>
+<li><p>Server to write resources to IoT Devices.</p></li>
+<li><p>OTA Update.</p></li>
+<li><p>Receive logs from IoT Devices.</p></li>
+</ul>
+<figure class="align-default">
+<img alt="_images/FlowNexus-Architecture.png" src="_images/FlowNexus-Architecture.png" />
+</figure>
+</section>
+</section>
+<section id="key-components">
+<h2>Key Components<a class="headerlink" href="#key-components" title="Link to this heading">#</a></h2>
+<section id="iot-devices">
+<h3>IoT Devices<a class="headerlink" href="#iot-devices" title="Link to this heading">#</a></h3>
+<p>These are typically resource-constrained devices
+(limited energy and storage capabilities) that run Zephyr OS. They communicate
+with the server using the UDP protocol to ensure constant connectivity,
+even in low power states. These devices are programmed to handle tasks
+like temperature sensing, location tracking, or any other telemetry
+based on Zephyr applications. They communicate via the UDP protocol to
+maintain a continuous link without needing frequent reconnections.
+The IoT device has to support LwM2M. Mainly systems that run
+Zephyr should be compatible. The application can e.g. be used with a dedicated
+nRF9160 device or via a simulation like native_sim or in Renode. The nRF9160 is
+a low power LTE-M and NB-IoT SoC that runs Zephyr OS. UDP is used as transport
+protocol as it allows to keep devices connected even when the device is
+sleeping for extended periods (TCP would require a new connection setup
+typically after a few minutes)</p>
+</section>
+<section id="lwm2m-server">
+<h3>LwM2M Server<a class="headerlink" href="#lwm2m-server" title="Link to this heading">#</a></h3>
+<p>The LwM2M server plays a critical role in managing communications with IoT devices.
+It handles data transmission, device monitoring, and control commands, ensuring
+that devices can report their telemetry data, receive configuration updates, and
+execute commands sent by the server. The server’s efficient management of these
+tasks is essential for maintaining reliable communication with numerous IoT devices,
+especially those with limited power and processing resources.</p>
+</section>
+<section id="terminology">
+<h3>Terminology<a class="headerlink" href="#terminology" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>LwM2M:</strong> Lightweight Machine to Machine protocol.</p></li>
+<li><p><strong>Leshan:</strong> LwM2M server implementation as one main component of the system.</p></li>
+<li><p><strong>Backend</strong>: Django instance that is responsible for the REST API, database
+and visualization.</p></li>
+<li><p><strong>Frontend</strong>: Web application that visualizes the data from the backend,
+integrated into Django.</p></li>
+<li><p><strong>Endpoint</strong>: IoT device that is connected to Leshan, represented by a unique
+Endpoint name.</p></li>
+</ul>
+</section>
+<section id="django-server">
+<h3>Django Server<a class="headerlink" href="#django-server" title="Link to this heading">#</a></h3>
+<p>The Django server hosts the REST API, manages the database, and provides a web interface
+for data visualization and user management. This server acts as the backend
+infrastructure that supports the entire IoT ecosystem by:</p>
+<ul class="simple">
+<li><p><strong>REST API</strong>: Facilitates communication between the IoT devices and the server.
+The API endpoints handle requests for data uploads from devices, send control commands,
+and provide access to stored telemetry data.</p></li>
+<li><p><strong>Database Management</strong>: Stores all the telemetry data, device information, user
+accounts, and configuration settings. The database ensures that data is organized,
+searchable, and retrievable in an efficient manner.</p></li>
+<li><p><strong>Web Interface</strong>: Offers a user-friendly interface for data visualization and
+management. Through this interface, users can monitor device status, visualize
+telemetry data in real-time, manage user accounts, and configure device settings.</p></li>
+</ul>
+</section>
+<section id="database-model">
+<h3>Database Model<a class="headerlink" href="#database-model" title="Link to this heading">#</a></h3>
+<p>The database model is the core of the Django server. It aims to store
+information according to the LwM2M resource model. The advantage is that data
+can be stored in a generic way and the server can be extended with new
+resources without changing the database schema.</p>
+<p>The server application logic only has to handle higher level events. Those
+events are situations where multiple resources are associated (e.g.
+Temperature, Pressure, Humidity, Acceleration). Those multiple resources are
+linked in the event, together with a timestamp. The event itself is represented
+by the database model in a generic way, several custom event types can be
+created by the application logic.</p>
+<p>An Entity Relationship Diagram (ERD) is a visual representation of the database
+schema. It is automatically generated from the Django models. <code class="docutils literal notranslate"><span class="pre">sensordata</span></code> is
+the Django app that contains the application logic.</p>
+<figure class="align-default" id="id1">
+<img alt="_images/erd.svg" src="_images/erd.svg" /><figcaption>
+<p><span class="caption-text">Entity Relationship Diagram generated from Django models</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p><strong>Device:</strong> Represents IoT devices using the LwM2M protocol in the network,
+identifiable by a universally unique ID alongside a human-readable name.</p>
+<p><strong>ResourceType:</strong> Defines resource data points comprehensively, annotating each
+with a unique object-resource ID combination, a descriptive name, and
+specifying the expected data type.</p>
+<p><strong>Resource:</strong> Captures individual data values from IoT devices, annotated with
+timestamps, applicable data types, and linked to both the device and resource
+type for which the data pertains.</p>
+<p><strong>Event:</strong> Serves as a collection point for significant occurrences reported by
+devices, including composite events defined by enclosing object IDs. The server
+application logic has to generate events based on matching timestamps or
+received composite notifications from devices. Although individual resources
+within an event may have different timestamps, the event itself encapsulates a
+single timestamp.</p>
+<p><strong>EventResource:</strong> Acts as a junction table forming a many-to-many relationship
+between events and their constituent resources, enabling flexible association
+without direct modification to the core events or resources tables.</p>
+<p><strong>DeviceOperation:</strong> Represents actionable commands or processes targeted at
+devices, tracking the operation type, status, and scheduling through
+timestamps, also detailing the transmission attempts and last action.</p>
+<p><strong>Firmware:</strong> Stores metadata about firmware binaries that are available for
+devices to download and install. Each record includes a version identifier, the
+name of the file, a URL from where the device can retrieve the firmware, and
+timestamps for tracking when each firmware record was created and last updated.</p>
+</section>
+</section>
+<section id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">#</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The following setup guide is for a native Linux Machine. For MacOS or Windows
+consider creating a docker container build. One of the developers uses the following
+<cite>devcontainer.json</cite> build environment:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Ubuntu&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mcr.microsoft.com/devcontainers/base:jammy&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;runArgs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;--cap-add=NET_ADMIN&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--cap-add=MKNOD&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--device=/dev/net/tun&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--sysctl=net.ipv6.conf.all.disable_ipv6=0&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--sysctl=net.ipv6.conf.default.disable_ipv6=0&quot;</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;postCreateCommand&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;apt-get update &amp;&amp; apt-get install -y iproute2 &amp;&amp; echo &#39;IPv6 is enabled.&#39;&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;remoteUser&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;root&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>Before you we start with any development here are a few things you should get configured:</p>
+<ul class="simple">
+<li><p>Get the Zephyr SDK downloaded and configured in your root directory. You can find the instructions
+<a class="reference external" href="https://docs.zephyrproject.org/latest/develop/toolchains/zephyr_sdk.html">here</a>.</p></li>
+<li><p>Setup a virtual environment for the project.</p></li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>upgrade
+<span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>python3-pip<span class="w"> </span>python3.10-venv
+<span class="gp">host:~$ </span>python3.10<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:~$ </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>west
+<span class="gp">host:~$ </span>west<span class="w"> </span>init<span class="w"> </span>-m<span class="w"> </span>https://github.com/jonas-rem/lwm2m_server<span class="w"> </span>--mr<span class="w"> </span>main<span class="w"> </span>flownexus_workspace
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace
+<span class="gp">host:~/flownexus_workspace$ </span>west<span class="w"> </span>update
+</pre></div>
+</div>
+<section id="contributing-to-the-documentation">
+<h3>Contributing to the Documentation<a class="headerlink" href="#contributing-to-the-documentation" title="Link to this heading">#</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>default-jre<span class="w"> </span>plantuml<span class="w"> </span>graphviz
+<span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace/lwm2m_server/doc
+<span class="gp">host:lwm2m_server/doc$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="gp">host:lwm2m_server/doc$ </span>tox<span class="w"> </span>-e<span class="w"> </span>py3-html
+</pre></div>
+</div>
+<p>Open the generated index.html in the doc/build directory in your browser.</p>
+</section>
+<section id="contributing-to-django">
+<h3>Contributing to Django<a class="headerlink" href="#contributing-to-django" title="Link to this heading">#</a></h3>
+<p>The Django server can also run locally, without the need of a docker container.
+Make sure to create a virtual environment and install the requirements:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace/lwm2m_server/server/django
+<span class="gp">host:lwm2m_server/server/django$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="gp">host:lwm2m_server/server/django$ </span>./django_start.sh
+</pre></div>
+</div>
+<p>The Django server should now be up and running under the following URL:
+<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin</span></code>. The admin login is <code class="docutils literal notranslate"><span class="pre">admin</span></code> and the password</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Do not forget to change the password to the admin console as well as other
+settings like SECRET_KEY, DEBUG flag in a production environment!</p>
+</div>
+<p>There are also unit tests defined, which test the deserializer in Django, which
+parses the json payload from the Rest API. You can run the unit tests with the
+following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
+<span class="go">Found 2 test(s).</span>
+<span class="go">Creating test database for alias &#39;default&#39;...</span>
+<span class="go">----------------------------------------------------------------------</span>
+<span class="go">Ran 2 tests in 0.008s</span>
+
+<span class="go">OK</span>
+<span class="go">Destroying test database for alias &#39;default&#39;...</span>
+</pre></div>
+</div>
+</section>
+<section id="contributing-to-leshan">
+<h3>Contributing to Leshan<a class="headerlink" href="#contributing-to-leshan" title="Link to this heading">#</a></h3>
+<p>The Leshan server can also run locally, without the need of a docker container.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>update
+<span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>openjdk-17-jdk<span class="w"> </span>maven
+<span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace/lwm2m_server/server/leshan
+<span class="gp">host:lwm2m_server/server/leshan$ </span>./leshan_build_run.sh
+</pre></div>
+</div>
+<p>The Leshan server should now be up and running under the following URL: <code class="docutils literal notranslate"><span class="pre">http://localhost:8080</span></code>.</p>
+</section>
+</section>
+<section id="communication-interfaces">
+<h2>Communication &amp; Interfaces<a class="headerlink" href="#communication-interfaces" title="Link to this heading">#</a></h2>
+<p>The communication between IoT devices and Leshan is specified by the OMA LwM2M
+standard:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.openmobilealliance.org/release/LightweightM2M/V1_1_1-20190617-A/OMA-TS-LightweightM2M_Core-V1_1_1-20190617-A.pdf">LwM2M core specification v1.1.1</a></p></li>
+<li><p><a class="reference external" href="https://www.openmobilealliance.org/release/LightweightM2M/V1_1_1-20190617-A/OMA-TS-LightweightM2M_Transport-V1_1_1-20190617-A.pdf">LwM2M transport binding v1.1.1</a></p></li>
+</ul>
+<p>The standard describes how the LwM2M server (Leshan) works, however, it does
+not describe how to connect a backend server to Leshan. The backend is
+responsible for storing the data in a database and implementing application
+logic. A frontend can access the data in the database and visualize outward
+facing user interfaces. Leshan acts as a gateway between Endpoints and the
+backend. There should be no application specific logic implemented in Leshan.</p>
+<p>In order to communicate and exchange data, both components (Leshan LwM2M Server
+and Django) post data to each other’s ReST APIs. Communication is typically
+triggered by IoT devices sending data or the user/application requesting data
+from devices.</p>
+<section id="data-flow-backend-device">
+<h3>Data Flow: Backend -&gt; Device<a class="headerlink" href="#data-flow-backend-device" title="Link to this heading">#</a></h3>
+<p>IoT devices usually operate in queue mode, meaning they are not always online.
+The LwM2M Server is aware of the current status of a device (Online/Offline)
+and communicates this status to the backend server. Leshan does not queue
+pending data that should be sent to the device when it comes online. The
+backend server must handle this by itself so it has to have a representation of
+the current status of each device as well as the data to be send. The resource
+table <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> is used to store pending operations that should be
+sent to the endpoint while it is online.</p>
+<p>Once an endpoint updates it’s registration (LwM2M Update Operation) Leshan
+notifies the backend. The backend checks the <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> table for
+pending operations and sends them to the device by posting to the Leshan hosted
+ReST API. Leshan keeps the post call open until the device acknowledges the
+operation or a timeout is generated. Endpoints can be slow to respond (several
+Seconds), so the backend has to handle the ReST API call in an asynchronous
+manner. By only sending data to endpoints while they are online, the backend
+can be sure that the ReST API calls are not open for a long time.</p>
+</section>
+<section id="asynchronous-communication">
+<h3>Asynchronous Communication<a class="headerlink" href="#asynchronous-communication" title="Link to this heading">#</a></h3>
+<p>Given that endpoints are comparably slow to respond, handling communication
+asynchronously is essential for efficient operation. This can be effectively
+managed using Celery, a distributed task queue. When Leshan notifies the
+backend of an endpoint status update, Celery can be used to handle the
+long-running API calls, ensuring that the backend remains responsive and
+scalable. As the backend communicates with many endpoints simultaneously, an
+efficient queing mechanism is essential to ensure that the system remains
+responsive and scalable.</p>
+<p>Before the backend executes the API call, it updates the endpointOperation
+status to <code class="docutils literal notranslate"><span class="pre">SENDING</span></code>, indicating an ongoing operation.</p>
+<p>Once the API call is complete the database will be updated with the result
+(e.g. <code class="docutils literal notranslate"><span class="pre">CONFIRMED</span></code>, <code class="docutils literal notranslate"><span class="pre">FAILED</span></code>, <code class="docutils literal notranslate"><span class="pre">QUEUED</span></code>) depending on the result of the
+request. The <code class="docutils literal notranslate"><span class="pre">FAILED</span></code> status is assigned after 3 attempts. Retransmissions are
+triggered when the endpoint updates it’s registration the next time.</p>
+</section>
+<section id="example-communication">
+<h3>Example Communication<a class="headerlink" href="#example-communication" title="Link to this heading">#</a></h3>
+<p>The following example shows how the backend server can send a firmware download
+link resource <code class="docutils literal notranslate"><span class="pre">Package</span> <span class="pre">URI</span> <span class="pre">5/0/1</span></code> to an endpoint:</p>
+<ol class="arabic simple">
+<li><p>User creates new <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code>: resource path <code class="docutils literal notranslate"><span class="pre">5/0/1</span></code>, value
+<code class="docutils literal notranslate"><span class="pre">https://url.com/fw.bin</span></code>.</p></li>
+<li><p>Backend checks endpoint online status.</p></li>
+<li><p>If endpoint is offline, no further action is taken right away.</p></li>
+<li><p>Endoint comes online, Leshan sends update to the backend.</p></li>
+<li><p>Backend checks <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> table for pending operations for the
+endpoint.</p></li>
+<li><p>Finds pending operation, send resource to endpoint via the Leshan ReST API.</p></li>
+<li><p>Pending operation is marked <code class="docutils literal notranslate"><span class="pre">completed</span></code> if the endpoint acknowledges the
+operation.</p></li>
+</ol>
+</section>
+<section id="iot-devices-with-zephyr">
+<h3>IoT Devices with Zephyr<a class="headerlink" href="#iot-devices-with-zephyr" title="Link to this heading">#</a></h3>
+<p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
+<code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
+LwM2M library and establishes a connection to an LwM2M server. The example can
+be build with the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>nrf9161dk_nrf9160_ns<span class="w"> </span>fw_test/lwm2m_client<span class="w"> </span>-p
+<span class="gp">host:~/flownexus_workspace/lwm2m_server$ </span>west<span class="w"> </span>flash<span class="w"> </span>--recover
+</pre></div>
+</div>
+</section>
+<section id="lwm2m-client-simulation">
+<h3>LwM2M Client Simulation<a class="headerlink" href="#lwm2m-client-simulation" title="Link to this heading">#</a></h3>
+<p>The Zephyr application can run in simulation mode. This allows to test all
+components locally. Once leshan and Zephyr are running, the Zephyr application
+can be started in emulation with the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server$ </span>./zephyr_build_run_sim.sh
+<span class="go">*** Booting nRF Connect SDK zephyr-v3.5.0-3024-g7c3e830729b7 ***</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_engine: lwm2m_engine_init: LWM2M engine socket receive thread started</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_security: security_create: Create LWM2M security instance: 0</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_server: server_create: Create LWM2M server instance: 0</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_device: device_create: Create LWM2M device instance: 0</span>
+<span class="go">[00:00:00.010,000] &lt;dbg&gt; net_lwm2m_obj_firmware: firmware_create: Create LWM2M firmware instance: 0</span>
+<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: Initializing network</span>
+<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: IPv4 address: 192.0.2.1</span>
+</pre></div>
+</div>
+<p>You should see the following output in the docker console or in the most recent
+log file in <code class="docutils literal notranslate"><span class="pre">server/logs/</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/docker_compose$ </span>leshan-1<span class="w">  </span><span class="p">|</span><span class="w"> </span>LeshanServer<span class="w"> </span>started
+<span class="go">leshan-1  | new device registered: qemu_x86</span>
+<span class="go">leshan-1  | Onboarding qemu_x86</span>
+<span class="go">leshan-1  | Resources:</span>
+<span class="go">leshan-1  | &lt;/3&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0/0&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0/1&gt;</span>
+<span class="go">[..]</span>
+</pre></div>
+</div>
+<p>Additionally you can see the device in the Django server under
+<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin/sensordata/endpoint/</span></code>. You should see that the
+LAST UPDATED field contains a recent timestamp.</p>
+<figure class="align-default" id="id2">
+<img alt="_images/django_local.png" src="_images/django_local.png" />
+<figcaption>
+<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
+<section id="deployment">
+<h2>Deployment<a class="headerlink" href="#deployment" title="Link to this heading">#</a></h2>
+<section id="container-environment">
+<h3>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading">#</a></h3>
+<p>Both components run in a Docker container. The Leshan server is running in a
+<code class="docutils literal notranslate"><span class="pre">openjdk:17-slim</span></code> container and the Django server is running in a
+<code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
+of the server.</p>
+<blockquote>
+<div><figure class="align-default" id="id3">
+<p class="plantuml">
+<img src="_images/plantuml-c3d163448b0d70a04ec6e7af1c18c8884ef6c5fe.png" alt="&#64;startuml
+package &quot;Docker Compose Environment&quot;  #DDDDDD {
+  [Leshan] as Leshan
+  [Django] as Django
+  database &quot;Database&quot; as DB
+  Leshan &lt;-right-&gt; Django : REST API
+  Django &lt;-down-&gt; DB
+}
+&#64;enduml"/>
+</p>
+<figcaption>
+<p><span class="caption-text">Both components running in one machine using Docker Compose</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</div></blockquote>
+<p>The following diagram shows the Docker Compose environment. The file
+<code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> defines the services and their configuration. The file
+<code class="docutils literal notranslate"><span class="pre">Dockerfile.leshan</span></code> defines the Leshan container and the file
+<code class="docutils literal notranslate"><span class="pre">Dockerfile.django</span></code> defines the Django container.</p>
+<p>The container can be build and started with the following commands:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>build
+<span class="go">[+] Building 0.5s (20/20) FINISHED                               docker:default</span>
+<span class="go"> =&gt; [leshan internal] load build definition from Dockerfile.leshan         0.0s</span>
+<span class="go"> =&gt; [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s</span>
+<span class="go"> =&gt; [django internal] load build definition from Dockerfile.django         0.0s</span>
+<span class="go"> =&gt; [django internal] load metadata for docker.io/library/python:3.11-sli  0.4s</span>
+<span class="go"> =&gt; [leshan 1/5] FROM docker.io/library/openjdk:17-slim@sha256:aaa3b3cb27  0.0s</span>
+<span class="go"> =&gt; [django 1/5] FROM docker.io/library/python:3.11-slim@sha256:d11b9bd5e  0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 2/5] WORKDIR /leshan                                    0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 3/5] COPY . /leshan/                                    0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 4/5] RUN apt-get update &amp;&amp;     apt-get install -y mave  0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 5/5] RUN chmod +x /leshan/leshan_build_run.sh           0.0s</span>
+<span class="go"> =&gt; =&gt; exporting layers                                                    0.0s</span>
+<span class="go"> =&gt; =&gt; writing image sha256:a017577ba2b175374148f5c3f128ac117ba5436ceaeff  0.0s</span>
+<span class="go"> =&gt; =&gt; naming to docker.io/library/server-leshan                           0.0s</span>
+<span class="go"> =&gt; CACHED [django 2/5] WORKDIR /django                                    0.0s</span>
+<span class="go"> =&gt; CACHED [django 3/5] COPY . /django/                                    0.0s</span>
+<span class="go"> =&gt; CACHED [django 4/5] RUN pip install --no-cache-dir -r /django/require  0.0s</span>
+<span class="go"> =&gt; CACHED [django 5/5] RUN chmod +x /django/django_start.sh               0.0s</span>
+<span class="go"> =&gt; =&gt; writing image sha256:1c88f1227753b08cf994c4e61d5cdcf97d68f260c99ad  0.0s</span>
+<span class="go"> =&gt; =&gt; naming to docker.io/library/server-django                           0.0s</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>up
+<span class="go">[+] Running 2/0</span>
+<span class="go"> ✔ Container server-leshan-1  Created                                      0.0s</span>
+<span class="go"> ✔ Container server-django-1  Created                                      0.0s</span>
+<span class="go">Attaching to django-1, leshan-1</span>
+<span class="go">[..]</span>
+<span class="go">django-1  | Starting development server at http://0.0.0.0:8000/</span>
+<span class="go">leshan-1  | [main] INFO org.eclipse.leshan.server.LeshanServer - CoAP over UDP endpoint based on Californium library available at coap://0.0.0.0:5683.</span>
+<span class="go">leshan-1  | LeshanServer started</span>
+<span class="go">^CGracefully stopping... (press Ctrl+C again to force)</span>
+<span class="go">[+] Stopping 2/2</span>
+<span class="go"> ✔ Container server-django-1  Stopped                                     10.3s</span>
+<span class="go"> ✔ Container server-leshan-1  Stopped                                     10.5s</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Flow Nexus: Open, Focused, Resilient</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="api.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Internal ReST APIs</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">Overview</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#key-components">Key Components</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices">IoT Devices</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-server">LwM2M Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#terminology">Terminology</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#django-server">Django Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#getting-started">Getting Started</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-the-documentation">Contributing to the Documentation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-django">Contributing to Django</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing-to-leshan">Contributing to Leshan</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#communication-interfaces">Communication &amp; Interfaces</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-device">Data Flow: Backend -&gt; Device</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-client-simulation">LwM2M Client Simulation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#deployment">Deployment</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jonas Remmert, Akarshan Kapoor
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2024, Jonas Remmert, Akarshan Kapoor.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
