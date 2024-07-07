@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Documentation &#8212; Flow Nexus  documentation</title>
+    <title>Build and Deploy &#8212; Flow Nexus  documentation</title>
   
   
   
@@ -41,11 +41,11 @@
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=efea14e4"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'documentation';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'deploy';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Glossary" href="glossary.html" />
-    <link rel="prev" title="Simulation" href="simulation.html" />
+    <link rel="next" title="Simulation" href="simulation.html" />
+    <link rel="prev" title="Communication, Interfaces" href="architecture/communication_interfaces.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -167,9 +167,9 @@
 <li class="toctree-l2"><a class="reference internal" href="architecture/communication_interfaces.html">Communication, Interfaces</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="deploy.html">Build and Deploy</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Build and Deploy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulation</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">APIs</span></p>
@@ -250,7 +250,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/edit/main/doc/source/documentation.rst" target="_blank"
+      <li><a href="https://github.com/jonas-rem/lwm2m_server/edit/main/doc/source/deploy.rst" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -267,7 +267,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/issues/new?title=Issue%20on%20page%20%2Fdocumentation.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/jonas-rem/lwm2m_server/issues/new?title=Issue%20on%20page%20%2Fdeploy.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -297,7 +297,7 @@
       
       
       
-      <li><a href="_sources/documentation.rst" target="_blank"
+      <li><a href="_sources/deploy.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -381,7 +381,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Documentation</h1>
+    <h1>Build and Deploy</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -391,7 +391,8 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-documentation">Build the documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#development-setup">Development Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
 </ul>
             </nav>
         </div>
@@ -403,18 +404,118 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="documentation">
-<h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">#</a></h1>
-<section id="build-the-documentation">
-<h2>Build the documentation<a class="headerlink" href="#build-the-documentation" title="Link to this heading">#</a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>default-jre<span class="w"> </span>plantuml<span class="w"> </span>graphviz
-<span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace/lwm2m_server/doc
-<span class="gp">host:lwm2m_server/doc$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-<span class="gp">host:lwm2m_server/doc$ </span>tox<span class="w"> </span>-e<span class="w"> </span>py3-html
+  <section id="build-and-deploy">
+<h1>Build and Deploy<a class="headerlink" href="#build-and-deploy" title="Link to this heading">#</a></h1>
+<section id="development-setup">
+<h2>Development Setup<a class="headerlink" href="#development-setup" title="Link to this heading">#</a></h2>
+<p>The build instructions in the documentation are tested for a native Linux
+Machine. For MacOS or Windows consider creating a docker container build. One
+of the developers uses the following <cite>devcontainer.json</cite> build environment:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Ubuntu&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mcr.microsoft.com/devcontainers/base:jammy&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;runArgs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;--cap-add=NET_ADMIN&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--cap-add=MKNOD&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--device=/dev/net/tun&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--sysctl=net.ipv6.conf.all.disable_ipv6=0&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--sysctl=net.ipv6.conf.default.disable_ipv6=0&quot;</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;postCreateCommand&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;apt-get update &amp;&amp; apt-get install -y iproute2 &amp;&amp; echo &#39;IPv6 is enabled.&#39;&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;remoteUser&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;root&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<p>Open the generated index.html in the doc/build directory in your browser.</p>
+<p>Before you we start with any development here are a few things you should get
+configured:</p>
+<ul class="simple">
+<li><p>Get the Zephyr SDK downloaded and configured in your root directory. You can
+find the instructions <a class="reference external" href="https://docs.zephyrproject.org/latest/develop/toolchains/zephyr_sdk.html">here</a>.</p></li>
+<li><p>Setup a virtual environment for the project.</p></li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>upgrade
+<span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>python3-pip<span class="w"> </span>python3.10-venv
+<span class="gp">host:~$ </span>python3.10<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:~$ </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>west
+<span class="gp">host:~$ </span>west<span class="w"> </span>init<span class="w"> </span>-m<span class="w"> </span>https://github.com/jonas-rem/lwm2m_server<span class="w"> </span>--mr<span class="w"> </span>main<span class="w"> </span>flownexus_workspace
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace
+<span class="gp">host:~/flownexus_workspace$ </span>west<span class="w"> </span>update
+</pre></div>
+</div>
+</section>
+<section id="container-environment">
+<h2>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading">#</a></h2>
+<p>Both components run in a Docker container. The Leshan server is running in a
+<code class="docutils literal notranslate"><span class="pre">openjdk:17-slim</span></code> container and the Django server is running in a
+<code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
+of the server.</p>
+<blockquote>
+<div><figure class="align-default" id="id1">
+<p class="plantuml">
+<img src="_images/plantuml-c3d163448b0d70a04ec6e7af1c18c8884ef6c5fe.png" alt="&#64;startuml
+package &quot;Docker Compose Environment&quot;  #DDDDDD {
+  [Leshan] as Leshan
+  [Django] as Django
+  database &quot;Database&quot; as DB
+  Leshan &lt;-right-&gt; Django : REST API
+  Django &lt;-down-&gt; DB
+}
+&#64;enduml"/>
+</p>
+<figcaption>
+<p><span class="caption-text">Both components running in one machine using Docker Compose</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</div></blockquote>
+<p>The following diagram shows the Docker Compose environment. The file
+<code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> defines the services and their configuration. The file
+<code class="docutils literal notranslate"><span class="pre">Dockerfile.leshan</span></code> defines the Leshan container and the file
+<code class="docutils literal notranslate"><span class="pre">Dockerfile.django</span></code> defines the Django container.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Make sure to change the password to the admin console as well as other
+settings like SECRET_KEY, DEBUG flag in a production environment!</p>
+</div>
+<p>The container can be build and started with the following commands:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>build
+<span class="go">[+] Building 0.5s (20/20) FINISHED                               docker:default</span>
+<span class="go"> =&gt; [leshan internal] load build definition from Dockerfile.leshan         0.0s</span>
+<span class="go"> =&gt; [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s</span>
+<span class="go"> =&gt; [django internal] load build definition from Dockerfile.django         0.0s</span>
+<span class="go"> =&gt; [django internal] load metadata for docker.io/library/python:3.11-sli  0.4s</span>
+<span class="go"> =&gt; [leshan 1/5] FROM docker.io/library/openjdk:17-slim@sha256:aaa3b3cb27  0.0s</span>
+<span class="go"> =&gt; [django 1/5] FROM docker.io/library/python:3.11-slim@sha256:d11b9bd5e  0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 2/5] WORKDIR /leshan                                    0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 3/5] COPY . /leshan/                                    0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 4/5] RUN apt-get update &amp;&amp;     apt-get install -y mave  0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 5/5] RUN chmod +x /leshan/leshan_build_run.sh           0.0s</span>
+<span class="go"> =&gt; =&gt; exporting layers                                                    0.0s</span>
+<span class="go"> =&gt; =&gt; writing image sha256:a017577ba2b175374148f5c3f128ac117ba5436ceaeff  0.0s</span>
+<span class="go"> =&gt; =&gt; naming to docker.io/library/server-leshan                           0.0s</span>
+<span class="go"> =&gt; CACHED [django 2/5] WORKDIR /django                                    0.0s</span>
+<span class="go"> =&gt; CACHED [django 3/5] COPY . /django/                                    0.0s</span>
+<span class="go"> =&gt; CACHED [django 4/5] RUN pip install --no-cache-dir -r /django/require  0.0s</span>
+<span class="go"> =&gt; CACHED [django 5/5] RUN chmod +x /django/django_start.sh               0.0s</span>
+<span class="go"> =&gt; =&gt; writing image sha256:1c88f1227753b08cf994c4e61d5cdcf97d68f260c99ad  0.0s</span>
+<span class="go"> =&gt; =&gt; naming to docker.io/library/server-django                           0.0s</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>up
+<span class="go">[+] Running 2/0</span>
+<span class="go"> ✔ Container server-leshan-1  Created                                      0.0s</span>
+<span class="go"> ✔ Container server-django-1  Created                                      0.0s</span>
+<span class="go">Attaching to django-1, leshan-1</span>
+<span class="go">[..]</span>
+<span class="go">django-1  | Starting development server at http://0.0.0.0:8000/</span>
+<span class="go">leshan-1  | [main] INFO org.eclipse.leshan.server.LeshanServer - CoAP over UDP endpoint based on Californium library available at coap://0.0.0.0:5683.</span>
+<span class="go">leshan-1  | LeshanServer started</span>
+<span class="go">^CGracefully stopping... (press Ctrl+C again to force)</span>
+<span class="go">[+] Stopping 2/2</span>
+<span class="go"> ✔ Container server-django-1  Stopped                                     10.3s</span>
+<span class="go"> ✔ Container server-leshan-1  Stopped                                     10.5s</span>
+</pre></div>
+</div>
 </section>
 </section>
 
@@ -430,20 +531,20 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="simulation.html"
+       href="architecture/communication_interfaces.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Simulation</p>
+        <p class="prev-next-title">Communication, Interfaces</p>
       </div>
     </a>
     <a class="right-next"
-       href="glossary.html"
+       href="simulation.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Glossary</p>
+        <p class="prev-next-title">Simulation</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -463,7 +564,8 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-documentation">Build the documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#development-setup">Development Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
 </ul>
   </nav></div>
 

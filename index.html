@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Flow Nexus: Open, Focused, Resilient &#8212; Flow Nexus  documentation</title>
+    <title>&lt;no title&gt; &#8212; Flow Nexus  documentation</title>
   
   
   
@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=384b581d" />
-    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=ac1fc1b8" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=64d943e2" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
@@ -44,7 +44,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Documentation" href="documentation.html" />
+    <link rel="next" title="Flow Nexus" href="introduction.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -156,18 +156,30 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        
-        <ul class="nav bd-sidenav bd-sidenav__home-link">
-            <li class="toctree-l1 current active">
-                <a class="reference internal" href="#">
-                    Flow Nexus: Open, Focused, Resilient
-                </a>
-            </li>
-        </ul>
         <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Flow Nexus</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="architecture/index.html">Architecture</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="architecture/django.html">Django</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture/leshan.html">Leshan</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture/communication_interfaces.html">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="deploy.html">Build and Deploy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">Internal ReST APIs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="weblog.html">Weblog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">APIs</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api_doc/api.html">Internal Django</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">News and Updates</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="news/weblog.html">Weblog</a></li>
 </ul>
 
     </div>
@@ -370,7 +382,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Flow Nexus: Open, Focused, Resilient</h1>
+    <h1><no title></h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -380,11 +392,8 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#introduction">Introduction</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motivation">Motivation</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#vision">Vision</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#table-of-contents">Table of Contents</a></li>
 </ul>
+
             </nav>
         </div>
     </div>
@@ -395,39 +404,34 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="flow-nexus-open-focused-resilient">
-<h1>Flow Nexus: Open, Focused, Resilient<a class="headerlink" href="#flow-nexus-open-focused-resilient" title="Link to this heading">#</a></h1>
-<section id="introduction">
-<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">#</a></h2>
-<p>Welcome to Flow Nexus, your comprehensive solution for small to medium scale IoT deployments.
-This platform is designed to streamline the setup, configuration, and use of IoT devices, making it easy to
-manage your IoT ecosystem.</p>
-</section>
-<section id="motivation">
-<h2>Motivation<a class="headerlink" href="#motivation" title="Link to this heading">#</a></h2>
-<p>This project aims to provide a minimal and standalone Open Source IoT platform. The focus is on systems
-with a deployment of up to a few thousand devices; it does not aim to be scalable to millions of devices.
-The goal is to build a system that receives, for example, regular temperature samples from remote IoT devices.
-These temperature samples will be sent to a backend and stored in a database. The data is then visualized in
-a web application.</p>
-</section>
-<section id="vision">
-<h2>Vision<a class="headerlink" href="#vision" title="Link to this heading">#</a></h2>
-<p>Our vision for Flow Nexus is to create a user-friendly, efficient, and robust Open Source platform for IoT management.
-We aim to simplify the complexities of IoT deployments, making them accessible and manageable for businesses
-of all sizes.</p>
-</section>
-<section id="table-of-contents">
-<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Link to this heading">#</a></h2>
-<div class="toctree-wrapper compound">
+  <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">Internal ReST APIs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="weblog.html">Weblog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Flow Nexus</a></li>
 </ul>
 </div>
-</section>
-</section>
+<div class="toctree-wrapper compound">
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture/index.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deploy.html">Build and Deploy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">APIs</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api_doc/api.html">Internal Django</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">News and Updates</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="news/weblog.html">Weblog</a></li>
+</ul>
+</div>
 
 
                 </article>
@@ -441,11 +445,11 @@ of all sizes.</p>
                   
 <div class="prev-next-area">
     <a class="right-next"
-       href="documentation.html"
+       href="introduction.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Documentation</p>
+        <p class="prev-next-title">Flow Nexus</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -465,11 +469,8 @@ of all sizes.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#introduction">Introduction</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motivation">Motivation</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#vision">Vision</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#table-of-contents">Table of Contents</a></li>
 </ul>
+
   </nav></div>
 
 </div></div>
@@ -482,10 +483,6 @@ of all sizes.</p>
   
   <div class="footer-item">
     
-<p class="component-author">
-By Jonas Remmert, Akarshan Kapoor
-</p>
-
   </div>
   
   <div class="footer-item">
@@ -493,7 +490,7 @@ By Jonas Remmert, Akarshan Kapoor
 
   <p class="copyright">
     
-      © Copyright 2024, Jonas Remmert, Akarshan Kapoor.
+      © Copyright 2024, Individual contributors to Flow Nexus.
       <br/>
     
   </p>
