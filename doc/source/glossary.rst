@@ -1,6 +1,14 @@
 Glossary
 ========
 
+Terms are usually explained and indexed directly in the documentation chapters.
+Additionally, some general terms are defined here to provide a quick reference.
+The terms defined here, as well as the indexed terms from the documentation
+chapters can be referenced in the documentation by using the ``:term:`` role.
+
+Additional Terms and Definitions
+--------------------------------
+
 .. glossary::
 
   LwM2M
@@ -16,7 +24,3 @@ Glossary
   Frontend
     Web application that visualizes the data from the backend, integrated into
     Django.
-
-  Endpoint
-    IoT device that is connected to Leshan, represented by a unique Endpoint
-    name.
