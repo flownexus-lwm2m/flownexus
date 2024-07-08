@@ -1,6 +1,6 @@
 .. only:: html
 
-   📥 Documentation as `PDF <./_static/flow_nexus.pdf>`_.
+   📥 Documentation as `PDF <./_static/FlowNexus.pdf>`_.
 
 .. toctree::
    :maxdepth: 1
