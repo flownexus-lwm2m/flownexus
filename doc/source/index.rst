@@ -14,6 +14,7 @@
 
    overview
    architecture/index
+   application_guide/index
    deploy
    simulation
    documentation
