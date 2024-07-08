@@ -88,17 +88,17 @@ the Django app that contains the application logic.
     expected data type.
 
   Resource
-    Captures individual data values from IoT devices, annotated with
-    timestamps, applicable data types, and linked to both the device and
-    resource type for which the data pertains.
+    A specific piece of data or functionality within an LwM2M Object. Resources
+    represent attributes or actions and are identified by Resource IDs within
+    an Object.
+
+    In the database Model a Resource represents an individual data value from one
+    IoT device, annotated with timestamps, applicable data types, and linked
+    to both the device and resource type for which the data is relevant.
 
   Event
-    Serves as a collection point for significant occurrences reported by
-    devices, including composite events defined by enclosing object IDs. The
-    server application logic has to generate events based on matching
-    timestamps or received composite notifications from devices. Although
-    individual resources within an event may have different timestamps, the
-    event itself encapsulates a single timestamp.
+    A collection for significant occurrences reported by endpoints. Events and
+    Resources are linked to each other via EventResource table.
 
   EventResource
     Acts as a junction table forming a many-to-many relationship between events
