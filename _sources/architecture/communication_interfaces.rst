@@ -105,20 +105,39 @@ consist of multiple Object IDs.
 Registration Updates
 ....................
 
+Leshan maintains registrations of endpoints. An endpoint can be registered or
+unregistered. To maintain its registration, an endpoint must send an update to
+Leshan regularly. If an endpoint does not send an update within the specified
+duration, it is considered offline and will be unregistered by Leshan.
+
+Those registration events are encapsulated into an LwM2M Object and sent to the
+backend server. The backend server stores the registration events in the
+database. This allows to use the generic database model for the registration
+events as well. All received registration events are stored in the database and
+can be used for statistics.
+
+All registration events are maintained in the custom LwM2M Object ID ``10240``:
+
+- ``10240/0/0``: Endpoint **registered** to Leshan.
+- ``10240/0/1``: Endpoint **unregistered** from Leshan.
+- ``10240/0/2``: Endpoint **updated** its registration.
+
+.. _data-flow-backend-to-endpoint-label:
+
 Data Flow: Backend -> Endpoint
 ------------------------------
 
-Endpoints often operate in queue mode, meaning they are not always online.
-The LwM2M Server is aware of the current status of a device (Online/Offline)
-and communicates this status to the backend server. Leshan does not queue
-pending data that should be sent to the device when it comes online. The
-backend server must handle this by itself so it has to have a representation of
-the current status of each device as well as the data to be send. The resource
-table ``DeviceOperation`` is used to store pending operations that should be
-sent to the endpoint while it is online.
+:term:`Endpoints <endpoint>` often operate in queue mode, meaning they are not
+always online. The LwM2M Server is aware of the current status of a device
+(Online/Offline) and communicates this status to the backend server. Leshan
+does not queue pending data that should be sent to the device when it comes
+online. The backend server must handle this by itself so it has to have a
+representation of the current status of each device as well as the data to be
+send. The resource table ``EndpointOperation`` is used to store pending
+operations that should be sent to the endpoint while it is online.
 
 Once an endpoint updates it's registration (LwM2M Update Operation) Leshan
-notifies the backend. The backend checks the ``DeviceOperation`` table for
+notifies the backend. The backend checks the ``EndpointOperation`` table for
 pending operations and sends them to the device by posting to the Leshan hosted
 ReST API. Leshan keeps the post call open until the device acknowledges the
 operation or a timeout is generated. Endpoints can be slow to respond (several
@@ -127,7 +146,7 @@ manner. By only sending data to endpoints while they are online, the backend
 can be sure that the ReST API calls are not open for a long time.
 
 Asynchronous Communication
---------------------------
+..........................
 
 Given that endpoints are comparably slow to respond, handling communication
 asynchronously is essential for efficient operation. This can be effectively
@@ -147,17 +166,17 @@ request. The ``FAILED`` status is assigned after 3 attempts. Retransmissions are
 triggered when the endpoint updates it's registration the next time.
 
 Example Communication
----------------------
+.....................
 
 The following example shows how the backend server can send a firmware download
 link resource ``Package URI 5/0/1`` to an endpoint:
 
-#. User creates new ``DeviceOperation``: resource path ``5/0/1``, value
+#. User creates new ``EndpointOperation``: resource path ``5/0/1``, value
    ``https://url.com/fw.bin``.
 #. Backend checks endpoint online status.
 #. If endpoint is offline, no further action is taken right away.
 #. Endoint comes online, Leshan sends update to the backend.
-#. Backend checks ``DeviceOperation`` table for pending operations for the
+#. Backend checks ``EndpointOperation`` table for pending operations for the
    endpoint.
 #. Finds pending operation, send resource to endpoint via the Leshan ReST API.
 #. Pending operation is marked ``completed`` if the endpoint acknowledges the

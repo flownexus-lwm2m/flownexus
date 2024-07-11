@@ -44,7 +44,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'architecture/communication_interfaces';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Build and Deploy" href="../deploy.html" />
+    <link rel="next" title="Application Guide" href="../application_guide/index.html" />
     <link rel="prev" title="Leshan" href="leshan.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -155,16 +155,20 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Flow Nexus</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Architecture</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="django.html">Django</a></li>
 <li class="toctree-l2"><a class="reference internal" href="leshan.html">Leshan</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/fw_setup.html">Firmware Setup</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../deploy.html">Build and Deploy</a></li>
@@ -348,9 +352,11 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#registration-updates">Registration Updates</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-endpoint">Data Flow: Backend -&gt; Endpoint</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-endpoint">Data Flow: Backend -&gt; Endpoint</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
+</ul>
+</li>
 </ul>
             </nav>
         </div>
@@ -458,29 +464,43 @@ dataypes  are e.g. used for Voltage range (min, max).</p>
 </section>
 <section id="registration-updates">
 <h3>Registration Updates<a class="headerlink" href="#registration-updates" title="Link to this heading">#</a></h3>
+<p>Leshan maintains registrations of endpoints. An endpoint can be registered or
+unregistered. To maintain its registration, an endpoint must send an update to
+Leshan regularly. If an endpoint does not send an update within the specified
+duration, it is considered offline and will be unregistered by Leshan.</p>
+<p>Those registration events are encapsulated into an LwM2M Object and sent to the
+backend server. The backend server stores the registration events in the
+database. This allows to use the generic database model for the registration
+events as well. All received registration events are stored in the database and
+can be used for statistics.</p>
+<p>All registration events are maintained in the custom LwM2M Object ID <code class="docutils literal notranslate"><span class="pre">10240</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">10240/0/0</span></code>: Endpoint <strong>registered</strong> to Leshan.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">10240/0/1</span></code>: Endpoint <strong>unregistered</strong> from Leshan.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">10240/0/2</span></code>: Endpoint <strong>updated</strong> its registration.</p></li>
+</ul>
 </section>
 </section>
 <section id="data-flow-backend-endpoint">
-<h2>Data Flow: Backend -&gt; Endpoint<a class="headerlink" href="#data-flow-backend-endpoint" title="Link to this heading">#</a></h2>
-<p>Endpoints often operate in queue mode, meaning they are not always online.
-The LwM2M Server is aware of the current status of a device (Online/Offline)
-and communicates this status to the backend server. Leshan does not queue
-pending data that should be sent to the device when it comes online. The
-backend server must handle this by itself so it has to have a representation of
-the current status of each device as well as the data to be send. The resource
-table <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> is used to store pending operations that should be
-sent to the endpoint while it is online.</p>
+<span id="data-flow-backend-to-endpoint-label"></span><h2>Data Flow: Backend -&gt; Endpoint<a class="headerlink" href="#data-flow-backend-endpoint" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="django.html#term-Endpoint"><span class="xref std std-term">Endpoints</span></a> often operate in queue mode, meaning they are not
+always online. The LwM2M Server is aware of the current status of a device
+(Online/Offline) and communicates this status to the backend server. Leshan
+does not queue pending data that should be sent to the device when it comes
+online. The backend server must handle this by itself so it has to have a
+representation of the current status of each device as well as the data to be
+send. The resource table <code class="docutils literal notranslate"><span class="pre">EndpointOperation</span></code> is used to store pending
+operations that should be sent to the endpoint while it is online.</p>
 <p>Once an endpoint updates it’s registration (LwM2M Update Operation) Leshan
-notifies the backend. The backend checks the <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> table for
+notifies the backend. The backend checks the <code class="docutils literal notranslate"><span class="pre">EndpointOperation</span></code> table for
 pending operations and sends them to the device by posting to the Leshan hosted
 ReST API. Leshan keeps the post call open until the device acknowledges the
 operation or a timeout is generated. Endpoints can be slow to respond (several
 Seconds), so the backend has to handle the ReST API call in an asynchronous
 manner. By only sending data to endpoints while they are online, the backend
 can be sure that the ReST API calls are not open for a long time.</p>
-</section>
 <section id="asynchronous-communication">
-<h2>Asynchronous Communication<a class="headerlink" href="#asynchronous-communication" title="Link to this heading">#</a></h2>
+<h3>Asynchronous Communication<a class="headerlink" href="#asynchronous-communication" title="Link to this heading">#</a></h3>
 <p>Given that endpoints are comparably slow to respond, handling communication
 asynchronously is essential for efficient operation. This can be effectively
 managed using Celery, a distributed task queue. When Leshan notifies the
@@ -497,21 +517,22 @@ request. The <code class="docutils literal notranslate"><span class="pre">FAILED
 triggered when the endpoint updates it’s registration the next time.</p>
 </section>
 <section id="example-communication">
-<h2>Example Communication<a class="headerlink" href="#example-communication" title="Link to this heading">#</a></h2>
+<h3>Example Communication<a class="headerlink" href="#example-communication" title="Link to this heading">#</a></h3>
 <p>The following example shows how the backend server can send a firmware download
 link resource <code class="docutils literal notranslate"><span class="pre">Package</span> <span class="pre">URI</span> <span class="pre">5/0/1</span></code> to an endpoint:</p>
 <ol class="arabic simple">
-<li><p>User creates new <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code>: resource path <code class="docutils literal notranslate"><span class="pre">5/0/1</span></code>, value
+<li><p>User creates new <code class="docutils literal notranslate"><span class="pre">EndpointOperation</span></code>: resource path <code class="docutils literal notranslate"><span class="pre">5/0/1</span></code>, value
 <code class="docutils literal notranslate"><span class="pre">https://url.com/fw.bin</span></code>.</p></li>
 <li><p>Backend checks endpoint online status.</p></li>
 <li><p>If endpoint is offline, no further action is taken right away.</p></li>
 <li><p>Endoint comes online, Leshan sends update to the backend.</p></li>
-<li><p>Backend checks <code class="docutils literal notranslate"><span class="pre">DeviceOperation</span></code> table for pending operations for the
+<li><p>Backend checks <code class="docutils literal notranslate"><span class="pre">EndpointOperation</span></code> table for pending operations for the
 endpoint.</p></li>
 <li><p>Finds pending operation, send resource to endpoint via the Leshan ReST API.</p></li>
 <li><p>Pending operation is marked <code class="docutils literal notranslate"><span class="pre">completed</span></code> if the endpoint acknowledges the
 operation.</p></li>
 </ol>
+</section>
 </section>
 </section>
 
@@ -536,11 +557,11 @@ operation.</p></li>
       </div>
     </a>
     <a class="right-next"
-       href="../deploy.html"
+       href="../application_guide/index.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Build and Deploy</p>
+        <p class="prev-next-title">Application Guide</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -565,9 +586,11 @@ operation.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#registration-updates">Registration Updates</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-endpoint">Data Flow: Backend -&gt; Endpoint</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow-backend-endpoint">Data Flow: Backend -&gt; Endpoint</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#asynchronous-communication">Asynchronous Communication</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-communication">Example Communication</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 

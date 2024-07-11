@@ -155,16 +155,20 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Flow Nexus</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Architecture</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="django.html">Django</a></li>
 <li class="toctree-l2"><a class="reference internal" href="leshan.html">Leshan</a></li>
 <li class="toctree-l2"><a class="reference internal" href="communication_interfaces.html">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/fw_setup.html">Firmware Setup</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../deploy.html">Build and Deploy</a></li>
@@ -361,6 +365,8 @@ interact with each other.</p>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="leshan.html">Leshan</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="leshan.html#build-and-run">Build and Run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="leshan.html#leshans-role-in-flownexus">Leshans Role in FlowNexus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="leshan.html#lwm2m-observe">LwM2M Observe</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="communication_interfaces.html">Communication, Interfaces</a><ul>
@@ -369,9 +375,11 @@ interact with each other.</p>
 <li class="toctree-l3"><a class="reference internal" href="communication_interfaces.html#registration-updates">Registration Updates</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="communication_interfaces.html#data-flow-backend-endpoint">Data Flow: Backend -&gt; Endpoint</a></li>
-<li class="toctree-l2"><a class="reference internal" href="communication_interfaces.html#asynchronous-communication">Asynchronous Communication</a></li>
-<li class="toctree-l2"><a class="reference internal" href="communication_interfaces.html#example-communication">Example Communication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="communication_interfaces.html#data-flow-backend-endpoint">Data Flow: Backend -&gt; Endpoint</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="communication_interfaces.html#asynchronous-communication">Asynchronous Communication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="communication_interfaces.html#example-communication">Example Communication</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

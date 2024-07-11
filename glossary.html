@@ -155,16 +155,20 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="introduction.html">Flow Nexus</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="architecture/index.html">Architecture</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="architecture/django.html">Django</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture/leshan.html">Leshan</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture/communication_interfaces.html">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/fw_setup.html">Firmware Setup</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="deploy.html">Build and Deploy</a></li>
@@ -373,6 +377,9 @@ visualization.</p>
 </dd>
 <dt id="term-Frontend">Frontend<a class="headerlink" href="#term-Frontend" title="Link to this term">#</a></dt><dd><p>Web application that visualizes the data from the backend, integrated into
 Django.</p>
+</dd>
+<dt id="term-Object">Object<a class="headerlink" href="#term-Object" title="Link to this term">#</a></dt><dd><p>A logical grouping of one or multiple Resources in LwM2M. An Object is
+identified by an Object ID.</p>
 </dd>
 </dl>
 </section>

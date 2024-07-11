@@ -44,7 +44,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Flow Nexus" href="introduction.html" />
+    <link rel="next" title="Overview" href="overview.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -156,16 +156,20 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="introduction.html">Flow Nexus</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="architecture/index.html">Architecture</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="architecture/django.html">Django</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture/leshan.html">Leshan</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture/communication_interfaces.html">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/fw_setup.html">Firmware Setup</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="deploy.html">Build and Deploy</a></li>
@@ -357,16 +361,27 @@ document.write(`
                 <article class="bd-article">
                   
   <p>📥 Documentation as <a class="reference external" href="./_static/FlowNexus.pdf">PDF</a>.</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="introduction.html">Flow Nexus</a></li>
-</ul>
-</div>
+<p><strong>Introduction</strong></p>
+<p>Welcome to Flow Nexus, your comprehensive solution for small to medium scale
+IoT deployments. This platform is designed to streamline the setup,
+configuration, and use of IoT devices, making it easy to manage your IoT
+ecosystem.</p>
+<p>This project aims to provide a minimal and standalone Open Source IoT platform.
+The focus is on systems with a deployment of up to a few thousand devices; it
+does not aim to be scalable to millions of devices. The goal is to build a
+system that receives, for example, regular temperature samples from remote IoT
+devices. These temperature samples will be sent to a backend and stored in a
+database. The data is then visualized in a web application.</p>
+<p>Our vision for Flow Nexus is to create a user-friendly, efficient, and robust
+Open Source platform for IoT management. We aim to simplify the complexities of
+IoT deployments, making them accessible and manageable for businesses of all
+sizes.</p>
 <div class="toctree-wrapper compound">
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="architecture/index.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="application_guide/index.html">Application Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="deploy.html">Build and Deploy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
@@ -398,11 +413,11 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="right-next"
-       href="introduction.html"
+       href="overview.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Flow Nexus</p>
+        <p class="prev-next-title">Overview</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

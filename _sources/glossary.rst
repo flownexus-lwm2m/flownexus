@@ -24,3 +24,7 @@ Additional Terms and Definitions
   Frontend
     Web application that visualizes the data from the backend, integrated into
     Django.
+
+  Object
+    A logical grouping of one or multiple Resources in LwM2M. An Object is
+    identified by an Object ID.

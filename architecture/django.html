@@ -155,16 +155,20 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Flow Nexus</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Architecture</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Django</a></li>
 <li class="toctree-l2"><a class="reference internal" href="leshan.html">Leshan</a></li>
 <li class="toctree-l2"><a class="reference internal" href="communication_interfaces.html">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/fw_setup.html">Firmware Setup</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../deploy.html">Build and Deploy</a></li>
@@ -423,7 +427,7 @@ the Django app that contains the application logic.</p>
 <p><span class="caption-text">Entity Relationship Diagram generated from Django models</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
-<dl class="simple glossary">
+<dl class="glossary">
 <dt id="term-Endpoint">Endpoint<a class="headerlink" href="#term-Endpoint" title="Link to this term">#</a></dt><dd><p>IoT devices using the LwM2M protocol in the network, identifiable by a
 unique name, e.g. <code class="docutils literal notranslate"><span class="pre">urn:imei:123456789012345</span></code>.</p>
 </dd>
@@ -431,16 +435,15 @@ unique name, e.g. <code class="docutils literal notranslate"><span class="pre">u
 object-resource ID combination, a descriptive name, and specifying the
 expected data type.</p>
 </dd>
-<dt id="term-Resource">Resource<a class="headerlink" href="#term-Resource" title="Link to this term">#</a></dt><dd><p>Captures individual data values from IoT devices, annotated with
-timestamps, applicable data types, and linked to both the device and
-resource type for which the data pertains.</p>
+<dt id="term-Resource">Resource<a class="headerlink" href="#term-Resource" title="Link to this term">#</a></dt><dd><p>A specific piece of data or functionality within an LwM2M Object. Resources
+represent attributes or actions and are identified by Resource IDs within
+an Object.</p>
+<p>In the database Model a Resource represents an individual data value from one
+IoT device, annotated with timestamps, applicable data types, and linked
+to both the device and resource type for which the data is relevant.</p>
 </dd>
-<dt id="term-Event">Event<a class="headerlink" href="#term-Event" title="Link to this term">#</a></dt><dd><p>Serves as a collection point for significant occurrences reported by
-devices, including composite events defined by enclosing object IDs. The
-server application logic has to generate events based on matching
-timestamps or received composite notifications from devices. Although
-individual resources within an event may have different timestamps, the
-event itself encapsulates a single timestamp.</p>
+<dt id="term-Event">Event<a class="headerlink" href="#term-Event" title="Link to this term">#</a></dt><dd><p>A collection for significant occurrences reported by endpoints. Events and
+Resources are linked to each other via EventResource table.</p>
 </dd>
 <dt id="term-EventResource">EventResource<a class="headerlink" href="#term-EventResource" title="Link to this term">#</a></dt><dd><p>Acts as a junction table forming a many-to-many relationship between events
 and their constituent resources, enabling flexible association without

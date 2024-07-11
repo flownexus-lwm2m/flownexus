@@ -155,16 +155,20 @@
  </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Flow Nexus</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Architecture</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="django.html">Django</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Leshan</a></li>
 <li class="toctree-l2"><a class="reference internal" href="communication_interfaces.html">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../application_guide/fw_setup.html">Firmware Setup</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../deploy.html">Build and Deploy</a></li>
@@ -344,6 +348,8 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-and-run">Build and Run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#leshans-role-in-flownexus">Leshans Role in FlowNexus</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-observe">LwM2M Observe</a></li>
 </ul>
             </nav>
         </div>
@@ -369,6 +375,47 @@ document.write(`
 </div>
 <p>The Leshan server should now be up and running under the following URL:
 <code class="docutils literal notranslate"><span class="pre">http://localhost:8080</span></code>.</p>
+</section>
+<section id="leshans-role-in-flownexus">
+<h2>Leshans Role in FlowNexus<a class="headerlink" href="#leshans-role-in-flownexus" title="Link to this heading">#</a></h2>
+<p>Lehsan is considered a production ready LwM2M server and is used in many
+commercial products. It is used as an LwM2M server in FlowNexus. It is
+responsible for registering and managing <a class="reference internal" href="django.html#term-Endpoint"><span class="xref std std-term">endpoint</span></a>. There is no application
+specific logic implemented in Leshan related Java code within FlowNexus. The
+goal is to have all application logic within the Django application.</p>
+<p>Leshan can be seen as a proxy between the LwM2M endpoints Django. There is no
+direct communication between Django and endpoints.</p>
+</section>
+<section id="lwm2m-observe">
+<span id="lwm2m-observe-label"></span><h2>LwM2M Observe<a class="headerlink" href="#lwm2m-observe" title="Link to this heading">#</a></h2>
+<dl class="simple glossary">
+<dt id="term-LwM2M-observe">LwM2M observe<a class="headerlink" href="#term-LwM2M-observe" title="Link to this term">#</a></dt><dd><p>The <cite>LwM2M observe</cite> operation allows an LwM2M Server to monitor changes to
+specific Resources, Resources within an Object Instance, or all Object
+Instances of an Object on an LwM2M Client. An endpoint must
+remember these observation requests until re-registration.</p>
+</dd>
+<dt id="term-Single-and-CompositeObserve">Single and CompositeObserve<a class="headerlink" href="#term-Single-and-CompositeObserve" title="Link to this term">#</a></dt><dd><p>Leshan supports two types of observe requests: Single and CompositeObserve.
+SingleObserve is a simple observe request for a single resource.
+CompositeObserve is a more complex observe request that subscribes to
+multiple <a class="reference internal" href="django.html#term-Resource"><span class="xref std std-term">Resources</span></a> of one <a class="reference internal" href="../glossary.html#term-Object"><span class="xref std std-term">Object</span></a>.</p>
+</dd>
+</dl>
+<p>Once an endpoint registers to Leshan, Leshan will initiate an observe request
+to selected resources. With every new registration of an endpoint, the observe
+requests are re-initiated.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The observe initiation will move from Leshan to Django with future versions.
+Django is informed about new registrations and will then initiate the
+observe requests. This allows a more centralized approach and better control
+over the observe requests via the database model.</p>
+<p>For testing, the Leshan server currently initiates the following two observe
+requests:</p>
+<ul class="simple">
+<li><p>SingleObserve (Temperature Sensor Value): <code class="docutils literal notranslate"><span class="pre">{3303,</span> <span class="pre">0,</span> <span class="pre">5700}</span></code></p></li>
+<li><p>CompositeObject (Custom Object Id): <code class="docutils literal notranslate"><span class="pre">{10300}</span></code></p></li>
+</ul>
+</div>
 </section>
 </section>
 
@@ -418,6 +465,8 @@ document.write(`
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-and-run">Build and Run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#leshans-role-in-flownexus">Leshans Role in FlowNexus</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-observe">LwM2M Observe</a></li>
 </ul>
   </nav></div>
 
