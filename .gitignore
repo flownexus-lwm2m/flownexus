@@ -48,3 +48,7 @@ Gitlint.txt
 
 # Database files
 *.sqlite3
+
+# Build artifacts from simulate.py script
+simulation/lwm2m_client/endpoint_binaries/
+simulation/conf_tmp/
