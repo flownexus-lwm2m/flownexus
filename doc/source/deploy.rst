@@ -1,8 +1,8 @@
 Build and Deploy
 ================
 
-Development Setup
------------------
+Build Setup
+-----------
 
 The build instructions in the documentation are tested for a native Linux
 Machine. For MacOS or Windows consider creating a docker container build. One
@@ -117,3 +117,105 @@ The container can be build and started with the following commands:
   [+] Stopping 2/2
    ✔ Container server-django-1  Stopped                                     10.3s
    ✔ Container server-leshan-1  Stopped                                     10.5s
+
+Setup a Virtual Server
+-------------------------
+
+flownexus can be deployed to a virtual server. This chapter explains a basic
+setup of a virtual server with a domain name. A requirement is to have a Linux
+server and a domain name. The domain name must point to the server, e.g. via a
+A/AAAA-Record.
+
+The setup has been tested with a Debian 12 server with a 1C/1GB RAM
+configuration.
+
+
+.. code-block:: console
+   :caption: Basic setup of a virtual server
+
+   vserver:~/ apt update
+   vserver:~/ apt install git docker docker-compose nginx certbot python3-certbot-nginx
+   # Generate a certificate with letsencrypt:
+   vserver:~/ certbot --nginx -d flownexus.org -d www.flownexus.org
+   vserver:~/ Create nginx config at /etc/nginx/sites-available/flownexus (see example below)
+   # Activate the Nginx config:
+   vserver:~/ sudo ln -s /etc/nginx/sites-available/flownexus /etc/nginx/sites-enabled/
+   # Test the Nginx config:
+   vserver:~/ nginx -t
+   # Restart Nginx:
+   vserver:~/systemctl restart nginx
+
+
+.. code-block:: nginx
+   :caption: Example Nginx configuration
+   :linenos:
+
+   server {
+       listen 443 ssl http2;
+       listen [::]:443 ssl http2;
+       server_name flownexus.org;
+
+       error_log /var/log/nginx/flownexus.org.error.log;
+       access_log /var/log/nginx/flownexus.org.access.log;
+
+       ssl_certificate /etc/letsencrypt/live/flownexus.org/fullchain.pem;
+       ssl_certificate_key /etc/letsencrypt/live/flownexus.org/privkey.pem;
+
+       location / {
+           proxy_pass http://127.0.0.1:8000/;
+           proxy_set_header Host $http_host;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+           proxy_set_header X-Frame-Options SAMEORIGIN;
+       }
+   }
+
+   server {
+       ssl_certificate /etc/letsencrypt/live/flownexus.org/fullchain.pem;
+       ssl_certificate_key /etc/letsencrypt/live/flownexus.org/privkey.pem;
+       ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+       listen 80;
+       #listen [::]:80 ipv6only=on;
+       listen [::]:80;
+       server_name flownexus.org;
+
+       return 301 https://$host$request_uri;
+   }
+
+After the setup, dlownload flownexus and start it with using docker compose in
+detached mode. Make sure to change the ``DEPLOY_SECRET_KEY`` and ``DEBUG`` flag
+in the ``settings.py`` file before deploying.:
+
+.. code-block:: console
+   :caption: Start flownexus with docker compose
+
+
+   vserver:~/ git clone https://github.com/jonas-rem/flownexus.git
+   # Change the DEPLOY_SECRET_KEY and DEBUG flag in the settings.py file
+   vserver:~/flownexus/server$ docker-compose up -d
+
+flownexus is now available at https://flownexus.org. The server is running in a
+Docker container and the Nginx server is used as a reverse proxy. Consider
+enabling the firewall and only keep required ports open:
+
+- **Port 80, TCP**: HTTP
+- **Port 443, TCP**: HTTPS
+- **Port 22, TCP**: SSH
+- **Port 5683, UDP**: CoAP
+
+.. warning::
+
+  flownexus is not production ready. This server setup is only intended for
+  testing purposes.
+
+  The current flownexus configuration uses the default Django
+  ``DEPLOY_SECRET_KEY`` and enables the ``DEBUG`` flag. This is a security risk
+  and must be change before deploying.
+
+  Currently, the default django inbuild webserver is used. This is not
+  recommended for production use. Consider using a production-ready webserver
+  like Nginx or Apache.
