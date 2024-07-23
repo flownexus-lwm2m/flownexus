@@ -5,6 +5,8 @@
 #
 
 from django.db import models
+from django.core.exceptions import ValidationError
+import os
 
 class Endpoint(models.Model):
     """Represents a specific device in the IoT ecosystem."""
@@ -105,7 +107,17 @@ class EndpointOperation(models.Model):
 
 class Firmware(models.Model):
     """Represents a firmware update file that can be downloaded by an endpoint."""
-    version = models.CharField(max_length=100)
-    file_name = models.CharField(max_length=255)
-    download_url = models.URLField()
+    version = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    binary = models.FileField(upload_to='firmware')
+
+    # Limit the binary file size to 1 MB
+    def clean(self):
+        super().clean()
+        max_size = 1 * 1024 * 1024
+
+        if self.binary and self.binary.size > max_size:
+            raise ValidationError("The file size must be under 1 MB.")
+
+    def __str__(self):
+        return os.path.basename(self.binary.name)
