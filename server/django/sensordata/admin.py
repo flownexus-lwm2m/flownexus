@@ -6,8 +6,10 @@
 
 import logging
 from django.utils import timezone
+from django.utils.html import format_html
 from django.contrib import admin
 from .tasks import process_pending_operations
+import os
 from .models import (
     Endpoint,
     ResourceType,
@@ -99,4 +101,20 @@ class EndpointOperationAdmin(admin.ModelAdmin):
 
 @admin.register(Firmware)
 class FirmwareAdmin(admin.ModelAdmin):
-    list_display = ('version', 'file_name', 'download_url', 'created_at')
+    list_display = ('version', 'file_name', 'file_link', 'created_at')
+
+    def file_name(self, obj):
+        return os.path.basename(obj.binary.name)
+    file_name.short_description = 'File Name'
+
+    def file_link(self, obj):
+        return format_html('<a href="{}" download>{}</a>', obj.binary.url, "Download")
+    file_link.short_description = 'Download Link'
+
+    # Override the get_form method to make the binary field read-only when
+    # editing an existing record
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj:
+            form.base_fields['binary'].disabled = True
+        return form
