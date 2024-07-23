@@ -196,7 +196,7 @@ in the ``settings.py`` file before deploying.:
 
    vserver:~/ git clone https://github.com/jonas-rem/flownexus.git
    # Change the DEPLOY_SECRET_KEY and DEBUG flag in the settings.py file
-   vserver:~/flownexus/server$ docker compose up -d
+   vserver:~/flownexus/server$ docker-compose up -d
 
 flownexus is now available at https://flownexus.org. The server is running in a
 Docker container and the Nginx server is used as a reverse proxy. Consider
