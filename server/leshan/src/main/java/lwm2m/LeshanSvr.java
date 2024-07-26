@@ -1,3 +1,11 @@
+/* Copyright (c) 2024 Jonas Remmert
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Parts of this code are based on the Leshan project
+ * (https://www.eclipse.org/leshan/) licensed under the BSD 3-Clause License.
+ */
+
 package lwm2m;
 import java.util.ArrayList;
 import java.util.List;

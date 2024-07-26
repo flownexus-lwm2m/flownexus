@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 from rest_framework import serializers
 from .base import HandleResourceMixin, ResourceDataSerializer
 from ..models import Endpoint

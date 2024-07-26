@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 from django.core.management.base import BaseCommand
 from drf_spectacular.generators import SchemaGenerator
 import yaml
