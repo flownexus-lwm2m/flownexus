@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 from rest_framework import serializers
 from ..models import ResourceType, Resource, Event, EventResource
 from ..tasks import process_pending_operations

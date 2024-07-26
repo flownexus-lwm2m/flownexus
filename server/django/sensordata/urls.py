@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 from django.urls import path
 from .views import PostSingleResourceView, PostCompositeResourceView
 

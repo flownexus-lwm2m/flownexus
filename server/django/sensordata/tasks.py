@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 from celery import shared_task
 import requests
 from .models import Endpoint, EndpointOperation
