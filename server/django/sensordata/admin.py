@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 import logging
 from django.utils import timezone
 from django.contrib import admin

@@ -13,6 +13,10 @@
  * Contributors:
  *     Sierra Wireless - initial API and implementation
  *     Orange - keep one JSON dependency
+ *
+ * Copyright (c) 2024 Jonas Remmert
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *******************************************************************************/
 package lwm2m.model;
 
