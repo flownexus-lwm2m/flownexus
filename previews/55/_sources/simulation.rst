@@ -30,8 +30,8 @@ on the ESP32-S3 and has built-in WiFi.
 .. code-block:: console
   :caption: Build and run the lwm2m_client sample on the M5Stack ATOM S3 Lite
 
-  host:~/workspace/flownexus/simulatin$ west update
-  host:~/workspace/flownexus/simulation$ west build -b m5stack_atoms3_lite/esp32s3/procpu lwm2m_client/ -p -- -DCONF=overlay-lwm2m-1.1.conf
+  host:~/workspace/flownexus$ west update
+  host:~/workspace/flownexus$ west build -b m5stack_atoms3_lite/esp32s3/procpu simulation/lwm2m_client/ -p -- -DCONF=overlay-lwm2m-1.1.conf
   host:~/workspace/flownexus$ west flash && west espressif monitor
 
 .. note::

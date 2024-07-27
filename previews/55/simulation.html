@@ -397,8 +397,8 @@ work on the target device.</p>
 on the ESP32-S3 and has built-in WiFi.</p>
 <div class="literal-block-wrapper docutils container" id="id9">
 <div class="code-block-caption"><span class="caption-text">Build and run the lwm2m_client sample on the M5Stack ATOM S3 Lite</span><a class="headerlink" href="#id9" title="Link to this code">#</a></div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/simulatin$ </span>west<span class="w"> </span>update
-<span class="gp">host:~/workspace/flownexus/simulation$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>m5stack_atoms3_lite/esp32s3/procpu<span class="w"> </span>lwm2m_client/<span class="w"> </span>-p<span class="w"> </span>--<span class="w"> </span>-DCONF<span class="o">=</span>overlay-lwm2m-1.1.conf
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus$ </span>west<span class="w"> </span>update
+<span class="gp">host:~/workspace/flownexus$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>m5stack_atoms3_lite/esp32s3/procpu<span class="w"> </span>simulation/lwm2m_client/<span class="w"> </span>-p<span class="w"> </span>--<span class="w"> </span>-DCONF<span class="o">=</span>overlay-lwm2m-1.1.conf
 <span class="gp">host:~/workspace/flownexus$ </span>west<span class="w"> </span>flash<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>west<span class="w"> </span>espressif<span class="w"> </span>monitor
 </pre></div>
 </div>
