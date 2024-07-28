@@ -347,16 +347,8 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#client-simulation">Client Simulation</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulating-a-single-endpoint">Simulating a single Endpoint</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-script-simulate-py">Simulation Script (simulate.py)</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulating-multiple-endpoints">Simulating Multiple Endpoints</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#connecting-to-a-locally-hosted-leshan-server">Connecting to a locally hosted Leshan server</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#configuring-the-firmware">Configuring the Firmware</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#attach-to-the-running-container">Attach to the running Container</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-build-and-run">Manual build and run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-client-simulation">LwM2M Client Simulation</a></li>
 </ul>
 </li>
 </ul>
@@ -374,226 +366,52 @@ document.write(`
 <h1>Simulation<a class="headerlink" href="#simulation" title="Link to this heading">#</a></h1>
 <section id="iot-devices-with-zephyr">
 <h2>IoT Devices with Zephyr<a class="headerlink" href="#iot-devices-with-zephyr" title="Link to this heading">#</a></h2>
-<p>Zephyr implements an LwM2M client library <a class="footnote-reference brackets" href="#id5" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> and has an LwM2M client sample
-<a class="footnote-reference brackets" href="#id6" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>. The Zephyr works with the flownexus server out of the box e.g. with an
-nRF9160 DK board.</p>
-<p>flownexus provides a modified sample at <code class="docutils literal notranslate"><span class="pre">simulation/lwm2m_client</span></code> to showcase
-all server features.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The lwm2m_client sample is a copy of the original Zephyr sample. Distinct
-features that showcase flownexus capabilities are planned for the upcoming
-releases.</p>
-</div>
-</section>
-<section id="client-simulation">
-<h2>Client Simulation<a class="headerlink" href="#client-simulation" title="Link to this heading">#</a></h2>
-<p>The lwm2m_client sample can run in simulation mode (<code class="docutils literal notranslate"><span class="pre">native_sim</span></code>) <a class="footnote-reference brackets" href="#id7" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.
-Building the sample with <code class="docutils literal notranslate"><span class="pre">native_sim</span></code> will generate a binary that can be
-executed directly on the host machine. This allows to test all components
-locally.</p>
-<p>The native_sim simulation allows to connect the simulated Zephyr instance to
-the host network <a class="footnote-reference brackets" href="#id8" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a>. Furthermore, simulated Zephyr endpoints have access to
-the internet via the host network, allowing testing of both a locally hosted
-instance of flownexus as well as a remote instance.</p>
-<p>To simulate endpoints easily, a script is provided that builds and runs the
-endpoints in a docker container. Setting up the network and running the
-simulation in a docker container ensures interoperability with different host
-systems.</p>
-<section id="prerequisites">
-<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">#</a></h3>
-<p>The simulation requires a working Docker installation.</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>apt<span class="w"> </span>install<span class="w"> </span>docker-ce
+<p>As device management protocol LwM2M is used. Zephyr offers a LwM2M client at
+<code class="docutils literal notranslate"><span class="pre">subsys/net/lib/lwm2m</span></code>. This LwM2M client sample application implements the
+LwM2M library and establishes a connection to an LwM2M server. The example can
+be build with the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>nrf9161dk_nrf9160_ns<span class="w"> </span>fw_test/lwm2m_client<span class="w"> </span>-p
+<span class="gp">host:~/flownexus_workspace/lwm2m_server$ </span>west<span class="w"> </span>flash<span class="w"> </span>--recover
 </pre></div>
 </div>
-</section>
-<section id="simulating-a-single-endpoint">
-<h3>Simulating a single Endpoint<a class="headerlink" href="#simulating-a-single-endpoint" title="Link to this heading">#</a></h3>
-<p>The easiest way to run the simulation is to execute the simulate.py script
-without any arguments:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/simulation$ </span>python3<span class="w"> </span>./simulate.py
-<span class="go">No build/run options provided, build and run n clients with logging:</span>
-<span class="go">  Warning: bindir will be cleaned, do you want to continue? [y/n]</span>
-<span class="go">y</span>
-
-<span class="go">Cleaning ./lwm2m_client/endpoint_binaries/, ./conf_tmp/</span>
-<span class="go">Building Zephyr client [1/1]</span>
-<span class="go">Building image from ./Dockerfile</span>
-<span class="go">Starting container</span>
-<span class="go">Starting zeth [1/1]</span>
-<span class="go">Starting Zephyr client [1/1]</span>
-
-<span class="go">*** Booting Zephyr OS build v3.7.0-rc3-75-gd06e95c49b75 ***</span>
+<section id="lwm2m-client-simulation">
+<h3>LwM2M Client Simulation<a class="headerlink" href="#lwm2m-client-simulation" title="Link to this heading">#</a></h3>
+<p>The Zephyr application can run in simulation mode. This allows to test all
+components locally. Once leshan and Zephyr are running, the Zephyr application
+can be started in emulation with the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server$ </span>./zephyr_build_run_sim.sh
+<span class="go">*** Booting nRF Connect SDK zephyr-v3.5.0-3024-g7c3e830729b7 ***</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_engine: lwm2m_engine_init: LWM2M engine socket receive thread started</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_security: security_create: Create LWM2M security instance: 0</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_server: server_create: Create LWM2M server instance: 0</span>
+<span class="go">[00:00:00.000,000] &lt;dbg&gt; net_lwm2m_obj_device: device_create: Create LWM2M device instance: 0</span>
+<span class="go">[00:00:00.010,000] &lt;dbg&gt; net_lwm2m_obj_firmware: firmware_create: Create LWM2M firmware instance: 0</span>
+<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: Initializing network</span>
+<span class="go">[00:00:00.010,000] &lt;inf&gt; net_config: IPv4 address: 192.0.2.1</span>
+</pre></div>
+</div>
+<p>You should see the following output in the docker console or in the most recent
+log file in <code class="docutils literal notranslate"><span class="pre">server/logs/</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:lwm2m_server/docker_compose$ </span>leshan-1<span class="w">  </span><span class="p">|</span><span class="w"> </span>LeshanServer<span class="w"> </span>started
+<span class="go">leshan-1  | new device registered: qemu_x86</span>
+<span class="go">leshan-1  | Onboarding qemu_x86</span>
+<span class="go">leshan-1  | Resources:</span>
+<span class="go">leshan-1  | &lt;/3&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0/0&gt;</span>
+<span class="go">leshan-1  | &lt;/3/0/1&gt;</span>
 <span class="go">[..]</span>
 </pre></div>
 </div>
-<p>You should now be able see one active endoint with the registration name
-<code class="docutils literal notranslate"><span class="pre">urn:imei:100000000000000</span></code> the registered node in the Django Admin dashboard
-at <code class="docutils literal notranslate"><span class="pre">https://flownexus.org/admin/</span></code>.</p>
-</section>
-<section id="simulation-script-simulate-py">
-<h3>Simulation Script (simulate.py)<a class="headerlink" href="#simulation-script-simulate-py" title="Link to this heading">#</a></h3>
-<div class="literal-block-wrapper docutils container" id="id9">
-<div class="code-block-caption"><span class="caption-text">Options of the simulate.py script</span><a class="headerlink" href="#id9" title="Link to this code">#</a></div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--help
-<span class="go">usage: simulate.py [-h] [-n NUM_CLIENTS] [-v] [-b] [-r] [-d DELAY] [-l]</span>
-
-<span class="go">Zephyr Build and Run Script</span>
-
-<span class="go">options:</span>
-<span class="go">  -h, --help      show this help message and exit</span>
-<span class="go">  -n NUM_CLIENTS  Number of client instances to start. (1 - 254) (default: 1)</span>
-<span class="go">  -v              Enable logging (default: False)</span>
-<span class="go">  -b              Build the client (default: False)</span>
-<span class="go">  -r              Run the client. (default: False)</span>
-<span class="go">  -d DELAY        Client start delay [ms] (default: 0)</span>
-<span class="go">  -l              Connect to locally running Leshan server (default: False)</span>
-</pre></div>
-</div>
-</div>
-</section>
-<section id="simulating-multiple-endpoints">
-<h3>Simulating Multiple Endpoints<a class="headerlink" href="#simulating-multiple-endpoints" title="Link to this heading">#</a></h3>
-<p>The simulation allows to configure and start multiple Zephyr endpoints. The
-script takes care of assigning individual IP addresses and gateway settings to
-each endpoint. Furthermore it sets up the virtual network adapter (zeth) that
-connects the endpoints to the host network. For that reason, each endpoint has
-to be build before it can be started. The resulting binaries are stored in the
-lwm2m_client sample (e.g. <code class="docutils literal notranslate"><span class="pre">lwm2m_client/endpoint_binaries/ep_0.exe</span></code>). A set
-of devices can be build once and started by omitting the parameter <code class="docutils literal notranslate"><span class="pre">-b</span></code>.</p>
-<div class="literal-block-wrapper docutils container" id="id10">
-<div class="code-block-caption"><span class="caption-text">Build and run 10 endpoints without logging</span><a class="headerlink" href="#id10" title="Link to this code">#</a></div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>-b<span class="w"> </span>-r<span class="w"> </span>-n<span class="w"> </span><span class="m">10</span>
-<span class="go">Cleaning ./lwm2m_client/endpoint_binaries/, ./conf_tmp/</span>
-<span class="go">Building Zephyr client [10/10]</span>
-<span class="go">Building image from ./Dockerfile</span>
-<span class="go">Starting container</span>
-<span class="go">Starting zeth [10/10]</span>
-<span class="go">Starting Zephyr client [10/10]</span>
-<span class="gp"># </span>Stop<span class="w"> </span>the<span class="w"> </span>simulation<span class="w"> </span>with<span class="w"> </span>&lt;Ctrl+c&gt;
-<span class="go">Stopping container</span>
-</pre></div>
-</div>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The simulate.py script supports max. 254 clients.</p>
-</div>
-</section>
-<section id="connecting-to-a-locally-hosted-leshan-server">
-<h3>Connecting to a locally hosted Leshan server<a class="headerlink" href="#connecting-to-a-locally-hosted-leshan-server" title="Link to this heading">#</a></h3>
-<p>Connecting to a locally hosted Leshan server is possible by setting the <code class="docutils literal notranslate"><span class="pre">-l</span></code>
-flag. The script will connect the simulated Zephyr instances to the Leshan
-server running on the host machine. Internally, the script overwrites the
-<code class="docutils literal notranslate"><span class="pre">LWM2M_APP_SERVER</span></code> configuration option in the Zephyr lwm2m_client sample
-with the IP address of the container with the running Leshan server.</p>
-<p>If the Leshan server is started on the host natively (without docker compose),
-change the IP address in the Kconfig file (see next chapter) to
-<code class="docutils literal notranslate"><span class="pre">coap://192.0.2.2:5683</span></code>.</p>
-</section>
-<section id="configuring-the-firmware">
-<h3>Configuring the Firmware<a class="headerlink" href="#configuring-the-firmware" title="Link to this heading">#</a></h3>
-<p>You can change the flownexus domain that you want to connect to by modifying
-the <code class="docutils literal notranslate"><span class="pre">Kconfig</span></code> file in the lwm2m_client sample.</p>
-<div class="literal-block-wrapper docutils container" id="id11">
-<div class="code-block-caption"><span class="caption-text">Change LwM2M server to the public hosted eclipse leshan server</span><a class="headerlink" href="#id11" title="Link to this code">#</a></div>
-<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="w"> </span>./simulation/lwm2m_client/Kconfig
-<span class="w"> </span>config LWM2M_APP_SERVER
-<span class="w"> </span>       string &quot;LwM2M server address&quot;
-<span class="gd">-       default &quot;coap://flownexus.org:5683&quot; if !LWM2M_DTLS_SUPPORT</span>
-<span class="gi">+       default &quot;coap://leshan.eclipseprojects.io:5683&quot; if !LWM2M_DTLS_SUPPORT</span>
-</pre></div>
-</div>
-</div>
-<dl class="simple">
-<dt>Leshan URLs:</dt><dd><ul class="simple">
-<li><p>flownexus public server: <code class="docutils literal notranslate"><span class="pre">coap://flownexus.org:5683</span></code></p></li>
-<li><p>Eclipse public Leshan server: <code class="docutils literal notranslate"><span class="pre">coap://leshan.eclipseprojects.io:5683</span></code></p></li>
-</ul>
-</dd>
-</dl>
-<p>If you want to modify the firmware further, check <a class="reference internal" href="application_guide/fw_setup.html#firmware-setup"><span class="std std-ref">Firmware Setup</span></a> for
-more details on this topic.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>After making changes to Kconfig, make sure to delete the build directory
-to ensure that the changes are applied.</p>
-</div>
-</section>
-<section id="attach-to-the-running-container">
-<h3>Attach to the running Container<a class="headerlink" href="#attach-to-the-running-container" title="Link to this heading">#</a></h3>
-<p>After starting the simulation, you can attach to the running container e.g. to
-attach to the Shell terminal of a running Zephyr instance:</p>
-<div class="literal-block-wrapper docutils container" id="id12">
-<div class="code-block-caption"><span class="caption-text">Attach to the running container</span><a class="headerlink" href="#id12" title="Link to this code">#</a></div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>-b<span class="w"> </span>-r<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span>
-<span class="go">Cleaning ./lwm2m_client/endpoint_binaries/, ./conf_tmp/</span>
-<span class="go">Building Zephyr client [1/1]</span>
-<span class="go">Building image from ./Dockerfile</span>
-<span class="go">Starting container</span>
-<span class="go">Starting zeth [1/1]</span>
-<span class="go">Starting Zephyr client [1/1]</span>
-<span class="go">Quit &lt;q&gt;;   Attach to Container &lt;a&gt;</span>
-<span class="go">a</span>
-
-<span class="gp">root@855c499d5a09:/home/workspace/flownexus/simulation# </span>tio<span class="w"> </span>/dev/pts/0
-<span class="go">tio v2.7</span>
-<span class="go">Press ctrl-t q to quit</span>
-<span class="go">Connected</span>
-<span class="gp gp-VirtualEnv">(Press &lt;Tab&gt; to interact with the Zephyr Shell)</span>
-
-<span class="go">  clear    device   devmem   help     history  kernel   lwm2m    net</span>
-<span class="go">  rem      resize   retval   shell</span>
-</pre></div>
-</div>
-</div>
-<p>By having access to individual nodes, you can interact with the Zephyr Shell
-and test different features. In particular, interacting with the LwM2M Shell
-can be useful to test the LwM2M client features.</p>
-</section>
-<section id="manual-build-and-run">
-<h3>Manual build and run<a class="headerlink" href="#manual-build-and-run" title="Link to this heading">#</a></h3>
-<p>For development purposes, it can be useful to build and run the simulation
-manually. The following steps show how to setup zeth network, build and run the
-Zephyr lwm2m_client sample.</p>
-<div class="literal-block-wrapper docutils container" id="id13">
-<div class="code-block-caption"><span class="caption-text">Manual build and run of the Zephyr lwm2m_client sample</span><a class="headerlink" href="#id13" title="Link to this code">#</a></div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus$ </span>west<span class="w"> </span>update<span class="w"> </span><span class="c1"># Update the Zephyr repository</span>
-<span class="gp">host:~/workspace/flownexus$ </span>../tools/net-tools/net-setup.sh<span class="w"> </span>start
-<span class="go">Using ../tools/net-tools/./zeth.conf configuration file.</span>
-<span class="go">Creating zeth</span>
-<span class="gp">host:~/workspace/flownexus$ </span>west<span class="w"> </span>build<span class="w"> </span>-b<span class="w"> </span>native_sim<span class="w"> </span>simulation/lwm2m_client<span class="w"> </span>-p<span class="w"> </span>--<span class="w"> </span>-DCONF<span class="o">=</span>overlay-lwm2m-1.1.conf
-<span class="gp">host:~/workspace/flownexus$ </span>west<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>run
-<span class="go">*** Booting Zephyr OS build v3.7.0-rc3-75-gd06e95c49b75 ***</span>
-<span class="go">[..]</span>
-<span class="go">&lt;inf&gt; net_config: IPv4 address: 192.0.2.1</span>
-<span class="go">&lt;inf&gt; net_lwm2m_client_app: Run LWM2M client</span>
-
-<span class="gp"># </span>Stop<span class="w"> </span>the<span class="w"> </span>simulation<span class="w"> </span>with<span class="w"> </span>&lt;Ctrl+c&gt;,<span class="w"> </span><span class="k">do</span><span class="w"> </span>not<span class="w"> </span>forget<span class="w"> </span>to<span class="w"> </span>stop<span class="w"> </span>the<span class="w"> </span>zeth<span class="w"> </span>network
-<span class="gp">host:~/workspace/flownexus$ </span>../tools/net-tools/net-setup.sh<span class="w"> </span>stop
-<span class="go">Using ../tools/net-tools/./zeth.conf configuration file.</span>
-<span class="go">Removing zeth</span>
-</pre></div>
-</div>
-</div>
-<aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id5" role="doc-footnote">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
-<p><a class="reference external" href="https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html">https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html</a></p>
-</aside>
-<aside class="footnote brackets" id="id6" role="doc-footnote">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
-<p><a class="reference external" href="https://docs.zephyrproject.org/latest/samples/net/lwm2m_client/README.html">https://docs.zephyrproject.org/latest/samples/net/lwm2m_client/README.html</a></p>
-</aside>
-<aside class="footnote brackets" id="id7" role="doc-footnote">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
-<p><a class="reference external" href="https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html">https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html</a>.</p>
-</aside>
-<aside class="footnote brackets" id="id8" role="doc-footnote">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">4</a><span class="fn-bracket">]</span></span>
-<p><a class="reference external" href="https://docs.zephyrproject.org/latest/connectivity/networking/networking_with_multiple_instances.html">https://docs.zephyrproject.org/latest/connectivity/networking/networking_with_multiple_instances.html</a></p>
-</aside>
-</aside>
+<p>Additionally you can see the device in the Django server under
+<code class="docutils literal notranslate"><span class="pre">http://localhost:8000/admin/sensordata/endpoint/</span></code>. You should see that the
+LAST UPDATED field contains a recent timestamp.</p>
+<figure class="align-default" id="id1">
+<img alt="_images/django_local.png" src="_images/django_local.png" />
+<figcaption>
+<p><span class="caption-text">Endpoints table in Django</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 </section>
 </section>
 </section>
@@ -643,16 +461,8 @@ Zephyr lwm2m_client sample.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#client-simulation">Client Simulation</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulating-a-single-endpoint">Simulating a single Endpoint</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-script-simulate-py">Simulation Script (simulate.py)</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#simulating-multiple-endpoints">Simulating Multiple Endpoints</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#connecting-to-a-locally-hosted-leshan-server">Connecting to a locally hosted Leshan server</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#configuring-the-firmware">Configuring the Firmware</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#attach-to-the-running-container">Attach to the running Container</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-build-and-run">Manual build and run</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#iot-devices-with-zephyr">IoT Devices with Zephyr</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lwm2m-client-simulation">LwM2M Client Simulation</a></li>
 </ul>
 </li>
 </ul>

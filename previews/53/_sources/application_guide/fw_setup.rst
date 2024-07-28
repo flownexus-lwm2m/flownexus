@@ -1,5 +1,3 @@
-.. _firmware_setup:
-
 Firmware Setup
 ==============
 
