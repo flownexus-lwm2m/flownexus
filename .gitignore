@@ -46,6 +46,9 @@ compliance.xml
 GitDiffCheck.txt
 Gitlint.txt
 
+# Firmware folder
+firmware/
+
 # Database files
 *.sqlite3
 
