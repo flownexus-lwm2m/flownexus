@@ -219,14 +219,16 @@ public class LeshanSvr{
 
             /* Subscribe to single resource instances as an example
              * 3303: Temperature Sensor
+             * 3304: Humidity Sensor
              */
             int[][] singleObjectLinks = {
-                {3303, 0, 5700}
+                {3303, 0, 5700},
+                {3304, 0, 5700}
             };
 
             for (int[] link : singleObjectLinks) {
                 try {
-                    ObserveRequest singleRequest = new ObserveRequest(link[0], link[2]);
+                    ObserveRequest singleRequest = new ObserveRequest(link[0], link[1], link[2]);
 
                     log.trace("Sending ObserveRequest: " + singleRequest);
                     server.send(registration, singleRequest);
