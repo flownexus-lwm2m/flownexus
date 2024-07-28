@@ -362,13 +362,13 @@ document.write(`
                 <article class="bd-article">
                   
   <section id="firmware-setup">
-<h1>Firmware Setup<a class="headerlink" href="#firmware-setup" title="Link to this heading">#</a></h1>
+<span id="id1"></span><h1>Firmware Setup<a class="headerlink" href="#firmware-setup" title="Link to this heading">#</a></h1>
 <section id="lwm2m-version">
 <h2>LwM2M Version<a class="headerlink" href="#lwm2m-version" title="Link to this heading">#</a></h2>
 <p>The used Leshan version uses LwM2M version 1.1. Make sure to enable this
 version in the Zephyr LwM2M client accordingly.</p>
-<div class="literal-block-wrapper docutils container" id="id1">
-<div class="code-block-caption"><span class="caption-text">Enable LwM2M version 1.1 in Zephyr</span><a class="headerlink" href="#id1" title="Link to this code">#</a></div>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Enable LwM2M version 1.1 in Zephyr</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
 <div class="highlight-kconfig notranslate"><div class="highlight"><pre><span></span><span class="w"> </span>CONFIG_LWM2M_VERSION_1_1=y
 </pre></div>
 </div>
@@ -376,8 +376,8 @@ version in the Zephyr LwM2M client accordingly.</p>
 </section>
 <section id="lwm2m-transport-format">
 <h2>LwM2M Transport Format<a class="headerlink" href="#lwm2m-transport-format" title="Link to this heading">#</a></h2>
-<div class="literal-block-wrapper docutils container" id="id2">
-<div class="code-block-caption"><span class="caption-text">Enable CBOR Format</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">Enable CBOR Format</span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
 <div class="highlight-kconfig notranslate"><div class="highlight"><pre><span></span><span class="w"> </span>CONFIG_ZCBOR=y
 <span class="w"> </span>CONFIG_ZCBOR_CANONICAL=y
 </pre></div>
@@ -390,8 +390,8 @@ version in the Zephyr LwM2M client accordingly.</p>
 <p class="admonition-title">Note</p>
 <p>Currently not supported in FlowNexus.</p>
 </div>
-<div class="literal-block-wrapper docutils container" id="id3">
-<div class="code-block-caption"><span class="caption-text">Enable LwM2M version 1.1 in Zephyr</span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Enable LwM2M version 1.1 in Zephyr</span><a class="headerlink" href="#id4" title="Link to this code">#</a></div>
 <div class="highlight-kconfig notranslate"><div class="highlight"><pre><span></span><span class="w"> </span><span class="c1"># SenML CBOR - default</span>
 <span class="w"> </span>CONFIG_LWM2M_RW_SENML_CBOR_SUPPORT=y
 </pre></div>
