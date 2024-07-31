@@ -6,12 +6,17 @@
 
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.db import transaction
 import os
+
 
 class Endpoint(models.Model):
     """Represents a specific device in the IoT ecosystem."""
     endpoint = models.CharField(max_length=255, primary_key=True)
     registered = models.BooleanField(default=False)
+
+    def __str__(self):
+        return os.path.basename(self.endpoint)
 
 
 class ResourceType(models.Model):
@@ -46,6 +51,7 @@ class ResourceType(models.Model):
     def get_value_field(self):
         return dict(ResourceType.TYPE_CHOICES).get(self.data_type)
 
+
 class Resource(models.Model):
     """Stores individual resource data, such as sensor readings, from an endpoint."""
     endpoint = models.ForeignKey(Endpoint, on_delete=models.PROTECT)
@@ -65,6 +71,7 @@ class Resource(models.Model):
             return getattr(self, value_field)
         return None
 
+
 class Event(models.Model):
     """
     Represents a significant event in the system that is associated with a
@@ -77,6 +84,7 @@ class Event(models.Model):
     def __str__(self):
         return f"{self.endpoint} - {self.event_type} - {self.time}"
 
+
 class EventResource(models.Model):
     """Acts as a many-to-many bridge table that links resources to their respective events."""
     event = models.ForeignKey(Event, related_name='resources', on_delete=models.PROTECT)
@@ -84,6 +92,7 @@ class EventResource(models.Model):
 
     class Meta:
         unique_together = ('event', 'resource')
+
 
 class EndpointOperation(models.Model):
     """Operation to be performed on an endpoint"""
@@ -105,6 +114,10 @@ class EndpointOperation(models.Model):
     timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
     last_attempt = models.DateTimeField(auto_now_add=False, null=True)
 
+    def __str__(self):
+        return f"{self.resource} - {self.operation_type} - {self.status}"
+
+
 class Firmware(models.Model):
     """Represents a firmware update file that can be downloaded by an endpoint."""
     version = models.CharField(max_length=100, unique=True)
@@ -120,4 +133,73 @@ class Firmware(models.Model):
             raise ValidationError("The file size must be under 1 MB.")
 
     def __str__(self):
-        return os.path.basename(self.binary.name)
+        return os.path.basename(self.version)
+
+
+class FirmwareUpdate(models.Model):
+    """Represents a firmware update operation for an endpoint."""
+
+
+    class State(models.IntegerChoices):
+        STATE_IDLE = 0, 'IDLE'
+        STATE_DOWNLOADING = 1, 'DOWNLOADING'
+        STATE_DOWNLOADED = 2, 'DOWNLOADED'
+        STATE_UPDATING = 3, 'UPDATING'
+
+    class Result(models.IntegerChoices):
+        RESULT_DEFAULT = 0, 'DEFAULT'
+        RESULT_SUCCESS = 1, 'SUCCESS'
+        RESULT_NO_STORAGE = 2, 'NO STORAGE'
+        RESULT_OUT_OF_MEM = 3, 'OUT OF MEMORY'
+        RESULT_CONNECTION_LOST = 4, 'CONNECTION LOST'
+        RESULT_INTEGRITY_FAILED = 5, 'INTEGRITY FAILED'
+        RESULT_UNSUP_FW = 6, 'UNSUPPORTED FIRMWARE'
+        RESULT_INVALID_URI = 7, 'INVALID URI'
+        RESULT_UPDATE_FAILED = 8, 'UPDATE FAILED'
+        RESULT_UNSUP_PROTO = 9, 'UNSUPPORTED PROTOCOL'
+
+    endpoint = models.ForeignKey(Endpoint, on_delete=models.PROTECT)
+    firmware = models.ForeignKey(Firmware, on_delete=models.PROTECT)
+    state = models.IntegerField(choices=State.choices, default=State.STATE_IDLE)
+    result = models.IntegerField(choices=Result.choices, default=Result.RESULT_DEFAULT)
+    timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
+    timestamp_updated = models.DateTimeField(auto_now=True, blank=True)
+    # The update is initiated with this resource (send URI)
+    send_uri_operation = models.ForeignKey(EndpointOperation, null=True,
+                                           on_delete=models.PROTECT,
+                                           related_name='send_uri_operation')
+    # Once the firmware is downloaded, the update is initiated with this resource
+    execute_operation = models.ForeignKey(EndpointOperation, null=True,
+                                          on_delete=models.PROTECT,
+                                          related_name='execute_operation')
+
+    # Check for existing non-finished updates for the same endpoint. Only
+    # Update processes that have no result (RESULT_DEFAULT) are considered.
+    def clean(self):
+        super().clean()
+        existing_nodes = FirmwareUpdate.objects.filter(
+            endpoint = self.endpoint,
+            result = self.Result.RESULT_DEFAULT
+        )
+        if existing_nodes.exists():
+            raise ValidationError("An active update with this endpoint already exists.")
+
+    # Avoid having multiple ongoing updates for the same endpoint
+    def save(self, *args, **kwargs):
+        # Check if the instance is being created for the first time
+        is_new = self.pk is None
+        with transaction.atomic():
+            if is_new:
+                # Create the send Resource instance if send_uri is provided
+                send_resource = Resource(
+                    endpoint = self.endpoint,
+                    # Assign "Package URI" resource type
+                    resource_type=ResourceType.objects.get(object_id = 5, resource_id = 1),
+                    str_value = self.firmware.binary.url,
+                )
+                send_resource.save()
+
+                self.send_uri_operation = EndpointOperation(resource=send_resource)
+                self.send_uri_operation.save()
+                print("New instance created")
+            super().save(*args, **kwargs)

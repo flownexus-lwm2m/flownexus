@@ -11,9 +11,11 @@ from rest_framework import status
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .models import Endpoint, Resource, Event, EndpointOperation, Firmware, ResourceType
+from rest_framework.exceptions import ValidationError
 from .serializers.single_resource_serializer import SingleResourceSerializer
 from .serializers.composite_resource_serializer import CompositeResourceSerializer
 from .serializers.generic_resource_serializer import GenericResourceSerializer
+import traceback
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,24 +26,30 @@ class PostSingleResourceView(APIView):
 
     def post(self, request):
         serializer = SingleResourceSerializer(data=request.data, many=False)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
-        logger.error(serializer.errors)
-        logger.error(request.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            logger.error("Validation error: %s", e)
+            logger.error("Request data: %s", request.data)
+            logger.error("Backtrace: %s", traceback.format_exc())
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PostCompositeResourceView(APIView):
     serializer_class = CompositeResourceSerializer
 
     def post(self, request):
         serializer = CompositeResourceSerializer(data=request.data, many=False)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
-        logger.error(serializer.errors)
-        logger.error(request.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            logger.error("Validation error: %s", e)
+            logger.error("Request data: %s", request.data)
+            logger.error("Backtrace: %s", traceback.format_exc())
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ResourceDataView(ListAPIView):
     serializer_class = GenericResourceSerializer
