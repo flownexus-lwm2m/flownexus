@@ -2,7 +2,7 @@ Application Guide
 =================
 
 This section explains according to best practises how to develop IoT
-applications with FlowNexus and Zephyr.
+applications with flownexus and Zephyr.
 
 .. toctree::
 

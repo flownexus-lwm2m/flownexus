@@ -1,7 +1,7 @@
 Endpoint Interactions
 =====================
 
-FlowNexus can interact with any endpoint via the LwM2M methods ``Read``,
+flownexus can interact with any endpoint via the LwM2M methods ``Read``,
 ``Write``, ``Execute`` and ``Observe``.
 
 
