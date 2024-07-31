@@ -17,13 +17,13 @@ The Leshan server can also run locally, without the need of a docker container.
 The Leshan server should now be up and running under the following URL:
 ``http://localhost:8080``.
 
-Leshans Role in FlowNexus
+Leshans Role in flownexus
 -------------------------
 
 Lehsan is considered a production ready LwM2M server and is used in many
-commercial products. It is used as an LwM2M server in FlowNexus. It is
+commercial products. It is used as an LwM2M server in flownexus. It is
 responsible for registering and managing :term:`endpoint`. There is no application
-specific logic implemented in Leshan related Java code within FlowNexus. The
+specific logic implemented in Leshan related Java code within flownexus. The
 goal is to have all application logic within the Django application.
 
 Leshan can be seen as a proxy between the LwM2M endpoints Django. There is no

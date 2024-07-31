@@ -1,6 +1,6 @@
 .. only:: html
 
-   📥 Documentation as `PDF <./_static/FlowNexus.pdf>`_.
+   📥 Documentation as `PDF <./_static/flownexus.pdf>`_.
 
 .. Do not add a heading in this file. A heading would be placed at the upper
    hierarchical level for the pdf document.
