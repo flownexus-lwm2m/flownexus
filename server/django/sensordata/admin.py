@@ -17,7 +17,8 @@ from .models import (
     Event,
     EventResource,
     EndpointOperation,
-    Firmware
+    Firmware,
+    FirmwareUpdate
 )
 
 log = logging.getLogger('sensordata')
@@ -36,6 +37,7 @@ class EndpointAdmin(admin.ModelAdmin):
             'delete': False,
             'view': True,
         }
+
 
 @admin.register(ResourceType)
 class ResourceTypeAdmin(admin.ModelAdmin):
@@ -58,12 +60,14 @@ class EventResourceInline(admin.TabularInline):
     can_delete = False
     readonly_fields = ('resource',)
 
+
 @admin.register(Resource)
 class ResourceAdmin(admin.ModelAdmin):
     list_display = ('endpoint', 'resource_type', 'timestamp_created')
     search_fields = ('endpoint__endpoint', 'resource_type__name')
     list_filter = ('endpoint__endpoint', 'resource_type', 'timestamp_created')
     readonly_fields = ('timestamp_created',)
+
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
@@ -72,6 +76,7 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = ('endpoint', 'event_type')
     readonly_fields = ('endpoint', 'event_type', 'time')
     inlines = [EventResourceInline]
+
 
 @admin.register(EventResource)
 class EventResourceAdmin(admin.ModelAdmin):
@@ -89,6 +94,12 @@ class EndpointOperationAdmin(admin.ModelAdmin):
     list_filter = ('resource__resource_type', 'operation_type', 'status', 'timestamp_created')
     readonly_fields = ('status', 'timestamp_created', 'transmit_counter',
                        'last_attempt', 'operation_type')
+
+    # "sesource" has to be setup during create, make read-only after that
+    def get_readonly_fields(self, request, obj=None):
+        if obj is not None:
+            return ('resource',) + self.readonly_fields
+        return self.readonly_fields
 
     def save_model(self, request, obj, form, change):
         # Update created timestamp, as we handle a manual entry.
@@ -118,3 +129,21 @@ class FirmwareAdmin(admin.ModelAdmin):
         if obj:
             form.base_fields['binary'].disabled = True
         return form
+
+
+@admin.register(FirmwareUpdate)
+class FirmwareUpdateAdmin(admin.ModelAdmin):
+    list_display = ('endpoint', 'firmware', 'state', 'result',
+                    'timestamp_created', 'timestamp_updated',
+                    'send_uri_operation', 'execute_operation')
+    search_fields = ('endpoint__endpoint', 'firmware__version', 'state', 'result')
+    list_filter = ('state', 'result', 'timestamp_created', 'timestamp_updated')
+    readonly_fields = ('timestamp_created', 'timestamp_updated',
+                       'result', 'state', 'send_uri_operation', 'execute_operation')
+
+    def save_model(self, request, obj, form, change):
+        # Custom save logic if needed
+        super().save_model(request, obj, form, change)
+
+        # Trigger the async task to process the operation
+        process_pending_operations.delay(obj.endpoint.endpoint)
