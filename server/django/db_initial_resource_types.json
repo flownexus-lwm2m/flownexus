@@ -264,18 +264,9 @@
     "model": "sensordata.resourcetype",
     "fields": {
       "object_id": 5,
-      "resource_id": 4,
+      "resource_id": 5,
       "name": "update_result",
       "data_type": "INTEGER"
-    }
-  },
-  {
-    "model": "sensordata.resourcetype",
-    "fields": {
-      "object_id": 5,
-      "resource_id": 5,
-      "name": "package_name",
-      "data_type": "STRING"
     }
   },
   {
