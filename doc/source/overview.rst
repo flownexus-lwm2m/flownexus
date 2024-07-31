@@ -24,7 +24,7 @@ Features
 * Receive logs from IoT Devices.
 
 
-.. figure:: _static/FlowNexus-Architecture.png
+.. figure:: _static/flownexus-architecture.png
 
 Key Components
 --------------

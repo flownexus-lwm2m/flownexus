@@ -19,7 +19,7 @@ explains the LwM2M Client in Zephyr in detail.
    CONFIG_LWM2M_ENGINE_DEFAULT_LIFETIME=600
 
 See chapter :ref:`data-flow-backend-to-endpoint-label` to know know more about
-how queue mode is implemented in FlowNexus.
+how queue mode is implemented in flownexus.
 
 eDRX Settings
 -------------
@@ -32,7 +32,7 @@ Devzone Article
 <https://devzone.nordicsemi.com/nordic/nordic-blog/b/blog/posts/maximizing-battery-lifetime-in-cellular-iot-an-analysis-of-edrx-psm-and-as-rai>`_
 
 Setting the eDRX interval to a value significantly smaller than the timeout
-value of the LwM2M server would theoretically allow FlowNexus to reach
+value of the LwM2M server would theoretically allow flownexus to reach
 endpoints at any time.
 
 .. warning::
