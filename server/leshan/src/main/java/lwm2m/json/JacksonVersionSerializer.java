@@ -12,6 +12,10 @@
  *
  * Contributors:
  *     Sierra Wireless - initial API and implementation
+ *
+ * Copyright (c) 2024 Jonas Remmert
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *******************************************************************************/
 package lwm2m.json;
 

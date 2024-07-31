@@ -3,7 +3,7 @@
 
 manifest:
   self:
-    path: lwm2m_server
+    path: flownexus
 
   remotes:
     - name: eclipse-leshan

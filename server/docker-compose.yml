@@ -1,5 +1,6 @@
 services:
   django:
+    stop_grace_period: 1s
     build:
       context: ./django
       dockerfile: Dockerfile.django
@@ -12,8 +13,18 @@ services:
       - mynetwork
     environment:
       - LESHAN_URI=http://leshan:8080
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+  redis:
+    image: redis:7.2.5
+    networks:
+      - mynetwork
+    ports:
+      - "6379:6379"
 
   leshan:
+    stop_grace_period: 1s
     build:
       context: ./leshan
       dockerfile: Dockerfile.leshan

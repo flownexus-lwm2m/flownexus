@@ -1,3 +1,11 @@
+/* Copyright (c) 2024 Jonas Remmert
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Parts of this code are based on the Leshan project
+ * (https://www.eclipse.org/leshan/) licensed under the BSD 3-Clause License.
+ */
+
 package lwm2m;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,8 +20,10 @@ import org.eclipse.leshan.core.observation.Observation;
 import org.eclipse.leshan.core.observation.CompositeObservation;
 import org.eclipse.leshan.core.observation.SingleObservation;
 import org.eclipse.leshan.core.request.ObserveRequest;
+import org.eclipse.leshan.core.request.ObserveCompositeRequest;
 import org.eclipse.leshan.core.response.ObserveCompositeResponse;
 import org.eclipse.leshan.core.response.ObserveResponse;
+import org.eclipse.leshan.core.request.ContentFormat;
 import org.eclipse.leshan.server.send.SendListener;
 import org.eclipse.leshan.core.request.SendRequest;
 import org.eclipse.leshan.core.request.ReadRequest;
@@ -73,7 +83,7 @@ public class LeshanSvr{
     private LeshanServer server;
     private ObjectMapper mapper;
     private SimpleModule module;
-    private static final Logger logger = LoggerFactory.getLogger(LeshanSvr.class);
+    private static final Logger log = LoggerFactory.getLogger(LeshanSvr.class);
 
     public LeshanSvr() {
         LeshanServerBuilder builder = new LeshanServerBuilder();
@@ -101,18 +111,18 @@ public class LeshanSvr{
         try {
             lwm2mServer.start();
             webServer.start();
-            logger.info("Web server started at {}.", webServer.getURI());
+            log.info("Web server started at {}.", webServer.getURI());
 
         } catch (Exception e) {
 
-            logger.error("Unable to create and start server ...", e);
+            log.error("Unable to create and start server ...", e);
             System.exit(1);
         }
     }
 
     public void start() {
         server.start();
-        logger.info("LeshanServer started");
+        log.info("LeshanServer started");
     }
 
     public void stop() {
@@ -126,7 +136,7 @@ public class LeshanSvr{
                 this.onboardingExecutor.shutdownNow();
 
                 if (!this.onboardingExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Pool did not terminate");
+                    log.error("Pool did not terminate");
                 }
             }
         } catch (InterruptedException ie) {
@@ -151,8 +161,10 @@ public class LeshanSvr{
         ServletHolder clientServletHolder = new ServletHolder(clientServlet);
         root.addServlet(clientServletHolder, "/api/clients/*");
 
-        ObjectSpecServlet objectSpecServlet = new ObjectSpecServlet(lwServer.getModelProvider(),
-                                                                    lwServer.getRegistrationService());
+        ObjectSpecServlet objectSpecServlet = new ObjectSpecServlet(
+                                                    lwServer.getModelProvider(),
+                                                    lwServer.getRegistrationService()
+                                                    );
         ServletHolder objectSpecServletHolder = new ServletHolder(objectSpecServlet);
         root.addServlet(objectSpecServletHolder, "/api/objectspecs/*");
 
@@ -160,7 +172,7 @@ public class LeshanSvr{
     }
 
     private void onboardingDevice(Registration registration) {
-        logger.info("Onboarding " + registration.getEndpoint());
+        log.trace("Onboarding " + registration.getEndpoint());
         onboardingExecutor.submit(() -> {
             LwM2mLink[] res;
             try {
@@ -169,16 +181,16 @@ public class LeshanSvr{
                 if (discoverResponse.isSuccess()) {
                     res = discoverResponse.getObjectLinks();
                     if (res != null) {
-                        logger.debug("Resources:");
+                        log.trace("Resources:");
                         for (LwM2mLink link : res) {
-                            logger.debug(link.toString());
+                            log.trace(link.toString());
                         }
                     } else {
-                        logger.error("No resources found.");
+                        log.error("No resources found.");
                     }
                 } else {
-                    System.err.println("Failed to discover resources: " +
-                                             discoverResponse.getErrorMessage());
+                    log.error("Failed to discover resources: " +
+                                 discoverResponse.getErrorMessage());
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -187,36 +199,69 @@ public class LeshanSvr{
             try {
                 ReadResponse readResp = server.send(registration, new ReadRequest(3));
                 if (readResp.isSuccess()) {
+                    /* Match the additional hierachiy of the observe response format */
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
-                    String jsonContent = null;
-                    try {
-                        jsonContent = mapper.writeValueAsString(readResp.getContent());
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                    logger.debug(jsonContent);
-                    String data = new StringBuilder("{\"ep\":\"") //
-                            .append(registration.getEndpoint()) //
-                            .append("\",\"res\":\"3\"") //
-                            .append(",\"val\":") //
-                            .append(jsonContent) //
-                            .append("}") //
-                            .toString();
-                    dataSenderRest.sendData(data);
+                    ObjectNode node = mapper.createObjectNode();
+                    node.put("ep", registration.getEndpoint());
+                    ObjectNode valNode = mapper.createObjectNode();
+                    valNode.set("/3", mapper.valueToTree(readResp.getContent()));
+                    node.set("val", valNode);
+
+                    dataSenderRest.sendData(ApiPath.COMPOSITE_RES, node);
                 } else {
-                    System.err.println("Failed to read resources: " +
-                                             readResp.getErrorMessage());
+                    log.error("Failed to read resources: " +
+                                 readResp.getErrorMessage());
                 }
             } catch (InterruptedException e) {
+                log.error("Failed to read resources: " + e.getMessage());
                 e.printStackTrace();
             }
 
-            /* Subscribe to individual objects */
-            int[][] objectLinks = {{3303, 0, 5700}, {3304, 0, 5701}, {3305, 0, 5702}};
-            for (int[] link : objectLinks) {
-                ObserveRequest observeRequest = new ObserveRequest(link[0], link[1], link[2]);
+            /* Subscribe to single resource instances as an example
+             * 3303: Temperature Sensor
+             * 3304: Humidity Sensor
+             */
+            int[][] singleObjectLinks = {
+                {3303, 0, 5700},
+                {3304, 0, 5700}
+            };
+
+            for (int[] link : singleObjectLinks) {
                 try {
-                    server.send(registration, observeRequest);
+                    ObserveRequest singleRequest = new ObserveRequest(link[0], link[1], link[2]);
+
+                    log.trace("Sending ObserveRequest: " + singleRequest);
+                    server.send(registration, singleRequest);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            /* Subscribe to composite object instances as an example
+             * 10300: Custom Object Instance
+             */
+            int[][] compositeObjectLinks = {
+                {10300}
+            };
+
+            for (int[] link : compositeObjectLinks) {
+                try {
+                    List<LwM2mPath> paths = new ArrayList<>();
+                    paths.add(new LwM2mPath(link[0]));
+
+                    // Specify the content formats
+                    ContentFormat requestContentFormat = ContentFormat.SENML_CBOR;
+                    ContentFormat responseContentFormat = ContentFormat.SENML_CBOR;
+
+                    // Create the ObserveCompositeRequest for the whole object instance
+                    ObserveCompositeRequest observeCompositeRequest = new ObserveCompositeRequest(
+                        requestContentFormat,
+                        responseContentFormat,
+                        paths
+                    );
+
+                    log.trace("Sending ObserveCompositeRequest: " + observeCompositeRequest);
+                    server.send(registration, observeCompositeRequest);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -226,7 +271,7 @@ public class LeshanSvr{
 
     public class MyRegistrationListener implements RegistrationListener {
         private final LeshanSvr server;
-        private static final Logger logger = LoggerFactory.getLogger(MyRegistrationListener.class);
+        private static final Logger log = LoggerFactory.getLogger(MyRegistrationListener.class);
 
         public MyRegistrationListener(LeshanSvr server) {
             this.server = server;
@@ -234,30 +279,70 @@ public class LeshanSvr{
 
         @Override
         public void registered(Registration registration, Registration previousReg,
-                                      Collection<Observation> previousObsersations) {
-            logger.info("new device registered: " + registration.getEndpoint());
-            /* Onboarding: read and subscribe to device resources initially.*/
+                               Collection<Observation> previousObsersations) {
+            log.trace("new device registered: " + registration.getEndpoint());
+
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", registration.getEndpoint());
+            node.put("obj_id", 10240);
+            ObjectNode valNode = mapper.createObjectNode();
+            valNode.put("kind", "singleResource");
+            valNode.put("id", 0);
+            valNode.put("type", "TIME");
+            valNode.put("value", registration.getRegistrationDate().getTime());
+            node.set("val", valNode);
+
+            dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
+
+            /* Onboarding: read and subscribe to device resources initially.
+             * TODO: Remove this onboarding, it should be triggered by Django
+             */
             server.onboardingDevice(registration);
         }
 
         @Override
         public void updated(RegistrationUpdate update, Registration updatedReg,
-                                  Registration previousReg) {
-            logger.info("Device updated: " + updatedReg.getEndpoint());
+                            Registration previousReg) {
+            log.trace("Device updated: " + updatedReg.getEndpoint());
+
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", updatedReg.getEndpoint());
+            node.put("obj_id", 10240);
+            ObjectNode valNode = mapper.createObjectNode();
+            valNode.put("kind", "singleResource");
+            valNode.put("id", 2);
+            valNode.put("type", "TIME");
+            valNode.put("value", updatedReg.getRegistrationDate().getTime());
+            node.set("val", valNode);
+
+            dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
         }
 
         @Override
-        public void unregistered(Registration registration, Collection<Observation> observations,
-                                         boolean expired,
-                                         Registration newReg) {
-            logger.info("Device left: " + registration.getEndpoint());
+        public void unregistered(Registration registration,
+                                 Collection<Observation> observations,
+                                 boolean expired,
+                                 Registration newReg) {
+            log.trace("Device left: " + registration.getEndpoint());
+
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", registration.getEndpoint());
+            node.put("obj_id", 10240);
+            ObjectNode valNode = mapper.createObjectNode();
+            valNode.put("kind", "singleResource");
+            valNode.put("id", 1);
+            valNode.put("type", "TIME");
+            valNode.put("value", registration.getRegistrationDate().getTime());
+            node.set("val", valNode);
+
+            dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
         }
     }
 
 
     public class MyObservationListener implements ObservationListener {
         private final LeshanSvr server;
-        private static final Logger logger = LoggerFactory.getLogger(MyObservationListener.class);
+        private static final Logger log = LoggerFactory.getLogger(MyObservationListener.class);
 
         public MyObservationListener(LeshanSvr server) {
             this.server = server;
@@ -268,65 +353,39 @@ public class LeshanSvr{
         }
 
         @Override
-        public void onResponse(SingleObservation observation, Registration registration,
-                                      ObserveResponse response) {
+        public void onResponse(SingleObservation observation,
+                               Registration registration,
+                               ObserveResponse response) {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            //logger.info("onResponse (single): " + response);
-            String jsonContent = null;
-            try {
-                jsonContent = mapper.writeValueAsString(response.getContent());
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-
             if (registration != null) {
-                String data = new StringBuilder("{\"ep\":\"") //
-                        .append(registration.getEndpoint()) //
-                        .append("\",\"res\":\"") //
-                        .append(observation.getPath()).append("\",\"val\":") //
-                        .append(jsonContent) //
-                        .append("}") //
-                        .toString();
+                ObjectNode node = mapper.createObjectNode();
+                node.put("ep", registration.getEndpoint());
+                node.put("obj_id", observation.getPath().getObjectId());
+                node.set("val", mapper.valueToTree(response.getContent()));
 
-                dataSenderRest.sendData(data);
+                dataSenderRest.sendData(ApiPath.SINGLE_RES, node);
             }
         }
 
         @Override
-        public void onResponse(CompositeObservation observation, Registration registration,
-                                      ObserveCompositeResponse response) {
-            String jsonContent = null;
-            String jsonListOfPath = null;
-            try {
-                jsonContent = mapper.writeValueAsString(response.getContent());
-                List<String> paths = new ArrayList<String>();
-                for (LwM2mPath path : response.getObservation().getPaths()) {
-                    paths.add(path.toString());
-                }
-                jsonListOfPath = mapper.writeValueAsString(paths);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+        public void onResponse(CompositeObservation observation,
+                               Registration registration,
+                               ObserveCompositeResponse response) {
+            log.trace("onResponse: " + response.getObservation());
 
-            if (registration != null) {
-                String data = new StringBuilder("{\"ep\":\"") //
-                        .append(registration.getEndpoint()) //
-                        .append("\",\"val\":") //
-                        .append(jsonContent) //
-                        .append(",\"paths\":") //
-                        .append(jsonListOfPath) //
-                        .append("}") //
-                        .toString();
+            mapper.enable(SerializationFeature.INDENT_OUTPUT);
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", registration.getEndpoint());
+            node.set("val", mapper.valueToTree(response.getContent()));
 
-                dataSenderRest.sendData(data);
-            }
+            dataSenderRest.sendData(ApiPath.COMPOSITE_RES, node);
         }
 
 
         @Override
         public void onError(Observation observation, Registration registration, Exception error) {
-            logger.error("onError: " + registration.getEndpoint());
-            logger.error("onError: " + error);
+            log.error("onError: " + registration.getEndpoint());
+            log.error("onError: " + error);
         }
 
         @Override
@@ -336,7 +395,7 @@ public class LeshanSvr{
 
     public class MySendListener implements SendListener {
         private final LeshanSvr server;
-        private static final Logger logger = LoggerFactory.getLogger(MySendListener.class);
+        private static final Logger log = LoggerFactory.getLogger(MySendListener.class);
 
         public MySendListener(LeshanSvr server) {
             this.server = server;
@@ -344,18 +403,19 @@ public class LeshanSvr{
 
         @Override
         public void dataReceived(Registration registration,
-                                         TimestampedLwM2mNodes data, SendRequest request) {
-            logger.info("dataReceived from: " + registration.getEndpoint());
-            logger.info("data: " + data);
+                                 TimestampedLwM2mNodes data,
+                                 SendRequest request) {
+            log.trace("dataReceived from: " + registration.getEndpoint());
+            log.trace("data: " + data);
         }
 
         @Override
         public void onError(Registration registration,
-                                 String errorMessage, Exception error) {
-          logger.error("Unable to handle Send Request from: " + registration.getEndpoint());
-          logger.error(errorMessage);
-          logger.error(error.toString());
+                            String errorMessage,
+                            Exception error) {
+            log.error("Unable to handle Send Request from: " + registration.getEndpoint());
+            log.error(errorMessage);
+            log.error(error.toString());
         }
     }
 }
-

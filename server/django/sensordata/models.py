@@ -1,25 +1,41 @@
-from django.db import models
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 
-class Device(models.Model):
+from django.db import models
+from django.core.exceptions import ValidationError
+import os
+
+class Endpoint(models.Model):
     """Represents a specific device in the IoT ecosystem."""
     endpoint = models.CharField(max_length=255, primary_key=True)
+    registered = models.BooleanField(default=False)
 
 
 class ResourceType(models.Model):
     """Map LwM2M object/resource IDs to human-readable names and data types."""
+
+    TIME = 'TIME'
+    STRING = 'STRING'
+    OPAQUE = 'OPAQUE'
+    INTEGER = 'INTEGER'
+    FLOAT = 'FLOAT'
+    BOOLEAN = 'BOOLEAN'
+
+    TYPE_CHOICES = [
+        (TIME, 'int_value'),
+        (STRING, 'str_value'),
+        (INTEGER, 'int_value'),
+        (FLOAT, 'float_value'),
+        (BOOLEAN, 'int_value'),
+    ]
+
     object_id = models.IntegerField()
     resource_id = models.IntegerField()
     name = models.CharField(max_length=255)
-    # LwM2M data types:
-    # - string: UTF-8 encoded sequence of characters
-    # - integer: 16-bit signed integer
-    # - float: 64-bit IEEE 754 floating point
-    # - boolean: 0 or 1
-    # - opaque: sequence of binary data
-    # - time: POSIX time, number of s since 1970 in UTC (signed integer)
-    # - objlnk: link to another object instance
-    # - none (''): no data, used for executable resources
-    data_type = models.CharField(max_length=50, blank=True)
+    data_type = models.CharField(max_length=50, choices=TYPE_CHOICES)
 
     class Meta:
         unique_together = ('object_id', 'resource_id')
@@ -27,33 +43,39 @@ class ResourceType(models.Model):
     def __str__(self):
         return f"{self.object_id}/{self.resource_id} - {self.name}"
 
+    def get_value_field(self):
+        return dict(ResourceType.TYPE_CHOICES).get(self.data_type)
+
 class Resource(models.Model):
-    """Stores individual resource data, such as sensor readings, from a device."""
-    device = models.ForeignKey(Device, on_delete=models.PROTECT)
+    """Stores individual resource data, such as sensor readings, from an endpoint."""
+    endpoint = models.ForeignKey(Endpoint, on_delete=models.PROTECT)
     resource_type = models.ForeignKey(ResourceType, on_delete=models.PROTECT)
     int_value = models.IntegerField(null=True, blank=True)
     float_value = models.FloatField(null=True, blank=True)
     str_value = models.CharField(max_length=512, null=True, blank=True)
-    timestamp = models.DateTimeField()
-
-    class Meta:
-        unique_together = ('device', 'resource_type', 'timestamp')
+    timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
 
     def __str__(self):
-        return f"{self.device} - {self.resource_type} - {self.timestamp}"
+        return f"{self.endpoint} - {self.resource_type} - {self.timestamp_created}"
+
+    # Gets the correct value field, based on the linked ResourceType
+    def get_value(self):
+        value_field = self.resource_type.get_value_field()
+        if value_field:
+            return getattr(self, value_field)
+        return None
 
 class Event(models.Model):
     """
     Represents a significant event in the system that is associated with a
-    device and various resources.
+    endpoint and various resources.
     """
-    device = models.ForeignKey(Device, on_delete=models.PROTECT)
+    endpoint = models.ForeignKey(Endpoint, on_delete=models.PROTECT)
     event_type = models.CharField(max_length=100)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    time = models.DateTimeField(auto_now_add=True, blank=True)
 
     def __str__(self):
-        return f"{self.event_type} from {self.start_time} to {self.end_time} for {self.device}"
+        return f"{self.endpoint} - {self.event_type} - {self.time}"
 
 class EventResource(models.Model):
     """Acts as a many-to-many bridge table that links resources to their respective events."""
@@ -63,18 +85,39 @@ class EventResource(models.Model):
     class Meta:
         unique_together = ('event', 'resource')
 
-class DeviceOperation(models.Model):
-    """Operation to be performed on a device"""
+class EndpointOperation(models.Model):
+    """Operation to be performed on an endpoint"""
+
+    class Status(models.TextChoices):
+        SENDING = 'SENDING'
+        QUEUED = 'QUEUED'
+        CONFIRMED = 'CONFIRMED'
+        FAILED = 'FAILED'
+
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     operation_type = models.CharField(max_length=100)  # e.g., 'send', 'update'
-    status = models.CharField(max_length=100)  # e.g., 'pending', 'completed', 'failed'
-    timestamp_sent = models.DateTimeField()  # When the operation was performed
-    retransmit_counter = models.IntegerField(default=0)
-    last_attempt = models.DateTimeField(auto_now=True)
+    status = models.CharField(
+        max_length=100,
+        choices=Status.choices,
+        default=Status.QUEUED,
+    )
+    transmit_counter = models.IntegerField(default=0)
+    timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
+    last_attempt = models.DateTimeField(auto_now_add=False, null=True)
 
 class Firmware(models.Model):
-    """Represents a firmware update file that can be downloaded by a device."""
-    version = models.CharField(max_length=100)
-    file_name = models.CharField(max_length=255)
-    download_url = models.URLField()
+    """Represents a firmware update file that can be downloaded by an endpoint."""
+    version = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    binary = models.FileField(upload_to='firmware')
+
+    # Limit the binary file size to 1 MB
+    def clean(self):
+        super().clean()
+        max_size = 1 * 1024 * 1024
+
+        if self.binary and self.binary.size > max_size:
+            raise ValidationError("The file size must be under 1 MB.")
+
+    def __str__(self):
+        return os.path.basename(self.binary.name)

@@ -15,6 +15,10 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+FIRMWARE_URL = '/media/firmware/'
+FIRMWARE_ROOT = os.path.join(BASE_DIR, 'media/firmware')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -25,7 +29,7 @@ SECRET_KEY = "django-insecure-ttm_sr56l7mv#4smgm*+tffm*$q%!qqp@#q7*_*y38^^#9%@7*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-CSRF_TRUSTED_ORIGINS = ['https://controlscope.de']
+CSRF_TRUSTED_ORIGINS = ['https://flownexus.org', 'https://www.flownexus.org']
 
 LOGGING = {
     'version': 1,
@@ -58,6 +62,10 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+        'celery': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
     },
 }
 
@@ -75,6 +83,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_extensions",
     "rest_framework",
+    "drf_spectacular",
     "sensordata",
 ]
 
@@ -88,6 +97,19 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Automatic ReST API documentation
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Leshan ReST API',
+    'DESCRIPTION': 'The leshan_api is hosted by Django. The API allows the\
+                    Leshan server to add LwM2M resource data to Django. It is \
+                    an internal API and must not be exposed to the internet.',
+    'VERSION': '1.0.0',
+}
 
 ROOT_URLCONF = "server.urls"
 
@@ -120,6 +142,15 @@ DATABASES = {
     }
 }
 
+# Celery asynchroneous task queue
+# Set Redis environment depending on on whether the application runs in a
+# container or native.
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
