@@ -5,7 +5,14 @@
 #
 
 from rest_framework import serializers
-from ..models import ResourceType, Resource, Event, EventResource
+from ..models import (
+        ResourceType,
+        Resource,
+        Event,
+        EventResource,
+        FirmwareUpdate,
+        EndpointOperation
+)
 from ..tasks import process_pending_operations
 import logging
 
@@ -64,7 +71,6 @@ class HandleResourceMixin:
         resource_type = ResourceType.objects.get(object_id=obj_id, resource_id=res_id)
         if not resource_type:
             err = f"Resource type {obj_id}/{res_id} not found"
-            logger.error(err)
             raise serializers.ValidationError(err)
 
         # Validate that datatype is matching the resource type
@@ -77,7 +83,6 @@ class HandleResourceMixin:
         if data_type != res_data_type:
             err = f"Mismatch between ResourceType.data_type '{res_data_type}' " \
                   f"and Resource value type '{data_type}'"
-            logger.error(err)
             raise serializers.ValidationError(err)
 
         # Create the Resource instance based on value type
@@ -99,10 +104,49 @@ class HandleResourceMixin:
         if resource_type.name == 'ep_registered':
             endpoint.registered = True
             endpoint.save()
+            return
         elif resource_type.name == 'ep_unregistered':
             endpoint.registered = False
             endpoint.save()
+            return
         elif resource_type.name == 'ep_registration_update':
-            # Check and process if there are pending messages that have not reached
-            # the endpoint yet.
             process_pending_operations.delay(endpoint.endpoint)
+            return
+
+        # Handle FOTA Update
+        elif resource_type.object_id == 5:
+            # There must be exactly one FirmwareUpdate object with
+            # result = 0 (RESULT_DEFAULT).
+            fw_queryset = FirmwareUpdate.objects.filter(endpoint=endpoint,
+                                 result=FirmwareUpdate.Result.RESULT_DEFAULT)
+            cnt = fw_queryset.count()
+            if cnt == 1:
+                fw_obj = fw_queryset.get()
+            elif cnt == 0:
+                if resource_type.resource_id == 3:
+                    # This case can happen if the result is updated before the
+                    # state. Can be ignored, as a result will automatically set the
+                    # state to IDLE.
+                    return
+                else:
+                    err = "No active FirmwareUpdate object found for endpoint"
+                    raise serializers.ValidationError(err)
+            else:
+                err = "Multiple active FirmwareUpdate objects found for endpoint"
+                logger.info(fw_queryset)
+                raise serializers.ValidationError(err)
+            if resource_type.resource_id == 3:
+                if int(res['value']) == FirmwareUpdate.State.STATE_DOWNLOADED:
+                    # Create "Update" resource to execute the update, no payload
+                    exec_resource = Resource.objects.create(endpoint = endpoint,
+                        resource_type = ResourceType.objects.get(object_id = 5, resource_id = 2)
+                        )
+                    exec_operation = EndpointOperation.objects.create(resource=exec_resource)
+                    fw_obj.state = res['value']
+                    fw_obj.execute_operation = exec_operation
+                    fw_obj.save()
+                    process_pending_operations.delay(endpoint.endpoint)
+            elif resource_type.resource_id == 5:
+                fw_obj.result = res['value']
+                fw_obj.state = FirmwareUpdate.State.STATE_IDLE
+                fw_obj.save()
