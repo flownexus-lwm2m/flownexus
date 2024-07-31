@@ -1,13 +1,13 @@
 .. only:: html
 
-   📥 Documentation as `PDF <./_static/FlowNexus.pdf>`_.
+   📥 Documentation as `PDF <./_static/flownexus.pdf>`_.
 
 .. Do not add a heading in this file. A heading would be placed at the upper
    hierarchical level for the pdf document.
 
 **Introduction**
 
-Welcome to Flow Nexus, your comprehensive solution for small to medium scale
+Welcome to flownexus, your comprehensive solution for small to medium scale
 IoT deployments. This platform is designed to streamline the setup,
 configuration, and use of IoT devices, making it easy to manage your IoT
 ecosystem.
@@ -19,7 +19,7 @@ system that receives, for example, regular temperature samples from remote IoT
 devices. These temperature samples will be sent to a backend and stored in a
 database. The data is then visualized in a web application.
 
-Our vision for Flow Nexus is to create a user-friendly, efficient, and robust
+Our vision for flownexus is to create a user-friendly, efficient, and robust
 Open Source platform for IoT management. We aim to simplify the complexities of
 IoT deployments, making them accessible and manageable for businesses of all
 sizes.

@@ -29,7 +29,7 @@ LwM2M SenML Format
 ------------------
 
 .. note::
-   Currently not supported in FlowNexus.
+   Currently not supported in flownexus.
 
 .. code-block:: kconfig
   :caption: Enable LwM2M version 1.1 in Zephyr
