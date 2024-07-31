@@ -59,7 +59,7 @@
       "object_id": 3,
       "resource_id": 4,
       "name": "reboot",
-      "data_type": ""
+      "data_type": "NONE"
     }
   },
   {
@@ -68,7 +68,7 @@
       "object_id": 3,
       "resource_id": 5,
       "name": "factory_reset",
-      "data_type": ""
+      "data_type": "NONE"
     }
   },
   {
@@ -131,7 +131,7 @@
       "object_id": 3,
       "resource_id": 12,
       "name": "reset_error_code",
-      "data_type": ""
+      "data_type": "NONE"
     }
   },
   {
@@ -248,7 +248,7 @@
       "object_id": 5,
       "resource_id": 2,
       "name": "update",
-      "data_type": ""
+      "data_type": "NONE"
     }
   },
   {
