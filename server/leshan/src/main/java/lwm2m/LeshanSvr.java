@@ -217,31 +217,32 @@ public class LeshanSvr{
                 e.printStackTrace();
             }
 
-            /* Subscribe to single resource instances as an example
-             * 3303: Temperature Sensor
-             * 3304: Humidity Sensor
-             */
+            /* Subscribe to single resource instances as an example */
             int[][] singleObjectLinks = {
-                {3303, 0, 5700},
-                {3304, 0, 5700}
+                {3303, 0, 5700},   /* Temperature Sensor */
+                {3304, 0, 5700},   /* Humidity Sensor */
+                {5, 0, 3},      /* Firmware Update State */
+                {5, 0, 5}      /* Firmware Update Result */
             };
 
             for (int[] link : singleObjectLinks) {
                 try {
-                    ObserveRequest singleRequest = new ObserveRequest(link[0], link[1], link[2]);
-
-                    log.trace("Sending ObserveRequest: " + singleRequest);
-                    server.send(registration, singleRequest);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                    ObserveRequest req;
+                    if (link.length != 3) {
+                        throw new IllegalArgumentException("Invalid link format");
+                    }
+                    req = new ObserveRequest(link[0], link[1], link[2]);
+                    server.send(registration, req);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
             }
 
             /* Subscribe to composite object instances as an example
              * 10300: Custom Object Instance
              */
             int[][] compositeObjectLinks = {
-                {10300}
+                {10300},
             };
 
             for (int[] link : compositeObjectLinks) {
