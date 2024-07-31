@@ -20,7 +20,8 @@ urlpatterns = [
     path('pending_communication_dashboard/', views.pending_communication_dashboard_view, name='pending_communication_dashboard'),
     path('license/', views.license_dashboard_view, name='license_dashboard'),
     path('accounts/', include('django.contrib.auth.urls')),
-    path('', views.admin_dashboard_view, name='default')
+    path('', views.admin_dashboard_view, name='default'),
+]
 
 # Serve static firmware files
 urlpatterns += static(settings.FIRMWARE_URL, document_root=settings.FIRMWARE_ROOT)

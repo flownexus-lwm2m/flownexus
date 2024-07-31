@@ -1,16 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1>Graph Dashboard</h1>
-<canvas id="temperatureChart" width="400" height="200"></canvas>
+<label for="resourceTypeSelector">Select Resource Type:</label>
+<select id="resourceTypeSelector">
+    <option value="temperature">Temperature</option>
+    <option value="humidity">Humidity</option>
+    <!-- Add more options as needed -->
+</select>
+<canvas id="resourceChart" width="400" height="200"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('temperatureChart').getContext('2d');
-        const temperatureChart = new Chart(ctx, {
+        const ctx = document.getElementById('resourceChart').getContext('2d');
+        const resourceChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Temperature',
+                    label: 'Resource Data',
                     data: [],
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     borderColor: 'rgba(75, 192, 192, 1)',
@@ -26,17 +33,28 @@
             }
         });
 
-        fetch('/api/temperature/')
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);  // For debugging
-                const labels = data.map(item => item.timestamp);
-                const values = data.map(item => item.value);
-                temperatureChart.data.labels = labels;
-                temperatureChart.data.datasets[0].data = values;
-                temperatureChart.update();
-            })
-            .catch(error => console.error('Error fetching data:', error));
+        const fetchData = (resourceType) => {
+            fetch(`/data/${resourceType}/`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);  // For debugging
+                    const labels = data.map(item => item.timestamp_created);
+                    const values = data.map(item => item.value);  // Use value as per the updated serializer
+                    resourceChart.data.labels = labels;
+                    resourceChart.data.datasets[0].label = `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} Data`;
+                    resourceChart.data.datasets[0].data = values;
+                    resourceChart.update();
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        };
+
+        document.getElementById('resourceTypeSelector').addEventListener('change', function () {
+            const selectedResource = this.value;
+            fetchData(selectedResource);
+        });
+
+        // Fetch initial data for the default selected resource type
+        fetchData(document.getElementById('resourceTypeSelector').value);
     });
 </script>
 {% endblock %}

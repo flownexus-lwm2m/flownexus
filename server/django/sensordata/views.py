@@ -4,15 +4,16 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+from rest_framework.generics import GenericAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LwM2MSerializer
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from .models import Device, Resource, Event, DeviceOperation, Firmware, ResourceType
+from .models import Endpoint, Resource, Event, EndpointOperation, Firmware, ResourceType
 from .serializers.single_resource_serializer import SingleResourceSerializer
 from .serializers.composite_resource_serializer import CompositeResourceSerializer
+from .serializers.generic_resource_serializer import GenericResourceSerializer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,29 +27,36 @@ class PostSingleResourceView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
-        else:
-            print(serializer.errors)
-            logger.error(f"Errors: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        logger.error(serializer.errors)
+        logger.error(request.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class TemperatureDataView(APIView):
-    def get(self, request):
+class PostCompositeResourceView(APIView):
+    serializer_class = CompositeResourceSerializer
+
+    def post(self, request):
+        serializer = CompositeResourceSerializer(data=request.data, many=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
+        logger.error(serializer.errors)
+        logger.error(request.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ResourceDataView(GenericAPIView):
+    serializer_class = GenericResourceSerializer
+
+    def get(self, request, resource_name):
         try:
-            temperature_resource_type = ResourceType.objects.get(name='temperature')
+            resource_type = ResourceType.objects.get(name=resource_name)
         except ResourceType.DoesNotExist:
-            return Response({"error": "Temperature resource type not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": f"{resource_name} resource type not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        temperature_resources = Resource.objects.filter(resource_type=temperature_resource_type)
-        logger.debug(f"Temperature resources: {temperature_resources}")
-        data = [
-            {
-                "timestamp": resource.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                "value": resource.float_value
-            }
-            for resource in temperature_resources
-        ]
-        logger.debug(f"Temperature data: {data}")
-        return Response(data, status=status.HTTP_200_OK)
+        resources = Resource.objects.filter(resource_type=resource_type)
+        logger.debug(f"{resource_name.capitalize()} resources: {resources}")
+        serializer = self.get_serializer(resources, many=True)
+        logger.debug(f"{resource_name.capitalize()} data: {serializer.data}")
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @login_required
@@ -57,7 +65,7 @@ def license_dashboard_view(request):
 
 @login_required
 def admin_dashboard_view(request):
-    devices = Device.objects.all()
+    devices = Endpoint.objects.all()
     return render(request, 'admin_dashboard.html', {'devices': devices, 'title': 'Admin Dashboard'})
 
 @login_required
@@ -76,21 +84,5 @@ def graph_dashboard_view(request):
 
 @login_required
 def pending_communication_dashboard_view(request):
-    pending_operations = DeviceOperation.objects.filter(status='pending')
+    pending_operations = EndpointOperation.objects.filter(status='pending')
     return render(request, 'pending_communication_dashboard.html', {'pending_operations': pending_operations, 'title': 'Pending Communication'})
-        logger.error(serializer.errors)
-        logger.error(request.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class PostCompositeResourceView(APIView):
-    serializer_class = CompositeResourceSerializer
-
-    def post(self, request):
-        serializer = CompositeResourceSerializer(data=request.data, many=False)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
-        logger.error(serializer.errors)
-        logger.error(request.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
