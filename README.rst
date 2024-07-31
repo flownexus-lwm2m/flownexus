@@ -1,4 +1,4 @@
-.. image:: doc/source/_static/LogoForReadme.png
+.. image:: doc/source/_static/flownexus_logo_gray.svg
 
 Flow Nexus Overview 🌐
 ======================

@@ -37,7 +37,9 @@ exclude_patterns = []
 
 html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
-html_logo = '_static/LogoForReadme.png'
+
+# Single gray logo for both dark and light themes (not used)
+# html_logo = '_static/flownexus_logo_gray.svg'
 
 html_css_files = [
   'custom.css',
@@ -65,6 +67,10 @@ html_theme_options = {
     'collapse_navbar': False,
     'home_page_in_toc': False,
     'navigation_with_keys': False,
+    'logo': {
+      "image_light": "_static/flownexus_logo_dark.svg",
+      "image_dark": "_static/flownexus_logo_light.svg",
+   }
 }
 
 latex_elements = {
