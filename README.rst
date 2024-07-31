@@ -1,6 +1,6 @@
 .. image:: doc/source/_static/flownexus_logo_gray.svg
 
-Flow Nexus Overview 🌐
+flownexus Overview 🌐
 ======================
 
 This repository hosts a framework to build IoT applications using the LwM2M

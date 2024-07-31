@@ -17,8 +17,8 @@ import re
 sys.path.insert(0, os.path.abspath('../../src/'))
 master_doc = "index"
 
-project = 'Flow Nexus'
-copyright = '2024, Individual contributors to Flow Nexus'
+project = 'flownexus'
+copyright = '2024, Individual contributors to flownexus'
 
 version = re.sub('', '', os.popen('git describe --tags').read().strip())
 release = version
@@ -86,6 +86,6 @@ latex_elements = {
 }
 
 latex_documents = [
-    (master_doc, f'flow_nexus_{version}.tex', 'Flow Nexus Documentation',
+    (master_doc, f'flow_nexus_{version}.tex', 'flownexus Documentation',
      'Jonas Remmert, Akarshan Kapoor', 'manual'),
 ]
