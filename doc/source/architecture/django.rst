@@ -116,3 +116,9 @@ the Django app that contains the application logic.
     of the file, a URL from where the device can retrieve the firmware, and
     timestamps for tracking when each firmware record was created and last
     updated.
+
+  FirmwareUpdate
+    keeps track of the execution of firmware updates for each endpoint. It adds
+    references to the two required resources from server to endpoint (Send URI,
+    execute Update). Furthermore it adds a field for the State and the Result
+    of an update.
