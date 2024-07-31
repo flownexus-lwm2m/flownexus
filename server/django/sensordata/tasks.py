@@ -51,7 +51,12 @@ def send_operation(endpointOperation_id: int) -> None:
     e_ops.status = e_ops.Status.SENDING
     e_ops.save()
 
-    response = requests.put(url, params=params, headers=headers, json=data)
+    # NONE type means this resource is an execute command. An execute command
+    # is send with a POST instead of PUT. It does not have data.
+    if resource_type.data_type == 'NONE':
+        response = requests.post(url, params=params, headers=headers)
+    else:
+        response = requests.put(url, params=params, headers=headers, json=data)
     if response.status_code == 200:
         logger.debug(f'Data sent to endpoint {ep} successfully')
         logger.debug(f'Response: {response.status_code} - {response.json()}')
