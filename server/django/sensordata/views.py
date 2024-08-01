@@ -61,7 +61,7 @@ class ResourceDataView(GenericAPIView):
 
 @login_required
 def license_dashboard_view(request):
-    return render(request, 'license.html', {'title': 'License Information'})
+    return render(request, 'license.html', {'title': 'Project Information and Licenses'})
 
 @login_required
 def admin_dashboard_view(request):

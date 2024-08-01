@@ -17,9 +17,10 @@
 
         <aside class="main-sidebar sidebar-dark-orange elevation-4">
 
-                <a href="#" class="brand-link">
-                    <img src="{% static 'img/flownexus_logo_light.svg' %}" alt="flownexus logo" class="brand-image-xl" style="opacity:1" >
-                </a>
+            <a href="#" class="brand-link">
+                <img src="{% static 'img/flownexus_logo_light.svg' %}" alt="flownexus logo" class="brand-image-xl"
+                    style="opacity:1">
+            </a>
 
             <div class="sidebar">
                 <nav class="mt-2">
@@ -91,13 +92,14 @@
                 </li>
 
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown2" role="button" data-toggle="dropdown"
-                        aria-haspopup="true" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown2" role="button"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         About
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown2">
-                        <a class="dropdown-item" href="{% url 'license_dashboard' %}">Overview</a>
-                        <a class="dropdown-item" href="mailto:jremmertgmx@googlemail.com,ov@tech22.de,akarshankap@gmail.com">Contact</a>
+                        <a class="dropdown-item" href="{% url 'license_dashboard' %}">Licenses</a>
+                        <a class="dropdown-item"
+                            href="mailto:jremmertgmx@googlemail.com,ov@tech22.de,akarshankap@gmail.com">Contact</a>
                     </div>
                 </li>
             </ul>
@@ -105,7 +107,8 @@
             <ul class="navbar-nav ml-auto">
                 {% if user.is_authenticated %}
                 <li class="nav-item" style="margin-right: 10px;">
-                    <a class="nav-link" href="#" style="padding-right: 0; margin-right: 0;"><i class="fa fa-user-secret"></i>
+                    <a class="nav-link" href="#" style="padding-right: 0; margin-right: 0;"><i
+                            class="fa fa-user-secret"></i>
                         {{ user.username }}</a>
                 </li>
                 <li class="nav-item">
@@ -117,7 +120,8 @@
                 </li>
                 {% else %}
                 <li class="nav-item" style="margin-right: 10px;">
-                    <a class="nav-link" href="#" style="padding-right: 0; margin-right: 0;"><i class="fa fa-user"></i> Guest</a>
+                    <a class="nav-link" href="#" style="padding-right: 0; margin-right: 0;"><i class="fa fa-user"></i>
+                        Guest</a>
                 </li>
                 <li class="nav-item">
                     <form action="{% url 'login' %}" method="get" style="margin: 0; padding: 0;">
@@ -149,8 +153,15 @@
                 </div>
             </section>
         </div>
-
+        <footer class="main-footer">
+            <strong>Made with ❤️ by <a href="https://github.com/jonas-rem/lwm2m_server">JoKar</a></strong>
+            Copyright &copy; 2024, OliVölck, JoRem & A-Karshan.
+            <div class="float-right d-none d-sm-inline-block">
+                <b>Version</b> 1.0.0-alpha
+            </div>
+        </footer>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
