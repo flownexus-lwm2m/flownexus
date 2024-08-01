@@ -1,0 +1,673 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Build and Deploy &#8212; flownexus  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=384b581d" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=64d943e2" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=efea14e4"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'deploy';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Simulation" href="simulation.html" />
+    <link rel="prev" title="Firmware Setup" href="application_guide/fw_setup.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus  documentation - Home"/>
+    <script>document.write(`<img src="_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus  documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="architecture/index.html">Architecture</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="architecture/django.html">Django</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture/leshan.html">Leshan</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture/communication_interfaces.html">Communication, Interfaces</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/fw_setup.html">Firmware Setup</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Build and Deploy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">APIs</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api_doc/api.html">Internal Django</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">News and Updates</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="news/weblog.html">Weblog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><label class="sidebar-toggle primary-toggle btn btn-sm" for="__primary" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</label></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/jonas-rem/lwm2m_server" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/jonas-rem/lwm2m_server/edit/main/doc/source/deploy.rst" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/jonas-rem/lwm2m_server/issues/new?title=Issue%20on%20page%20%2Fdeploy.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<label class="sidebar-toggle secondary-toggle btn btn-sm" for="__secondary"title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</label>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Build and Deploy</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-setup">Build Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup-a-virtual-server">Setup a Virtual Server</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="build-and-deploy">
+<h1>Build and Deploy<a class="headerlink" href="#build-and-deploy" title="Link to this heading">#</a></h1>
+<section id="build-setup">
+<h2>Build Setup<a class="headerlink" href="#build-setup" title="Link to this heading">#</a></h2>
+<p>The build instructions in the documentation are tested for a native Linux
+Machine. For MacOS or Windows consider creating a docker container build. One
+of the developers uses the following <cite>devcontainer.json</cite> build environment:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Ubuntu&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mcr.microsoft.com/devcontainers/base:jammy&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;runArgs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;--cap-add=NET_ADMIN&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--cap-add=MKNOD&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--device=/dev/net/tun&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--sysctl=net.ipv6.conf.all.disable_ipv6=0&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--sysctl=net.ipv6.conf.default.disable_ipv6=0&quot;</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;postCreateCommand&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;apt-get update &amp;&amp; apt-get install -y iproute2 &amp;&amp; echo &#39;IPv6 is enabled.&#39;&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;remoteUser&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;root&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Before you we start with any development here are a few things you should get
+configured:</p>
+<ul class="simple">
+<li><p>Get the Zephyr SDK downloaded and configured in your root directory. You can
+find the instructions <a class="reference external" href="https://docs.zephyrproject.org/latest/develop/toolchains/zephyr_sdk.html">here</a>.</p></li>
+<li><p>Setup a virtual environment for the project.</p></li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>upgrade
+<span class="gp">host:~$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>python3-pip<span class="w"> </span>python3.10-venv
+<span class="gp">host:~$ </span>python3.10<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="gp">host:~$ </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>west
+<span class="gp">host:~$ </span>west<span class="w"> </span>init<span class="w"> </span>-m<span class="w"> </span>https://github.com/jonas-rem/lwm2m_server<span class="w"> </span>--mr<span class="w"> </span>main<span class="w"> </span>flownexus_workspace
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace
+<span class="gp">host:~/flownexus_workspace$ </span>west<span class="w"> </span>update
+</pre></div>
+</div>
+</section>
+<section id="container-environment">
+<h2>Container Environment<a class="headerlink" href="#container-environment" title="Link to this heading">#</a></h2>
+<p>Both components run in a Docker container. The Leshan server is running in a
+<code class="docutils literal notranslate"><span class="pre">openjdk:17-slim</span></code> container and the Django server is running in a
+<code class="docutils literal notranslate"><span class="pre">python:3.11-slim</span></code> container. This allows for an easy and reproducible setup
+of the server.</p>
+<blockquote>
+<div><figure class="align-default" id="id1">
+<p class="plantuml">
+<img src="_images/plantuml-c3d163448b0d70a04ec6e7af1c18c8884ef6c5fe.png" alt="&#64;startuml
+package &quot;Docker Compose Environment&quot;  #DDDDDD {
+  [Leshan] as Leshan
+  [Django] as Django
+  database &quot;Database&quot; as DB
+  Leshan &lt;-right-&gt; Django : REST API
+  Django &lt;-down-&gt; DB
+}
+&#64;enduml"/>
+</p>
+<figcaption>
+<p><span class="caption-text">Both components running in one machine using Docker Compose</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</div></blockquote>
+<p>The following diagram shows the Docker Compose environment. The file
+<code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> defines the services and their configuration. The file
+<code class="docutils literal notranslate"><span class="pre">Dockerfile.leshan</span></code> defines the Leshan container and the file
+<code class="docutils literal notranslate"><span class="pre">Dockerfile.django</span></code> defines the Django container.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Make sure to change the password to the admin console as well as other
+settings like SECRET_KEY, DEBUG flag in a production environment!</p>
+</div>
+<p>The container can be build and started with the following commands:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>build
+<span class="go">[+] Building 0.5s (20/20) FINISHED                               docker:default</span>
+<span class="go"> =&gt; [leshan internal] load build definition from Dockerfile.leshan         0.0s</span>
+<span class="go"> =&gt; [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s</span>
+<span class="go"> =&gt; [django internal] load build definition from Dockerfile.django         0.0s</span>
+<span class="go"> =&gt; [django internal] load metadata for docker.io/library/python:3.11-sli  0.4s</span>
+<span class="go"> =&gt; [leshan 1/5] FROM docker.io/library/openjdk:17-slim@sha256:aaa3b3cb27  0.0s</span>
+<span class="go"> =&gt; [django 1/5] FROM docker.io/library/python:3.11-slim@sha256:d11b9bd5e  0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 2/5] WORKDIR /leshan                                    0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 3/5] COPY . /leshan/                                    0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 4/5] RUN apt-get update &amp;&amp;     apt-get install -y mave  0.0s</span>
+<span class="go"> =&gt; CACHED [leshan 5/5] RUN chmod +x /leshan/leshan_build_run.sh           0.0s</span>
+<span class="go"> =&gt; =&gt; exporting layers                                                    0.0s</span>
+<span class="go"> =&gt; =&gt; writing image sha256:a017577ba2b175374148f5c3f128ac117ba5436ceaeff  0.0s</span>
+<span class="go"> =&gt; =&gt; naming to docker.io/library/server-leshan                           0.0s</span>
+<span class="go"> =&gt; CACHED [django 2/5] WORKDIR /django                                    0.0s</span>
+<span class="go"> =&gt; CACHED [django 3/5] COPY . /django/                                    0.0s</span>
+<span class="go"> =&gt; CACHED [django 4/5] RUN pip install --no-cache-dir -r /django/require  0.0s</span>
+<span class="go"> =&gt; CACHED [django 5/5] RUN chmod +x /django/django_start.sh               0.0s</span>
+<span class="go"> =&gt; =&gt; writing image sha256:1c88f1227753b08cf994c4e61d5cdcf97d68f260c99ad  0.0s</span>
+<span class="go"> =&gt; =&gt; naming to docker.io/library/server-django                           0.0s</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>up
+<span class="go">[+] Running 2/0</span>
+<span class="go"> ✔ Container server-leshan-1  Created                                      0.0s</span>
+<span class="go"> ✔ Container server-django-1  Created                                      0.0s</span>
+<span class="go">Attaching to django-1, leshan-1</span>
+<span class="go">[..]</span>
+<span class="go">django-1  | Starting development server at http://0.0.0.0:8000/</span>
+<span class="go">leshan-1  | [main] INFO org.eclipse.leshan.server.LeshanServer - CoAP over UDP endpoint based on Californium library available at coap://0.0.0.0:5683.</span>
+<span class="go">leshan-1  | LeshanServer started</span>
+<span class="go">^CGracefully stopping... (press Ctrl+C again to force)</span>
+<span class="go">[+] Stopping 2/2</span>
+<span class="go"> ✔ Container server-django-1  Stopped                                     10.3s</span>
+<span class="go"> ✔ Container server-leshan-1  Stopped                                     10.5s</span>
+</pre></div>
+</div>
+</section>
+<section id="setup-a-virtual-server">
+<h2>Setup a Virtual Server<a class="headerlink" href="#setup-a-virtual-server" title="Link to this heading">#</a></h2>
+<p>flownexus can be deployed to a virtual server. This chapter explains a basic
+setup of a virtual server with a domain name. A requirement is to have a Linux
+server and a domain name. The domain name must point to the server, e.g. via a
+A/AAAA-Record.</p>
+<p>The setup has been tested with a Debian 12 server with a 1C/1GB RAM
+configuration.</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Basic setup of a virtual server</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">vserver:~/ apt update</span>
+<span class="go">vserver:~/ apt install git docker docker-compose nginx certbot python3-certbot-nginx</span>
+<span class="gp"># </span>Generate<span class="w"> </span>a<span class="w"> </span>certificate<span class="w"> </span>with<span class="w"> </span>letsencrypt:
+<span class="go">vserver:~/ certbot --nginx -d flownexus.org -d www.flownexus.org</span>
+<span class="go">vserver:~/ Create nginx config at /etc/nginx/sites-available/flownexus (see example below)</span>
+<span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>Nginx<span class="w"> </span>config:
+<span class="go">vserver:~/ sudo ln -s /etc/nginx/sites-available/flownexus /etc/nginx/sites-enabled/</span>
+<span class="gp"># </span>Test<span class="w"> </span>the<span class="w"> </span>Nginx<span class="w"> </span>config:
+<span class="go">vserver:~/ nginx -t</span>
+<span class="gp"># </span>Restart<span class="w"> </span>Nginx:
+<span class="go">vserver:~/systemctl restart nginx</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">Example Nginx configuration</span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos"> 2</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
+<span class="linenos"> 3</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="s">[::]:443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
+<span class="linenos"> 4</span><span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">flownexus.org</span><span class="p">;</span>
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="w">    </span><span class="kn">error_log</span><span class="w"> </span><span class="s">/var/log/nginx/flownexus.org.error.log</span><span class="p">;</span>
+<span class="linenos"> 7</span><span class="w">    </span><span class="kn">access_log</span><span class="w"> </span><span class="s">/var/log/nginx/flownexus.org.access.log</span><span class="p">;</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="w">    </span><span class="kn">ssl_certificate</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/fullchain.pem</span><span class="p">;</span>
+<span class="linenos">10</span><span class="w">    </span><span class="kn">ssl_certificate_key</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/privkey.pem</span><span class="p">;</span>
+<span class="linenos">11</span>
+<span class="linenos">12</span><span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">13</span><span class="w">        </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:8000/</span><span class="p">;</span>
+<span class="linenos">14</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Host</span><span class="w"> </span><span class="nv">$http_host</span><span class="p">;</span>
+<span class="linenos">15</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Upgrade</span><span class="w"> </span><span class="nv">$http_upgrade</span><span class="p">;</span>
+<span class="linenos">16</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Connection</span><span class="w"> </span><span class="s">&quot;upgrade&quot;</span><span class="p">;</span>
+<span class="linenos">17</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Real-IP</span><span class="w"> </span><span class="nv">$remote_addr</span><span class="p">;</span>
+<span class="linenos">18</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-For</span><span class="w"> </span><span class="nv">$proxy_add_x_forwarded_for</span><span class="p">;</span>
+<span class="linenos">19</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-Proto</span><span class="w"> </span><span class="nv">$scheme</span><span class="p">;</span>
+<span class="linenos">20</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Frame-Options</span><span class="w"> </span><span class="s">SAMEORIGIN</span><span class="p">;</span>
+<span class="linenos">21</span><span class="w">    </span><span class="p">}</span>
+<span class="linenos">22</span><span class="p">}</span>
+<span class="linenos">23</span>
+<span class="linenos">24</span><span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">25</span><span class="w">    </span><span class="kn">ssl_certificate</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/fullchain.pem</span><span class="p">;</span>
+<span class="linenos">26</span><span class="w">    </span><span class="kn">ssl_certificate_key</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/privkey.pem</span><span class="p">;</span>
+<span class="linenos">27</span><span class="w">    </span><span class="kn">ssl_dhparam</span><span class="w"> </span><span class="s">/etc/letsencrypt/ssl-dhparams.pem</span><span class="p">;</span>
+<span class="linenos">28</span>
+<span class="linenos">29</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span>
+<span class="linenos">30</span><span class="w">    </span><span class="c1">#listen [::]:80 ipv6only=on;</span>
+<span class="linenos">31</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="s">[::]:80</span><span class="p">;</span>
+<span class="linenos">32</span><span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">flownexus.org</span><span class="p">;</span>
+<span class="linenos">33</span>
+<span class="linenos">34</span><span class="w">    </span><span class="kn">return</span><span class="w"> </span><span class="mi">301</span><span class="w"> </span><span class="s">https://</span><span class="nv">$host$request_uri</span><span class="p">;</span>
+<span class="linenos">35</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>After the setup, dlownload flownexus and start it with using docker compose in
+detached mode. Make sure to change the <code class="docutils literal notranslate"><span class="pre">DEPLOY_SECRET_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> flag
+in the <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> file before deploying.:</p>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Start flownexus with docker compose</span><a class="headerlink" href="#id4" title="Link to this code">#</a></div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">vserver:~/ git clone https://github.com/jonas-rem/flownexus.git</span>
+<span class="gp"># </span>Change<span class="w"> </span>the<span class="w"> </span>DEPLOY_SECRET_KEY<span class="w"> </span>and<span class="w"> </span>DEBUG<span class="w"> </span>flag<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>settings.py<span class="w"> </span>file
+<span class="gp">vserver:~/flownexus/server$ </span>docker-compose<span class="w"> </span>up<span class="w"> </span>-d
+</pre></div>
+</div>
+</div>
+<p>flownexus is now available at <a class="reference external" href="https://flownexus.org">https://flownexus.org</a>. The server is running in a
+Docker container and the Nginx server is used as a reverse proxy. Consider
+enabling the firewall and only keep required ports open:</p>
+<ul class="simple">
+<li><p><strong>Port 80, TCP</strong>: HTTP</p></li>
+<li><p><strong>Port 443, TCP</strong>: HTTPS</p></li>
+<li><p><strong>Port 22, TCP</strong>: SSH</p></li>
+<li><p><strong>Port 5683, UDP</strong>: CoAP</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>flownexus is not production ready. This server setup is only intended for
+testing purposes.</p>
+<p>The current flownexus configuration uses the default Django
+<code class="docutils literal notranslate"><span class="pre">DEPLOY_SECRET_KEY</span></code> and enables the <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> flag. This is a security risk
+and must be change before deploying.</p>
+<p>Currently, the default django inbuild webserver is used. This is not
+recommended for production use. Consider using a production-ready webserver
+like Nginx or Apache.</p>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="application_guide/fw_setup.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Firmware Setup</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="simulation.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Simulation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-setup">Build Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup-a-virtual-server">Setup a Virtual Server</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2024, Individual contributors to flownexus.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
