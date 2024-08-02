@@ -79,7 +79,7 @@ The container can be build and started with the following commands:
 
 .. code-block:: console
 
-  host:~/flownexus_workspace/lwm2m_server/server$ docker compose build
+  host:~/workspace/flownexus/server$ docker compose build
   [+] Building 0.5s (20/20) FINISHED                               docker:default
    => [leshan internal] load build definition from Dockerfile.leshan         0.0s
    => [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s
@@ -104,7 +104,7 @@ The container can be build and started with the following commands:
 
 .. code-block:: console
 
-  host:~/flownexus_workspace/lwm2m_server/server$ docker compose up
+  host:~/workspace/flownexus/server$ docker compose up
   [+] Running 2/0
    ✔ Container server-leshan-1  Created                                      0.0s
    ✔ Container server-django-1  Created                                      0.0s
@@ -186,7 +186,7 @@ configuration.
        return 301 https://$host$request_uri;
    }
 
-After the setup, dlownload flownexus and start it with using docker compose in
+After the setup, download flownexus and start it with using docker compose in
 detached mode. Make sure to change the ``DEPLOY_SECRET_KEY`` and ``DEBUG`` flag
 in the ``settings.py`` file before deploying.:
 

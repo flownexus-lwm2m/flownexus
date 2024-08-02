@@ -11,7 +11,7 @@ efficiently.
 Getting Started 🛠️
 ==================
 
-Explore our `documentation <https://jonas-rem.github.io/lwm2m_server/>`_ to learn
+Explore our `documentation <https://jonas-rem.github.io/flownexus/>`_ to learn
 more about the project and get started!
 
 **⚠️ Warning: The framework is a work in progress and is not yet ready for production use.**
