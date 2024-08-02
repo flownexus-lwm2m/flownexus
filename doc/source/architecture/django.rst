@@ -27,9 +27,9 @@ Make sure to create a virtual environment and install the requirements:
 .. code-block:: console
 
   host:~$ source venv/bin/activate
-  host:~$ cd flownexus_workspace/lwm2m_server/server/django
-  host:lwm2m_server/server/django$ pip install -r requirements.txt
-  host:lwm2m_server/server/django$ ./django_start.sh
+  host:~$ cd workspace/flownexus/server/django
+  host:~/workspace/flownexus/server/django$ pip install -r requirements.txt
+  host:~/workspace/flownexus/server/django$ ./django_start.sh
 
 The Django server should now be up and running under the following URL:
 ``http://localhost:8000/admin``. The admin login is ``admin`` and the password
@@ -43,7 +43,7 @@ from the ReST API. You can run the unit tests with the following command:
 
 .. code-block:: console
 
-  host:~/flownexus_workspace/lwm2m_server/server/django$ python manage.py test sensordata
+  host:~/workspace/flownexus/server/django$ python manage.py test sensordata
   Found 2 test(s).
   Creating test database for alias 'default'...
   ----------------------------------------------------------------------
