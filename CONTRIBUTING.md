@@ -1,8 +1,8 @@
 # Contributing
 
-Thank you for considering contributing to the lwm2m_server project! We
-appreciate your support and effort to improve this open-source project. Below
-are some guidelines to help you get started.
+Thank you for considering contributing to the flownexus project! We appreciate
+your support and effort to improve this open-source project. Below are some
+guidelines to help you get started.
 
 ## Making Changes and submitting a Pull Request
 

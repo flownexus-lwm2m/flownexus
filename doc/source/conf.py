@@ -57,7 +57,7 @@ redoc = [
 redoc_uri = 'https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js'
 
 html_theme_options = {
-    'repository_url': 'https://github.com/jonas-rem/lwm2m_server',
+    'repository_url': 'https://github.com/jonas-rem/flownexus',
     'repository_branch': 'main',
     'path_to_docs': 'doc/source/',
     'use_repository_button': True,
