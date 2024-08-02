@@ -40,9 +40,9 @@ configured:
   host:~$ python3.10 -m venv venv
   host:~$ source venv/bin/activate
   host:~$ pip install --upgrade pip && pip install west
-  host:~$ west init -m https://github.com/jonas-rem/lwm2m_server --mr main flownexus_workspace
-  host:~$ cd flownexus_workspace
-  host:~/flownexus_workspace$ west update
+  host:~$ mkdir workspace && cd workspace
+  host:~/workspace$ west init -m https://github.com/jonas-rem/flownexus --mr main
+  host:~/workspace$ west update
 
 Container Environment
 ---------------------
