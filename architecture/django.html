@@ -237,7 +237,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server" target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus" target="_blank"
    class="btn btn-sm btn-source-repository-button dropdown-item"
    title="Source repository"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -254,7 +254,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/edit/main/doc/source/architecture/django.rst" target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus/edit/main/doc/source/architecture/django.rst" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -271,7 +271,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/issues/new?title=Issue%20on%20page%20%2Farchitecture/django.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus/issues/new?title=Issue%20on%20page%20%2Farchitecture/django.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -384,9 +384,9 @@ telemetry data in real-time, manage user accounts, and configure device settings
 <p>The Django server can also run locally, without the need of a docker container.
 Make sure to create a virtual environment and install the requirements:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace/lwm2m_server/server/django
-<span class="gp">host:lwm2m_server/server/django$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-<span class="gp">host:lwm2m_server/server/django$ </span>./django_start.sh
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>workspace/flownexus/server/django
+<span class="gp">host:~/workspace/flownexus/server/django$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="gp">host:~/workspace/flownexus/server/django$ </span>./django_start.sh
 </pre></div>
 </div>
 <p>The Django server should now be up and running under the following URL:
@@ -395,7 +395,7 @@ Make sure to create a virtual environment and install the requirements:</p>
 <h3>Run Unit Tests<a class="headerlink" href="#run-unit-tests" title="Link to this heading">#</a></h3>
 <p>There are unit tests, that test the deserializer, which parses the Json payload
 from the ReST API. You can run the unit tests with the following command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata
 <span class="go">Found 2 test(s).</span>
 <span class="go">Creating test database for alias &#39;default&#39;...</span>
 <span class="go">----------------------------------------------------------------------</span>

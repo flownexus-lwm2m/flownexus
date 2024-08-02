@@ -237,7 +237,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server" target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus" target="_blank"
    class="btn btn-sm btn-source-repository-button dropdown-item"
    title="Source repository"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -254,7 +254,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/edit/main/doc/source/documentation.rst" target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus/edit/main/doc/source/documentation.rst" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -271,7 +271,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/issues/new?title=Issue%20on%20page%20%2Fdocumentation.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus/issues/new?title=Issue%20on%20page%20%2Fdocumentation.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -365,9 +365,9 @@ document.write(`
 <h2>Build the documentation<a class="headerlink" href="#build-the-documentation" title="Link to this heading">#</a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>default-jre<span class="w"> </span>plantuml<span class="w"> </span>graphviz
 <span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
-<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace/lwm2m_server/doc
-<span class="gp">host:lwm2m_server/doc$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-<span class="gp">host:lwm2m_server/doc$ </span>tox<span class="w"> </span>-e<span class="w"> </span>py3-html
+<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>workspace/flownexus/doc
+<span class="gp">host:~/workspace/flownexus/doc$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="gp">host:~/workspace/flownexus/doc$ </span>tox<span class="w"> </span>-e<span class="w"> </span>py3-html
 </pre></div>
 </div>
 <p>Open the generated index.html in the doc/build directory in your browser.</p>

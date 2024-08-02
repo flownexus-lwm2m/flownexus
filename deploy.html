@@ -237,7 +237,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server" target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus" target="_blank"
    class="btn btn-sm btn-source-repository-button dropdown-item"
    title="Source repository"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -254,7 +254,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/edit/main/doc/source/deploy.rst" target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus/edit/main/doc/source/deploy.rst" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -271,7 +271,7 @@
       
       
       
-      <li><a href="https://github.com/jonas-rem/lwm2m_server/issues/new?title=Issue%20on%20page%20%2Fdeploy.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/jonas-rem/flownexus/issues/new?title=Issue%20on%20page%20%2Fdeploy.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -395,9 +395,9 @@ find the instructions <a class="reference external" href="https://docs.zephyrpro
 <span class="gp">host:~$ </span>python3.10<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
 <span class="gp">host:~$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate
 <span class="gp">host:~$ </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>west
-<span class="gp">host:~$ </span>west<span class="w"> </span>init<span class="w"> </span>-m<span class="w"> </span>https://github.com/jonas-rem/lwm2m_server<span class="w"> </span>--mr<span class="w"> </span>main<span class="w"> </span>flownexus_workspace
-<span class="gp">host:~$ </span><span class="nb">cd</span><span class="w"> </span>flownexus_workspace
-<span class="gp">host:~/flownexus_workspace$ </span>west<span class="w"> </span>update
+<span class="gp">host:~$ </span>mkdir<span class="w"> </span>workspace<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>workspace
+<span class="gp">host:~/workspace$ </span>west<span class="w"> </span>init<span class="w"> </span>-m<span class="w"> </span>https://github.com/jonas-rem/flownexus<span class="w"> </span>--mr<span class="w"> </span>main
+<span class="gp">host:~/workspace$ </span>west<span class="w"> </span>update
 </pre></div>
 </div>
 </section>
@@ -435,7 +435,7 @@ package &quot;Docker Compose Environment&quot;  #DDDDDD {
 settings like SECRET_KEY, DEBUG flag in a production environment!</p>
 </div>
 <p>The container can be build and started with the following commands:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>build
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>build
 <span class="go">[+] Building 0.5s (20/20) FINISHED                               docker:default</span>
 <span class="go"> =&gt; [leshan internal] load build definition from Dockerfile.leshan         0.0s</span>
 <span class="go"> =&gt; [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s</span>
@@ -458,7 +458,7 @@ settings like SECRET_KEY, DEBUG flag in a production environment!</p>
 <span class="go"> =&gt; =&gt; naming to docker.io/library/server-django                           0.0s</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus_workspace/lwm2m_server/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>up
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/server$ </span>docker<span class="w"> </span>compose<span class="w"> </span>up
 <span class="go">[+] Running 2/0</span>
 <span class="go"> ✔ Container server-leshan-1  Created                                      0.0s</span>
 <span class="go"> ✔ Container server-django-1  Created                                      0.0s</span>
@@ -538,7 +538,7 @@ configuration.</p>
 </pre></div>
 </div>
 </div>
-<p>After the setup, dlownload flownexus and start it with using docker compose in
+<p>After the setup, download flownexus and start it with using docker compose in
 detached mode. Make sure to change the <code class="docutils literal notranslate"><span class="pre">DEPLOY_SECRET_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> flag
 in the <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> file before deploying.:</p>
 <div class="literal-block-wrapper docutils container" id="id4">
