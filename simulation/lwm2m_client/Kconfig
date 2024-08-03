@@ -27,6 +27,21 @@ config LWM2M_APP_TLS_TAG
 	  TLS security tag to use when connecting.
 endif
 
+if WIFI
+config WIFI_SSID
+	string "WiFi SSID"
+	#default "my_wifi"
+	default "FRITZ!Box 3490"
+	help
+	  WiFi SSID to connect to.
+
+config WIFI_PSK
+	string "WiFi PSK"
+	#default "my_password"
+	default "!linksys!"
+	help
+	  WiFi PSK to use.
+endif
 
 config DL_SERVER_HOSTNAME
     string "Hostname of http download server. This is a security feature to \\
