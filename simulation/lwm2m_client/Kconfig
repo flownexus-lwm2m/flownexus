@@ -27,6 +27,12 @@ config LWM2M_APP_TLS_TAG
 	  TLS security tag to use when connecting.
 endif
 
+
+config DL_SERVER_HOSTNAME
+    string "Hostname of http download server. This is a security feature to \\
+            prevent downloading firmware from other sources."
+    default "https://flownexus.org"
+
 config LWM2M_APP_SERVER
 	string "LwM2M server address"
 	default "coap://flownexus.org:5683" if !LWM2M_DTLS_SUPPORT
