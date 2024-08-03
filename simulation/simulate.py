@@ -217,7 +217,9 @@ def build_clients(num_clients, logging):
 
         build_cmd = [
             'west', 'build', '-p=auto', '-b', 'native_sim', APP, '--',
-            f'-DEXTRA_CONF_FILE=overlay-lwm2m-1.1.conf ../{file_path}'
+            '-DEXTRA_CONF_FILE=overlay-lwm2m-1.1.conf '
+            'overlay-tls.conf '
+            f'../{file_path}'
         ]
 
         # Run the command, capturing both stdout and stderr
