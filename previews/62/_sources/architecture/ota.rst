@@ -104,7 +104,3 @@ each OTA update is stored in the database (FirmwareUpdate table).
 
 
 .. _LwM2M core specification v1.1.1: https://www.openmobilealliance.org/release/LightweightM2M/V1_1_1-20190617-A/OMA-TS-LightweightM2M_Core-V1_1_1-20190617-A.pdf
-
-
-Leshan Data Format
-..................
