@@ -18,14 +18,14 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include <stdint.h>
 
 static struct k_work_delayable temp_work;
-#define PERIOD K_MINUTES(2)
+#define PERIOD K_MINUTES(1)
 
 static void temp_work_cb(struct k_work *work)
 {
-	double v;
+	double t, h;
 
-	if (IS_ENABLED(CONFIG_FXOS8700_TEMP)) {
-		const struct device *dev = device_get_binding("nxp_fxos8700");
+	if (IS_ENABLED(CONFIG_SHT4X)) {
+		const struct device *dev = DEVICE_DT_GET_ANY(sensirion_sht4x);
 		struct sensor_value val;
 
 		if (!dev) {
@@ -37,15 +37,20 @@ static void temp_work_cb(struct k_work *work)
 			goto out;
 		}
 
-		sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &val);
+		sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &val);
+		t = sensor_value_to_double(&val);
+		sensor_channel_get(dev, SENSOR_CHAN_HUMIDITY, &val);
+		h = sensor_value_to_double(&val);
+		LOG_DBG("Temperature: %.2f, Humidity: %.2f", t, h);
 
-		v = sensor_value_to_double(&val);
 	} else {
 		/* Generate dummy temperature data */
-		v = 20.0 + (double)sys_rand32_get() / UINT32_MAX * 5.0;
+		t = 20.0 + (double)sys_rand32_get() / UINT32_MAX * 5.0;
+		h = 50.0 + (double)sys_rand32_get() / UINT32_MAX * 10.0;
 	}
 
-	lwm2m_set_f64(&LWM2M_OBJ(3303, 0, 5700), v);
+	lwm2m_set_f64(&LWM2M_OBJ(3303, 0, 5700), t);
+	lwm2m_set_f64(&LWM2M_OBJ(3304, 0, 5700), h);
 
 out:
 	k_work_schedule(&temp_work, PERIOD);
@@ -53,8 +58,11 @@ out:
 
 void init_temp_sensor(void)
 {
-	if (lwm2m_create_object_inst(&LWM2M_OBJ(3303, 0)) == 0) {
+	if ((lwm2m_create_object_inst(&LWM2M_OBJ(3303, 0)) == 0) &&
+	    (lwm2m_create_object_inst(&LWM2M_OBJ(3304, 0)) == 0)) {
 		k_work_init_delayable(&temp_work, temp_work_cb);
 		k_work_schedule(&temp_work, K_NO_WAIT);
+	} else {
+		LOG_ERR("Failed to create temperature object instance");
 	}
 }
