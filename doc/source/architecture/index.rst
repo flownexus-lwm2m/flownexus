@@ -9,3 +9,4 @@ interact with each other.
    django
    leshan
    communication_interfaces
+   ota
