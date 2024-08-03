@@ -6,10 +6,10 @@
  */
 
 #define LOG_MODULE_NAME net_lwm2m_client_app
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL LOG_LEVEL_INF
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL);
 
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/kernel.h>
@@ -18,6 +18,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include <zephyr/net/lwm2m.h>
 #include <zephyr/net/conn_mgr_monitor.h>
 #include <zephyr/net/conn_mgr_connectivity.h>
+#include <zephyr/net/wifi_mgmt.h>
 #include "modules.h"
 #include "lwm2m_resource_ids.h"
 
@@ -50,7 +51,7 @@ static int mem_total = 25;
 static double min_range = 0.0;
 static double max_range = 100;
 
-static struct lwm2m_ctx client_ctx;
+static struct lwm2m_ctx client_ctx = {0};
 
 static const char *endpoint =
 	(sizeof(CONFIG_LWM2M_APP_ID) > 1 ? CONFIG_LWM2M_APP_ID : CONFIG_BOARD);
@@ -65,6 +66,9 @@ static struct k_sem quit_lock;
 /* Zephyr NET management event callback structures. */
 static struct net_mgmt_event_callback l4_cb;
 static struct net_mgmt_event_callback conn_cb;
+static struct net_mgmt_event_callback wifi_conn_cb;
+
+static struct wifi_connect_req_params cnx_params;
 
 static K_SEM_DEFINE(network_connected_sem, 0, 1);
 
@@ -337,6 +341,8 @@ static void l4_event_handler(struct net_mgmt_event_callback *cb,
 			     uint32_t event,
 			     struct net_if *iface)
 {
+	LOG_DBG("Event %d", event);
+
 	switch (event) {
 	case NET_EVENT_L4_CONNECTED:
 		LOG_INF("IP Up");
@@ -355,9 +361,24 @@ static void connectivity_event_handler(struct net_mgmt_event_callback *cb,
 				       uint32_t event,
 				       struct net_if *iface)
 {
-	if (event == NET_EVENT_CONN_IF_FATAL_ERROR) {
-		LOG_ERR("Fatal error received from the connectivity layer");
-		return;
+	LOG_DBG("Event %d", event);
+	switch (event) {
+		case NET_EVENT_CONN_IF_FATAL_ERROR:
+			LOG_INF("Failed to connect to network");
+			break;
+		case NET_EVENT_WIFI_CONNECT_RESULT:
+			if (cb == &wifi_conn_cb) {
+				struct wifi_status *status = (struct wifi_status *)iface;
+				if (status->status) {
+					LOG_INF("Wi-Fi connected");
+					k_sem_give(&network_connected_sem);
+				} else {
+					LOG_INF("Wi-Fi connection failed");
+				}
+			}
+			break;
+		default:
+			break;
 	}
 }
 
@@ -381,6 +402,10 @@ int main(void)
 					     CONN_LAYER_EVENT_MASK);
 		net_mgmt_add_event_callback(&conn_cb);
 
+		net_mgmt_init_event_callback(&wifi_conn_cb, connectivity_event_handler,
+					     NET_EVENT_WIFI_CONNECT_RESULT);
+		net_mgmt_add_event_callback(&wifi_conn_cb);
+
 		ret = net_if_up(net_if_get_default());
 
 		if (ret < 0 && ret != -EALREADY) {
@@ -388,7 +413,22 @@ int main(void)
 			return ret;
 		}
 
+#if defined(CONFIG_WIFI) && (CONFIG_WIFI == 1)
+		cnx_params = (struct wifi_connect_req_params) {
+			.ssid = CONFIG_WIFI_SSID,
+			.ssid_length = strlen(CONFIG_WIFI_SSID),
+			.psk = CONFIG_WIFI_PSK,
+			.psk_length = strlen(CONFIG_WIFI_PSK),
+			.channel = 0,
+			.security = WIFI_SECURITY_TYPE_PSK,
+		};
+		LOG_INF("Wi-Fi network <%s>", CONFIG_WIFI_SSID);
+		ret = net_mgmt(NET_REQUEST_WIFI_CONNECT, net_if_get_default(),
+			       &cnx_params,
+			       sizeof(struct wifi_connect_req_params));
+#else
 		ret = conn_mgr_if_connect(net_if_get_default());
+#endif
 		/* Ignore errors from interfaces not requiring connectivity */
 		if (ret == 0) {
 			LOG_INF("Connecting to network");
