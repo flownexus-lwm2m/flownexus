@@ -16,8 +16,49 @@ all server features.
    features that showcase flownexus capabilities are planned for the upcoming
    releases.
 
-Client Simulation
------------------
+Running the LwM2M on Hardware
+-----------------------------
+
+The lwm2m_client sample can be built and run on hardware. The sample is
+configured to connect to the flownexus server by default. As long as the
+hardware is supported by Zephyr and has network connectivity, the sample should
+work on the target device.
+
+A cheap and board for testing is the M5Stack ATOM S3 Lite. The board is based
+on the ESP32-S3 and has built-in WiFi.
+
+.. code-block:: console
+  :caption: Build and run the lwm2m_client sample on the M5Stack ATOM S3 Lite
+
+  host:~/workspace/flownexus$ west update
+  host:~/workspace/flownexus$ west build -b m5stack_atoms3_lite/esp32s3/procpu simulation/lwm2m_client/ -p -- -DCONF=overlay-lwm2m-1.1.conf
+  host:~/workspace/flownexus$ west flash && west espressif monitor
+
+.. note::
+   The M5Stack ATOM S3 Lite is flashed via a UART over USB connection using a
+   bootloader. Connecting to the debug console and programming at the same time
+   is not possible.
+
+Activating MCUboot
+..................
+
+When testing OTA updates, the lwm2m_client sample can be built with MCUboot
+support. The sample is configured to use the MCUboot bootloader and the
+mcuboot_img_manager.
+
+In that case Zephyr has to be build with ``sysbuild`` activated. Building with
+sysbuild builds the bootloader and the application in one step and flashes a
+combined image to the device.
+
+.. code-block:: console
+  :caption: Build and run the lwm2m_client sample on the M5Stack ATOM S3 Lite with MCUboot
+
+  host:~/workspace/flownexus$ west update
+  host:~/workspace/flownexus$ west build --sysbuild -b m5stack_atoms3_lite/esp32s3/procpu simulation/lwm2m_client/ -p -- -DCONF=overlay-lwm2m-1.1.conf
+  host:~/workspace/flownexus$ west flash && west espressif monitor
+
+Running the LwM2M Client in Simulation
+--------------------------------------
 
 The lwm2m_client sample can run in simulation mode (``native_sim``) [3]_.
 Building the sample with ``native_sim`` will generate a binary that can be
@@ -215,6 +256,9 @@ Zephyr lwm2m_client sample.
   host:~/workspace/flownexus$ ../tools/net-tools/net-setup.sh stop
   Using ../tools/net-tools/./zeth.conf configuration file.
   Removing zeth
+
+If you want to connect with a locally hosted Leshan server, add a configuration
+option prj.conf: ``CONFIG_LWM2M_APP_SERVER="coap://192.0.2.2:5683"``.
 
 
 .. [1] https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html
