@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-
+import traceback, logging
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -16,7 +16,7 @@ from .serializers.single_resource_serializer import SingleResourceSerializer
 from .serializers.composite_resource_serializer import CompositeResourceSerializer
 from .serializers.generic_resource_serializer import GenericResourceSerializer
 import traceback
-import logging
+
 
 logger = logging.getLogger(__name__)
 
