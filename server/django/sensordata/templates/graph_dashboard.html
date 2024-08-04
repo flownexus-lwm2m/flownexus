@@ -4,8 +4,7 @@
 <label for="resourceTypeSelector">Select Resource Type:</label>
 <select id="resourceTypeSelector">
     <option value="temperature">Temperature</option>
-    <option value="humidity">Humidity</option>
-    <!-- Add more options as needed -->
+    <!-- TODO: Add more options as needed -->
 </select>
 <canvas id="resourceChart" width="400" height="200"></canvas>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -34,14 +33,15 @@
         });
 
         const fetchData = (resourceType) => {
-            fetch(`/data/${resourceType}/`)
+            fetch(`/leshan_api/data/${resourceType}/`)
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);  // For debugging
-                    const labels = data.map(item => item.timestamp_created);
-                    const values = data.map(item => item.value);  // Use value as per the updated serializer
+                    const labels = data.map(item => new Date(item.timestamp_created).toLocaleString());
+                    const values = data.map(item => item.value);
                     resourceChart.data.labels = labels;
-                    resourceChart.data.datasets[0].label = `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} Data`;
+                    labelStr = `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} Data`;
+                    resourceChart.data.datasets[0].label = labelStr;
                     resourceChart.data.datasets[0].data = values;
                     resourceChart.update();
                 })

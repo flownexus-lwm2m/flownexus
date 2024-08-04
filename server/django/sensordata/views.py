@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -43,21 +43,32 @@ class PostCompositeResourceView(APIView):
         logger.error(request.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ResourceDataView(GenericAPIView):
+class ResourceDataView(ListAPIView):
     serializer_class = GenericResourceSerializer
 
-    def get(self, request, resource_name):
+    def get_queryset(self):
+        resource_name = self.kwargs.get('resource_name')
+        logger.debug(f"Received request for resource type: {resource_name}")
         try:
             resource_type = ResourceType.objects.get(name=resource_name)
+            logger.debug(f"Found resource type: {resource_type}")
+            return Resource.objects.filter(resource_type=resource_type)
         except ResourceType.DoesNotExist:
+            logger.error(f"Resource type {resource_name} not found")
             return Response({"error": f"{resource_name} resource type not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        resources = Resource.objects.filter(resource_type=resource_type)
-        logger.debug(f"{resource_name.capitalize()} resources: {resources}")
-        serializer = self.get_serializer(resources, many=True)
+    def get(self, request, *args, **kwargs):
+        resource_name = self.kwargs.get('resource_name')
+        queryset = self.get_queryset()
+
+        if not queryset.exists():
+            logger.error(f"Resource type {resource_name} not found")
+            return Response({"error": f"{resource_name} resource type not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        logger.debug(f"{resource_name.capitalize()} resources: {queryset}")
+        serializer = self.get_serializer(queryset, many=True)
         logger.debug(f"{resource_name.capitalize()} data: {serializer.data}")
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 @login_required
 def license_dashboard_view(request):
@@ -84,5 +95,5 @@ def graph_dashboard_view(request):
 
 @login_required
 def pending_communication_dashboard_view(request):
-    pending_operations = EndpointOperation.objects.filter(status='pending')
+    pending_operations = EndpointOperation.objects.filter(status='QUEUED')
     return render(request, 'pending_communication_dashboard.html', {'pending_operations': pending_operations, 'title': 'Pending Communication'})
