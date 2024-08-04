@@ -15,13 +15,8 @@ from rest_framework.exceptions import ValidationError
 from .serializers.single_resource_serializer import SingleResourceSerializer
 from .serializers.composite_resource_serializer import CompositeResourceSerializer
 from .serializers.generic_resource_serializer import GenericResourceSerializer
-import traceback
-import logging
-
-
 
 logger = logging.getLogger(__name__)
-
 
 class PostSingleResourceView(APIView):
     serializer_class = SingleResourceSerializer
@@ -107,4 +102,3 @@ def graph_dashboard_view(request):
 def pending_communication_dashboard_view(request):
     pending_operations = EndpointOperation.objects.filter(status='QUEUED')
     return render(request, 'pending_communication_dashboard.html', {'pending_operations': pending_operations, 'title': 'Pending Communication'})
-
