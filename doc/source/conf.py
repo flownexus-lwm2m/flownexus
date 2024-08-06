@@ -86,6 +86,6 @@ latex_elements = {
 }
 
 latex_documents = [
-    (master_doc, f'flow_nexus_{version}.tex', 'flownexus Documentation',
+    (master_doc, f'flownexus_{version}.tex', 'flownexus Documentation',
      'Jonas Remmert, Akarshan Kapoor', 'manual'),
 ]
