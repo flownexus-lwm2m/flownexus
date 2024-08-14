@@ -12,8 +12,8 @@ echo "Running makemigrations for sensordata..."
 python manage.py makemigrations sensordata 2>&1 | tee -a "$logfile"
 echo "Running migrate..."
 python manage.py migrate 2>&1 | tee -a $logfile
-echo "Loading initial data..."
-python manage.py loaddata db_initial_data.json 2>&1 | tee -a $logfile
+#echo "Loading initial data..."
+#python manage.py loaddata db_initial_data.json 2>&1 | tee -a $logfile
 
 # Check for existing records
 exists=$(echo "from sensordata.models import ResourceType; print(ResourceType.objects.count())" | python manage.py shell)

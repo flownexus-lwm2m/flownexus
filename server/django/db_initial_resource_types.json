@@ -304,5 +304,23 @@
       "name": "ep_registration_update",
       "data_type": "INTEGER"
     }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 10300,
+      "resource_id": 0,
+      "name": "pm_result_code",
+      "data_type": "INTEGER"
+    }
+  },
+  {
+    "model": "sensordata.resourcetype",
+    "fields": {
+      "object_id": 10300,
+      "resource_id": 1,
+      "name": "pm_result_string",
+      "data_type": "STRING"
+    }
   }
 ]

@@ -22,12 +22,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-ttm_sr56l7mv#4smgm*+tffm*$q%!qqp@#q7*_*y38^^#9%@7*"
+SECRET_KEY = "django-insecure-ttm_sasdasdfaasdfr56l7mv#4smgm*+tffm*$q%!qqp@#q7*_*y38^^#9%@7*"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-CSRF_TRUSTED_ORIGINS = ['https://flownexus.org', 'https://www.flownexus.org']
+CSRF_TRUSTED_ORIGINS = ['https://db.tech22.de']
 
 LOGGING = {
     'version': 1,
