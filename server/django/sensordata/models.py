@@ -122,7 +122,8 @@ class Firmware(models.Model):
     """Represents a firmware update file that can be downloaded by an endpoint."""
     version = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    binary = models.FileField(upload_to='firmware')
+    # Upload to MEDIA_ROOT
+    binary = models.FileField()
 
     # Limit the binary file size to 1 MB
     def clean(self):
