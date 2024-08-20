@@ -113,8 +113,12 @@ class HandleResourceMixin:
             process_pending_operations.delay(endpoint.endpoint)
             return
 
-        # Handle FOTA Update
-        elif resource_type.object_id == 5:
+        # Cond 1: Check for fota update after ep registration.
+        # "Firmware Version - 3/0/3" Resource.
+        #
+        # Cond 2: Handle FOTA Update
+        elif ((resource_type.object_id == 3 and resource_type.resource_id == 3) or
+               resource_type.object_id == 5):
             # There must be exactly one FirmwareUpdate object with
             # result = 0 (RESULT_DEFAULT).
             fw_queryset = FirmwareUpdate.objects.filter(endpoint=endpoint,
@@ -135,6 +139,19 @@ class HandleResourceMixin:
                 err = "Multiple active FirmwareUpdate objects found for endpoint"
                 logger.info(fw_queryset)
                 raise serializers.ValidationError(err)
+
+            # Compare version with expected version and set download state/result
+            if resource_type.object_id == 3 and resource_type.resource_id == 3:
+                fw_obj.state = FirmwareUpdate.State.STATE_IDLE
+                expected_version = fw_obj.firmware.version
+                reported_version = res['value']
+                if expected_version == reported_version:
+                    fw_obj.result = FirmwareUpdate.Result.RESULT_SUCCESS
+                else:
+                    fw_obj.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+                fw_obj.save()
+                return
+
             if resource_type.resource_id == 3:
                 if int(res['value']) == FirmwareUpdate.State.STATE_DOWNLOADED:
                     # Create "Update" resource to execute the update, no payload

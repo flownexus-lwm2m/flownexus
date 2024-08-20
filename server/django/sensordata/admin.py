@@ -128,6 +128,11 @@ class FirmwareAdmin(admin.ModelAdmin):
         form = super().get_form(request, obj, **kwargs)
         if obj:
             form.base_fields['binary'].disabled = True
+        form.base_fields['version'].help_text = (
+            'The version field must match the binary firmware version.'
+            'that is reported to LwM2M Firmware Version field (3/0/3).<br>'
+            'This identifier is used to confirm the new firmware after a reboot of the endpoint.'
+        )
         return form
 
 
