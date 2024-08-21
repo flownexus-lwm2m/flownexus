@@ -12,6 +12,11 @@ URI. This method is called Pull via HTTP(s) and is faster, compared to a
 transfer via CoAP. Updates via CoAP blockwise transfer to download the firmware
 are not supported.
 
+A https server is usually be hosted under a subdomain. The default is
+``https://fw.flownexus.org``. This makes it easy to use a self-signed
+certificate for the https server. For details, check chapter
+:ref:`setup-a-virtual-server-label`.
+
 More information about a possible firmware implementation can be found in the
 ``lwm2m_client`` firmware sample at
 ``flownexus/simulation/lwm2m_client/src/firmware_update.c``.
@@ -32,7 +37,7 @@ the update process:
 
 1. flownexus sends a link to the firmware to the device via LwM2M object 5/0/1
    - Package URI. It is a relative link to the firmware on the server, e.g.
-   ``/media/firmware/v0.1.0.bin``. The host ``https://flownexus.org`` is
+   ``/binaries/v0.1.0.bin``. The host ``https://fw.flownexus.org`` is
    fixed in firmware.
 2. The device downloads the firmware from the server via http(s) and sets the
    state to ``STATE_DOWNLOADING``.
@@ -40,7 +45,11 @@ the update process:
    complete.
 4. flownexus executes the command 5/0/2 - Update to the device.
 5. The device sets the state to ``STATE_UPDATING`` upon receiving the command.
-6. The device updates the firmware and communicates the result to flownexus.
+6. The device updates the firmware, usually by performing a reboot.
+7. The device registers and sends the firwmare version to flownexus via
+   resource ``Firmware Version - 3/0/3``. Depending if the update was
+   successful or not, flownexus sets the result and state of the update in the
+   database accordingly.
 
 This process ensures that errors during the update process are handled and
 communicated to the backend.

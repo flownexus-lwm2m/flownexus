@@ -375,6 +375,10 @@ implemented by sending a link to a firmware via LwM2M object 5/0/1 - Package
 URI. This method is called Pull via HTTP(s) and is faster, compared to a
 transfer via CoAP. Updates via CoAP blockwise transfer to download the firmware
 are not supported.</p>
+<p>A https server is usually be hosted under a subdomain. The default is
+<code class="docutils literal notranslate"><span class="pre">https://fw.flownexus.org</span></code>. This makes it easy to use a self-signed
+certificate for the https server. For details, check chapter
+<a class="reference internal" href="../deploy.html#setup-a-virtual-server-label"><span class="std std-ref">Setup a Virtual Server</span></a>.</p>
 <p>More information about a possible firmware implementation can be found in the
 <code class="docutils literal notranslate"><span class="pre">lwm2m_client</span></code> firmware sample at
 <code class="docutils literal notranslate"><span class="pre">flownexus/simulation/lwm2m_client/src/firmware_update.c</span></code>.</p>
@@ -393,7 +397,7 @@ the update process:</p>
 <ol class="arabic simple">
 <li><p>flownexus sends a link to the firmware to the device via LwM2M object 5/0/1
 - Package URI. It is a relative link to the firmware on the server, e.g.
-<code class="docutils literal notranslate"><span class="pre">/media/firmware/v0.1.0.bin</span></code>. The host <code class="docutils literal notranslate"><span class="pre">https://flownexus.org</span></code> is
+<code class="docutils literal notranslate"><span class="pre">/binaries/v0.1.0.bin</span></code>. The host <code class="docutils literal notranslate"><span class="pre">https://fw.flownexus.org</span></code> is
 fixed in firmware.</p></li>
 <li><p>The device downloads the firmware from the server via http(s) and sets the
 state to <code class="docutils literal notranslate"><span class="pre">STATE_DOWNLOADING</span></code>.</p></li>
@@ -401,7 +405,11 @@ state to <code class="docutils literal notranslate"><span class="pre">STATE_DOWN
 complete.</p></li>
 <li><p>flownexus executes the command 5/0/2 - Update to the device.</p></li>
 <li><p>The device sets the state to <code class="docutils literal notranslate"><span class="pre">STATE_UPDATING</span></code> upon receiving the command.</p></li>
-<li><p>The device updates the firmware and communicates the result to flownexus.</p></li>
+<li><p>The device updates the firmware, usually by performing a reboot.</p></li>
+<li><p>The device registers and sends the firwmare version to flownexus via
+resource <code class="docutils literal notranslate"><span class="pre">Firmware</span> <span class="pre">Version</span> <span class="pre">-</span> <span class="pre">3/0/3</span></code>. Depending if the update was
+successful or not, flownexus sets the result and state of the update in the
+database accordingly.</p></li>
 </ol>
 <p>This process ensures that errors during the update process are handled and
 communicated to the backend.</p>

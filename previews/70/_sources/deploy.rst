@@ -118,6 +118,8 @@ The container can be build and started with the following commands:
    ✔ Container server-django-1  Stopped                                     10.3s
    ✔ Container server-leshan-1  Stopped                                     10.5s
 
+.. _setup-a-virtual-server-label:
+
 Setup a Virtual Server
 ----------------------
 
