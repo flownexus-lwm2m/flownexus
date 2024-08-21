@@ -6,7 +6,6 @@
 
 import logging
 from django.utils import timezone
-from django.utils.html import format_html
 from django.contrib import admin
 from .tasks import process_pending_operations
 import os
@@ -119,8 +118,8 @@ class FirmwareAdmin(admin.ModelAdmin):
     file_name.short_description = 'File Name'
 
     def file_link(self, obj):
-        return format_html('<a href="{}" download>{}</a>', obj.binary.url, "Download")
-    file_link.short_description = 'Download Link'
+        return obj.binary.url
+    file_link.short_description = 'Relative DL-Link'
 
     # Override the get_form method to make the binary field read-only when
     # editing an existing record
