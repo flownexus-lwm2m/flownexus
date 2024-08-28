@@ -13,6 +13,10 @@ of the developers uses the following `devcontainer.json` build environment:
   {
     "name": "Ubuntu",
     "image": "mcr.microsoft.com/devcontainers/base:jammy",
+    "features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+	 },
     "runArgs": [
       "--cap-add=NET_ADMIN",
       "--cap-add=MKNOD",

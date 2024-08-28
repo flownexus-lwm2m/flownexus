@@ -216,7 +216,7 @@ def build_clients(num_clients, logging):
                                                  zeth_name=zeth_name))
 
         build_cmd = [
-            'west', 'build', '-p=auto', '-b', 'native_sim', APP, '--',
+            'west', 'build', '-p=auto', '-b', 'native_sim/native/64', APP, '--',
             '-DEXTRA_CONF_FILE=overlay-lwm2m-1.1.conf '
             'overlay-tls.conf '
             f'../{file_path}'
