@@ -118,8 +118,10 @@ The container can be build and started with the following commands:
    ✔ Container server-django-1  Stopped                                     10.3s
    ✔ Container server-leshan-1  Stopped                                     10.5s
 
+.. _setup-a-virtual-server-label:
+
 Setup a Virtual Server
--------------------------
+----------------------
 
 flownexus can be deployed to a virtual server. This chapter explains a basic
 setup of a virtual server with a domain name. A requirement is to have a Linux
@@ -129,62 +131,171 @@ A/AAAA-Record.
 The setup has been tested with a Debian 12 server with a 1C/1GB RAM
 configuration.
 
+CA and self-signed Certificate
+..............................
+
+Leshan and the HTTPs download server for firware binaries use self-signed
+certificates. The flownexus frontend uses certificates that have been issued
+via Let's Encrypt. The following commands create a self-signed certificate for
+the domain ``flownexus.org``:
+
+**Create a Certificate Authority (CA)**
+
+1. Generate the CA Private Key:
+
+   .. code-block::
+
+      openssl ecparam -genkey -name prime256v1 -out ca.key
+
+2. Create a Self-Signed CA Certificate with 100 years validity:
+
+   .. code-block::
+
+      openssl req -new -x509 -key ca.key -out ca.crt -days 36500 -subj "/CN=flownexus.org"
+
+
+**Create a Server Certificate Signed by the CA**
+
+1. Generate the Server Private Key
+
+   .. code-block::
+
+      openssl ecparam -genkey -name prime256v1 -out fw_flownexus_org.key
+
+2. Generate a Certificate Signing Request (CSR)
+
+   .. code-block::
+
+        openssl req -new -key fw_flownexus_org.key -out fw_flownexus_org.csr -subj "/CN=fw.flownexus.org"
+
+3. Generate the Server Certificate Signed by the CA
+
+   .. code-block::
+
+      openssl x509 -req -in fw_flownexus_org.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out fw_flownexus_org.crt -days 3650 -sha256
+
+
+**Generated Files**
+
+- ``ca.key``: CA private key
+- ``ca.crt``: CA certificate
+- ``fw_flownexus_org.key``: Server private key
+- ``fw_flownexus_org.csr``: Server certificate signing request
+- ``fw_flownexus_org.crt``: Server certificate signed by the CA
+
+Copy the server certificate and key to the server and store then in
+``/etc/nginx/ssl/``. Keep the CA certificate and key in a secure location.
+
+Nginx as Reverse Proxy
+......................
+
+The following steps show how to configure Nginx as a reverse proxy for the
+flownexus server. The Nginx server listens on port 443 and forwards the
+requests to the Django server running on port 8000:
+
 
 .. code-block:: console
-   :caption: Basic setup of a virtual server
+   :caption: Nginx setup, create Let's Encrypt certificate
 
+
+   # Update Sytem, install required packages and enable the firewall
    vserver:~/ apt update
    vserver:~/ apt install git docker docker-compose nginx certbot python3-certbot-nginx
+
    # Generate a certificate with letsencrypt:
    vserver:~/ certbot --nginx -d flownexus.org -d www.flownexus.org
    vserver:~/ Create nginx config at /etc/nginx/sites-available/flownexus (see example below)
-   # Activate the Nginx config:
-   vserver:~/ sudo ln -s /etc/nginx/sites-available/flownexus /etc/nginx/sites-enabled/
-   # Test the Nginx config:
-   vserver:~/ nginx -t
-   # Restart Nginx:
-   vserver:~/systemctl restart nginx
 
 
 .. code-block:: nginx
-   :caption: Example Nginx configuration
+   :caption: Nginx config for the Frontend ``/etc/nginx/sites-available/flownexus.org``
    :linenos:
 
    server {
-       listen 443 ssl http2;
-       listen [::]:443 ssl http2;
-       server_name flownexus.org;
+           listen 443 ssl http2;
+           listen [::]:443 ssl http2;
+           server_name flownexus.org www.flownexus.org;
 
-       error_log /var/log/nginx/flownexus.org.error.log;
-       access_log /var/log/nginx/flownexus.org.access.log;
+           error_log /var/log/nginx/flownexus.org.error.log;
+           access_log /var/log/nginx/flownexus.org.access.log;
+           ssl_certificate /etc/letsencrypt/live/flownexus.org/fullchain.pem; # managed by Certbot
+           ssl_certificate_key /etc/letsencrypt/live/flownexus.org/privkey.pem; # managed by Certbot
 
-       ssl_certificate /etc/letsencrypt/live/flownexus.org/fullchain.pem;
-       ssl_certificate_key /etc/letsencrypt/live/flownexus.org/privkey.pem;
-
-       location / {
-           proxy_pass http://127.0.0.1:8000/;
-           proxy_set_header Host $http_host;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection "upgrade";
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-           proxy_set_header X-Frame-Options SAMEORIGIN;
-       }
+           location / {
+                   proxy_pass http://127.0.0.1:8000/;
+                   proxy_set_header Host $http_host;
+                   proxy_set_header X-Real-IP $remote_addr;
+                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                   proxy_set_header X-Forwarded-Proto $scheme;
+                   proxy_set_header X-Frame-Options SAMEORIGIN;
+           }
    }
 
    server {
-       ssl_certificate /etc/letsencrypt/live/flownexus.org/fullchain.pem;
-       ssl_certificate_key /etc/letsencrypt/live/flownexus.org/privkey.pem;
-       ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+           listen 80;
+           listen [::]:80;
+           server_name flownexus.org www.flownexus.org;
 
-       listen 80;
-       #listen [::]:80 ipv6only=on;
-       listen [::]:80;
-       server_name flownexus.org;
-
-       return 301 https://$host$request_uri;
+           # Redirect all HTTP requests to HTTPs
+           return 301 https://$host$request_uri;
    }
+
+
+.. code-block:: nginx
+   :caption: Nginx config for the https dl Server ``/etc/nginx/sites-available/fw.flownexus.org``
+   :linenos:
+
+   server {
+           listen 443 ssl;
+           listen [::]:443 ssl http2;
+           server_name fw.flownexus.org;
+
+           ssl_certificate /etc/nginx/ssl/fw_flownexus_org.crt;
+           ssl_certificate_key /etc/nginx/ssl/fw_flownexus_org.key;
+
+           location /binaries {
+                   root /var/www/flownexus/;
+                   # Debug option: uncomment to list files
+                   # autoindex on;
+           }
+   }
+
+   server {
+        listen 80;
+        server_name fw.flownexus.org;
+
+        # Redirect all HTTP requests to HTTPS
+        return 301 https://$host$request_uri;
+   }
+
+
+After creating the Nginx config, activate the config and restart the Nginx.
+
+.. code-block:: console
+   :caption: Activate the Nginx config
+
+   # Activate the Nginx config:
+   vserver:~/ ln -s /etc/nginx/sites-available/flownexus.org /etc/nginx/sites-enabled/
+   vserver:~/ ln -s /etc/nginx/sites-available/fw.flownexus.org /etc/nginx/sites-enabled/
+
+   # Test the Nginx config:
+   vserver:~/ nginx -t
+
+   # Restart Nginx:
+   vserver:~/ systemctl restart nginx
+
+Test the Download Server
+........................
+
+If you have setup an A/AAAA-Record, you can now test the download server. It is
+available at https://fw.flownexus.org/binaries. If you uncomment the option
+``autoindex on;`` in the Nginx config, you can list the files in the directory.
+
+.. figure:: images/https_server_demo.png
+   :width: 50%
+
+Start flownexus
+...............
 
 After the setup, download flownexus and start it with using docker compose in
 detached mode. Make sure to change the ``DEPLOY_SECRET_KEY`` and ``DEBUG`` flag
@@ -199,7 +310,12 @@ in the ``settings.py`` file before deploying.:
    vserver:~/flownexus/server$ docker-compose up -d
 
 flownexus is now available at https://flownexus.org. The server is running in a
-Docker container and the Nginx server is used as a reverse proxy. Consider
+Docker container and the Nginx server is used as a reverse proxy.
+
+Security Considerations
+.......................
+
+Consider
 enabling the firewall and only keep required ports open:
 
 - **Port 80, TCP**: HTTP

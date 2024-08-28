@@ -350,7 +350,14 @@ document.write(`
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-setup">Build Setup</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup-a-virtual-server">Setup a Virtual Server</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup-a-virtual-server">Setup a Virtual Server</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ca-and-self-signed-certificate">CA and self-signed Certificate</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nginx-as-reverse-proxy">Nginx as Reverse Proxy</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#test-the-download-server">Test the Download Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#start-flownexus">Start flownexus</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#security-considerations">Security Considerations</a></li>
+</ul>
+</li>
 </ul>
             </nav>
         </div>
@@ -476,74 +483,171 @@ settings like SECRET_KEY, DEBUG flag in a production environment!</p>
 </div>
 </section>
 <section id="setup-a-virtual-server">
-<h2>Setup a Virtual Server<a class="headerlink" href="#setup-a-virtual-server" title="Link to this heading">#</a></h2>
+<span id="setup-a-virtual-server-label"></span><h2>Setup a Virtual Server<a class="headerlink" href="#setup-a-virtual-server" title="Link to this heading">#</a></h2>
 <p>flownexus can be deployed to a virtual server. This chapter explains a basic
 setup of a virtual server with a domain name. A requirement is to have a Linux
 server and a domain name. The domain name must point to the server, e.g. via a
 A/AAAA-Record.</p>
 <p>The setup has been tested with a Debian 12 server with a 1C/1GB RAM
 configuration.</p>
+<section id="ca-and-self-signed-certificate">
+<h3>CA and self-signed Certificate<a class="headerlink" href="#ca-and-self-signed-certificate" title="Link to this heading">#</a></h3>
+<p>Leshan and the HTTPs download server for firware binaries use self-signed
+certificates. The flownexus frontend uses certificates that have been issued
+via Let’s Encrypt. The following commands create a self-signed certificate for
+the domain <code class="docutils literal notranslate"><span class="pre">flownexus.org</span></code>:</p>
+<p><strong>Create a Certificate Authority (CA)</strong></p>
+<ol class="arabic">
+<li><p>Generate the CA Private Key:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">ecparam</span> <span class="o">-</span><span class="n">genkey</span> <span class="o">-</span><span class="n">name</span> <span class="n">prime256v1</span> <span class="o">-</span><span class="n">out</span> <span class="n">ca</span><span class="o">.</span><span class="n">key</span>
+</pre></div>
+</div>
+</li>
+<li><p>Create a Self-Signed CA Certificate with 100 years validity:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">req</span> <span class="o">-</span><span class="n">new</span> <span class="o">-</span><span class="n">x509</span> <span class="o">-</span><span class="n">key</span> <span class="n">ca</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">out</span> <span class="n">ca</span><span class="o">.</span><span class="n">crt</span> <span class="o">-</span><span class="n">days</span> <span class="mi">36500</span> <span class="o">-</span><span class="n">subj</span> <span class="s2">&quot;/CN=flownexus.org&quot;</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p><strong>Create a Server Certificate Signed by the CA</strong></p>
+<ol class="arabic">
+<li><p>Generate the Server Private Key</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">ecparam</span> <span class="o">-</span><span class="n">genkey</span> <span class="o">-</span><span class="n">name</span> <span class="n">prime256v1</span> <span class="o">-</span><span class="n">out</span> <span class="n">fw_flownexus_org</span><span class="o">.</span><span class="n">key</span>
+</pre></div>
+</div>
+</li>
+<li><p>Generate a Certificate Signing Request (CSR)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">req</span> <span class="o">-</span><span class="n">new</span> <span class="o">-</span><span class="n">key</span> <span class="n">fw_flownexus_org</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">out</span> <span class="n">fw_flownexus_org</span><span class="o">.</span><span class="n">csr</span> <span class="o">-</span><span class="n">subj</span> <span class="s2">&quot;/CN=fw.flownexus.org&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p>Generate the Server Certificate Signed by the CA</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">x509</span> <span class="o">-</span><span class="n">req</span> <span class="o">-</span><span class="ow">in</span> <span class="n">fw_flownexus_org</span><span class="o">.</span><span class="n">csr</span> <span class="o">-</span><span class="n">CA</span> <span class="n">ca</span><span class="o">.</span><span class="n">crt</span> <span class="o">-</span><span class="n">CAkey</span> <span class="n">ca</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">CAcreateserial</span> <span class="o">-</span><span class="n">out</span> <span class="n">fw_flownexus_org</span><span class="o">.</span><span class="n">crt</span> <span class="o">-</span><span class="n">days</span> <span class="mi">3650</span> <span class="o">-</span><span class="n">sha256</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p><strong>Generated Files</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ca.key</span></code>: CA private key</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ca.crt</span></code>: CA certificate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fw_flownexus_org.key</span></code>: Server private key</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fw_flownexus_org.csr</span></code>: Server certificate signing request</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fw_flownexus_org.crt</span></code>: Server certificate signed by the CA</p></li>
+</ul>
+<p>Copy the server certificate and key to the server and store then in
+<code class="docutils literal notranslate"><span class="pre">/etc/nginx/ssl/</span></code>. Keep the CA certificate and key in a secure location.</p>
+</section>
+<section id="nginx-as-reverse-proxy">
+<h3>Nginx as Reverse Proxy<a class="headerlink" href="#nginx-as-reverse-proxy" title="Link to this heading">#</a></h3>
+<p>The following steps show how to configure Nginx as a reverse proxy for the
+flownexus server. The Nginx server listens on port 443 and forwards the
+requests to the Django server running on port 8000:</p>
 <div class="literal-block-wrapper docutils container" id="id2">
-<div class="code-block-caption"><span class="caption-text">Basic setup of a virtual server</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">vserver:~/ apt update</span>
+<div class="code-block-caption"><span class="caption-text">Nginx setup, create Let’s Encrypt certificate</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Update<span class="w"> </span>Sytem,<span class="w"> </span>install<span class="w"> </span>required<span class="w"> </span>packages<span class="w"> </span>and<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>the<span class="w"> </span>firewall
+<span class="go">vserver:~/ apt update</span>
 <span class="go">vserver:~/ apt install git docker docker-compose nginx certbot python3-certbot-nginx</span>
+
 <span class="gp"># </span>Generate<span class="w"> </span>a<span class="w"> </span>certificate<span class="w"> </span>with<span class="w"> </span>letsencrypt:
 <span class="go">vserver:~/ certbot --nginx -d flownexus.org -d www.flownexus.org</span>
 <span class="go">vserver:~/ Create nginx config at /etc/nginx/sites-available/flownexus (see example below)</span>
-<span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>Nginx<span class="w"> </span>config:
-<span class="go">vserver:~/ sudo ln -s /etc/nginx/sites-available/flownexus /etc/nginx/sites-enabled/</span>
-<span class="gp"># </span>Test<span class="w"> </span>the<span class="w"> </span>Nginx<span class="w"> </span>config:
-<span class="go">vserver:~/ nginx -t</span>
-<span class="gp"># </span>Restart<span class="w"> </span>Nginx:
-<span class="go">vserver:~/systemctl restart nginx</span>
 </pre></div>
 </div>
 </div>
 <div class="literal-block-wrapper docutils container" id="id3">
-<div class="code-block-caption"><span class="caption-text">Example Nginx configuration</span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
+<div class="code-block-caption"><span class="caption-text">Nginx config for the Frontend <code class="docutils literal notranslate"><span class="pre">/etc/nginx/sites-available/flownexus.org</span></code></span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
 <div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="k">server</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos"> 2</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
-<span class="linenos"> 3</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="s">[::]:443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
-<span class="linenos"> 4</span><span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">flownexus.org</span><span class="p">;</span>
+<span class="linenos"> 2</span><span class="w">        </span><span class="kn">listen</span><span class="w"> </span><span class="mi">443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
+<span class="linenos"> 3</span><span class="w">        </span><span class="kn">listen</span><span class="w"> </span><span class="s">[::]:443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
+<span class="linenos"> 4</span><span class="w">        </span><span class="kn">server_name</span><span class="w"> </span><span class="s">flownexus.org</span><span class="w"> </span><span class="s">www.flownexus.org</span><span class="p">;</span>
 <span class="linenos"> 5</span>
-<span class="linenos"> 6</span><span class="w">    </span><span class="kn">error_log</span><span class="w"> </span><span class="s">/var/log/nginx/flownexus.org.error.log</span><span class="p">;</span>
-<span class="linenos"> 7</span><span class="w">    </span><span class="kn">access_log</span><span class="w"> </span><span class="s">/var/log/nginx/flownexus.org.access.log</span><span class="p">;</span>
-<span class="linenos"> 8</span>
-<span class="linenos"> 9</span><span class="w">    </span><span class="kn">ssl_certificate</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/fullchain.pem</span><span class="p">;</span>
-<span class="linenos">10</span><span class="w">    </span><span class="kn">ssl_certificate_key</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/privkey.pem</span><span class="p">;</span>
-<span class="linenos">11</span>
-<span class="linenos">12</span><span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">13</span><span class="w">        </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:8000/</span><span class="p">;</span>
-<span class="linenos">14</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Host</span><span class="w"> </span><span class="nv">$http_host</span><span class="p">;</span>
-<span class="linenos">15</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Upgrade</span><span class="w"> </span><span class="nv">$http_upgrade</span><span class="p">;</span>
-<span class="linenos">16</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Connection</span><span class="w"> </span><span class="s">&quot;upgrade&quot;</span><span class="p">;</span>
-<span class="linenos">17</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Real-IP</span><span class="w"> </span><span class="nv">$remote_addr</span><span class="p">;</span>
-<span class="linenos">18</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-For</span><span class="w"> </span><span class="nv">$proxy_add_x_forwarded_for</span><span class="p">;</span>
-<span class="linenos">19</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-Proto</span><span class="w"> </span><span class="nv">$scheme</span><span class="p">;</span>
-<span class="linenos">20</span><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Frame-Options</span><span class="w"> </span><span class="s">SAMEORIGIN</span><span class="p">;</span>
-<span class="linenos">21</span><span class="w">    </span><span class="p">}</span>
-<span class="linenos">22</span><span class="p">}</span>
-<span class="linenos">23</span>
-<span class="linenos">24</span><span class="k">server</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">25</span><span class="w">    </span><span class="kn">ssl_certificate</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/fullchain.pem</span><span class="p">;</span>
-<span class="linenos">26</span><span class="w">    </span><span class="kn">ssl_certificate_key</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/privkey.pem</span><span class="p">;</span>
-<span class="linenos">27</span><span class="w">    </span><span class="kn">ssl_dhparam</span><span class="w"> </span><span class="s">/etc/letsencrypt/ssl-dhparams.pem</span><span class="p">;</span>
-<span class="linenos">28</span>
-<span class="linenos">29</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span>
-<span class="linenos">30</span><span class="w">    </span><span class="c1">#listen [::]:80 ipv6only=on;</span>
-<span class="linenos">31</span><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="s">[::]:80</span><span class="p">;</span>
-<span class="linenos">32</span><span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">flownexus.org</span><span class="p">;</span>
-<span class="linenos">33</span>
-<span class="linenos">34</span><span class="w">    </span><span class="kn">return</span><span class="w"> </span><span class="mi">301</span><span class="w"> </span><span class="s">https://</span><span class="nv">$host$request_uri</span><span class="p">;</span>
-<span class="linenos">35</span><span class="p">}</span>
+<span class="linenos"> 6</span><span class="w">        </span><span class="kn">error_log</span><span class="w"> </span><span class="s">/var/log/nginx/flownexus.org.error.log</span><span class="p">;</span>
+<span class="linenos"> 7</span><span class="w">        </span><span class="kn">access_log</span><span class="w"> </span><span class="s">/var/log/nginx/flownexus.org.access.log</span><span class="p">;</span>
+<span class="linenos"> 8</span><span class="w">        </span><span class="kn">ssl_certificate</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/fullchain.pem</span><span class="p">;</span><span class="w"> </span><span class="c1"># managed by Certbot</span>
+<span class="linenos"> 9</span><span class="w">        </span><span class="kn">ssl_certificate_key</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/flownexus.org/privkey.pem</span><span class="p">;</span><span class="w"> </span><span class="c1"># managed by Certbot</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span><span class="w">        </span><span class="kn">location</span><span class="w"> </span><span class="s">/</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">12</span><span class="w">                </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:8000/</span><span class="p">;</span>
+<span class="linenos">13</span><span class="w">                </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Host</span><span class="w"> </span><span class="nv">$http_host</span><span class="p">;</span>
+<span class="linenos">14</span><span class="w">                </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Real-IP</span><span class="w"> </span><span class="nv">$remote_addr</span><span class="p">;</span>
+<span class="linenos">15</span><span class="w">                </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-For</span><span class="w"> </span><span class="nv">$proxy_add_x_forwarded_for</span><span class="p">;</span>
+<span class="linenos">16</span><span class="w">                </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-Proto</span><span class="w"> </span><span class="nv">$scheme</span><span class="p">;</span>
+<span class="linenos">17</span><span class="w">                </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Frame-Options</span><span class="w"> </span><span class="s">SAMEORIGIN</span><span class="p">;</span>
+<span class="linenos">18</span><span class="w">        </span><span class="p">}</span>
+<span class="linenos">19</span><span class="p">}</span>
+<span class="linenos">20</span>
+<span class="linenos">21</span><span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">22</span><span class="w">        </span><span class="kn">listen</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span>
+<span class="linenos">23</span><span class="w">        </span><span class="kn">listen</span><span class="w"> </span><span class="s">[::]:80</span><span class="p">;</span>
+<span class="linenos">24</span><span class="w">        </span><span class="kn">server_name</span><span class="w"> </span><span class="s">flownexus.org</span><span class="w"> </span><span class="s">www.flownexus.org</span><span class="p">;</span>
+<span class="linenos">25</span>
+<span class="linenos">26</span><span class="w">        </span><span class="c1"># Redirect all HTTP requests to HTTPs</span>
+<span class="linenos">27</span><span class="w">        </span><span class="kn">return</span><span class="w"> </span><span class="mi">301</span><span class="w"> </span><span class="s">https://</span><span class="nv">$host$request_uri</span><span class="p">;</span>
+<span class="linenos">28</span><span class="p">}</span>
 </pre></div>
 </div>
 </div>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Nginx config for the https dl Server <code class="docutils literal notranslate"><span class="pre">/etc/nginx/sites-available/fw.flownexus.org</span></code></span><a class="headerlink" href="#id4" title="Link to this code">#</a></div>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos"> 2</span><span class="w">        </span><span class="kn">listen</span><span class="w"> </span><span class="mi">443</span><span class="w"> </span><span class="s">ssl</span><span class="p">;</span>
+<span class="linenos"> 3</span><span class="w">        </span><span class="kn">listen</span><span class="w"> </span><span class="s">[::]:443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
+<span class="linenos"> 4</span><span class="w">        </span><span class="kn">server_name</span><span class="w"> </span><span class="s">fw.flownexus.org</span><span class="p">;</span>
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="w">        </span><span class="kn">ssl_certificate</span><span class="w"> </span><span class="s">/etc/nginx/ssl/fw_flownexus_org.crt</span><span class="p">;</span>
+<span class="linenos"> 7</span><span class="w">        </span><span class="kn">ssl_certificate_key</span><span class="w"> </span><span class="s">/etc/nginx/ssl/fw_flownexus_org.key</span><span class="p">;</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="w">        </span><span class="kn">location</span><span class="w"> </span><span class="s">/binaries</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">10</span><span class="w">                </span><span class="kn">root</span><span class="w"> </span><span class="s">/var/www/flownexus/</span><span class="p">;</span>
+<span class="linenos">11</span><span class="w">                </span><span class="c1"># Debug option: uncomment to list files</span>
+<span class="linenos">12</span><span class="w">                </span><span class="c1"># autoindex on;</span>
+<span class="linenos">13</span><span class="w">        </span><span class="p">}</span>
+<span class="linenos">14</span><span class="p">}</span>
+<span class="linenos">15</span>
+<span class="linenos">16</span><span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">17</span><span class="w">     </span><span class="kn">listen</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span>
+<span class="linenos">18</span><span class="w">     </span><span class="kn">server_name</span><span class="w"> </span><span class="s">fw.flownexus.org</span><span class="p">;</span>
+<span class="linenos">19</span>
+<span class="linenos">20</span><span class="w">     </span><span class="c1"># Redirect all HTTP requests to HTTPS</span>
+<span class="linenos">21</span><span class="w">     </span><span class="kn">return</span><span class="w"> </span><span class="mi">301</span><span class="w"> </span><span class="s">https://</span><span class="nv">$host$request_uri</span><span class="p">;</span>
+<span class="linenos">22</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>After creating the Nginx config, activate the config and restart the Nginx.</p>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text">Activate the Nginx config</span><a class="headerlink" href="#id5" title="Link to this code">#</a></div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>Nginx<span class="w"> </span>config:
+<span class="go">vserver:~/ ln -s /etc/nginx/sites-available/flownexus.org /etc/nginx/sites-enabled/</span>
+<span class="go">vserver:~/ ln -s /etc/nginx/sites-available/fw.flownexus.org /etc/nginx/sites-enabled/</span>
+
+<span class="gp"># </span>Test<span class="w"> </span>the<span class="w"> </span>Nginx<span class="w"> </span>config:
+<span class="go">vserver:~/ nginx -t</span>
+
+<span class="gp"># </span>Restart<span class="w"> </span>Nginx:
+<span class="go">vserver:~/ systemctl restart nginx</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="test-the-download-server">
+<h3>Test the Download Server<a class="headerlink" href="#test-the-download-server" title="Link to this heading">#</a></h3>
+<p>If you have setup an A/AAAA-Record, you can now test the download server. It is
+available at <a class="reference external" href="https://fw.flownexus.org/binaries">https://fw.flownexus.org/binaries</a>. If you uncomment the option
+<code class="docutils literal notranslate"><span class="pre">autoindex</span> <span class="pre">on;</span></code> in the Nginx config, you can list the files in the directory.</p>
+<figure class="align-default">
+<a class="reference internal image-reference" href="_images/https_server_demo.png"><img alt="_images/https_server_demo.png" src="_images/https_server_demo.png" style="width: 50%;" />
+</a>
+</figure>
+</section>
+<section id="start-flownexus">
+<h3>Start flownexus<a class="headerlink" href="#start-flownexus" title="Link to this heading">#</a></h3>
 <p>After the setup, download flownexus and start it with using docker compose in
 detached mode. Make sure to change the <code class="docutils literal notranslate"><span class="pre">DEPLOY_SECRET_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> flag
 in the <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> file before deploying.:</p>
-<div class="literal-block-wrapper docutils container" id="id4">
-<div class="code-block-caption"><span class="caption-text">Start flownexus with docker compose</span><a class="headerlink" href="#id4" title="Link to this code">#</a></div>
+<div class="literal-block-wrapper docutils container" id="id6">
+<div class="code-block-caption"><span class="caption-text">Start flownexus with docker compose</span><a class="headerlink" href="#id6" title="Link to this code">#</a></div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">vserver:~/ git clone https://github.com/jonas-rem/flownexus.git</span>
 <span class="gp"># </span>Change<span class="w"> </span>the<span class="w"> </span>DEPLOY_SECRET_KEY<span class="w"> </span>and<span class="w"> </span>DEBUG<span class="w"> </span>flag<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>settings.py<span class="w"> </span>file
 <span class="gp">vserver:~/flownexus/server$ </span>docker-compose<span class="w"> </span>up<span class="w"> </span>-d
@@ -551,7 +655,11 @@ in the <code class="docutils literal notranslate"><span class="pre">settings.py<
 </div>
 </div>
 <p>flownexus is now available at <a class="reference external" href="https://flownexus.org">https://flownexus.org</a>. The server is running in a
-Docker container and the Nginx server is used as a reverse proxy. Consider
+Docker container and the Nginx server is used as a reverse proxy.</p>
+</section>
+<section id="security-considerations">
+<h3>Security Considerations<a class="headerlink" href="#security-considerations" title="Link to this heading">#</a></h3>
+<p>Consider
 enabling the firewall and only keep required ports open:</p>
 <ul class="simple">
 <li><p><strong>Port 80, TCP</strong>: HTTP</p></li>
@@ -570,6 +678,7 @@ and must be change before deploying.</p>
 recommended for production use. Consider using a production-ready webserver
 like Nginx or Apache.</p>
 </div>
+</section>
 </section>
 </section>
 
@@ -620,7 +729,14 @@ like Nginx or Apache.</p>
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-setup">Build Setup</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#container-environment">Container Environment</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup-a-virtual-server">Setup a Virtual Server</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup-a-virtual-server">Setup a Virtual Server</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ca-and-self-signed-certificate">CA and self-signed Certificate</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nginx-as-reverse-proxy">Nginx as Reverse Proxy</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#test-the-download-server">Test the Download Server</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#start-flownexus">Start flownexus</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#security-considerations">Security Considerations</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
