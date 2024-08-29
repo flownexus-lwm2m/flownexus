@@ -34,6 +34,22 @@ endpoints in a docker container. Setting up the network and running the
 simulation in a docker container ensures interoperability with different host
 systems.
 
+.. note::
+   The native_sim simulation does not have a true random number generator and
+   therefore the entropy source is limited. If a built simulation
+   image is run multiple times, the CoAP message that registers the endpoint with
+   the server may have the same message ID. The CoAP internal deduplicator will
+   ignore this message if a previous message within ``NON_LIFETIME`` seconds
+   (default 145 s) had the same message content and the same message ID. This
+   can lead to the device not being properly registered with the server.
+
+   This issue only shows if the same client registers multiple times within 145
+   s and only during simulation. Hardware with a true random number generator
+   is not affected, in face the CoAP deduplication feature is necessary for
+   reliable function. You can either wait for 145 s or rebuild the client. In
+   case of a rebuild the entropy seed will be different and the resulting
+   message ID will be different.
+
 Prerequisites
 .............
 
