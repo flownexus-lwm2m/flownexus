@@ -18,7 +18,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   redis:
-    image: redis:7.2.5
+    image: redis:7.4-alpine
     networks:
       - mynetwork
     ports:
