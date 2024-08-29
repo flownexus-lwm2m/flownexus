@@ -1,6 +1,6 @@
 # Use the official lightweight Python image.
 # 3.11.0a4 at the time of writing; use 3.11 when it is released
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
