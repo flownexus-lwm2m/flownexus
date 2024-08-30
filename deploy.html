@@ -379,6 +379,10 @@ of the developers uses the following <cite>devcontainer.json</cite> build enviro
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Ubuntu&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mcr.microsoft.com/devcontainers/base:jammy&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;features&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;ghcr.io/devcontainers/features/docker-in-docker:2&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">              </span><span class="nt">&quot;ghcr.io/devcontainers/features/docker-outside-of-docker:1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+<span class="w">       </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;runArgs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="s2">&quot;--cap-add=NET_ADMIN&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="s2">&quot;--cap-add=MKNOD&quot;</span><span class="p">,</span>
