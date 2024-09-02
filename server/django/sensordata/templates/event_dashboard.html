@@ -1,24 +1,157 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
 {% block content %}
-<h1>Event Dashboard</h1>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Device</th>
-            <th>Event Type</th>
-            <th>Start Time</th>
-            <th>End Time</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for event in events %}
-        <tr>
-            <td>{{ event.device.endpoint }}</td>
-            <td>{{ event.event_type }}</td>
-            <td>{{ event.start_time }}</td>
-            <td>{{ event.end_time }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Event Log</h3>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select id="endpoint-filter" class="form-control">
+                            <option value="">All Endpoints</option>
+                            {% for endpoint in endpoints %}
+                            <option value="{{ endpoint }}">{{ endpoint }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="event-type-filter" class="form-control">
+                            <option value="">All Event Types</option>
+                            {% for event_type in event_types %}
+                            <option value="{{ event_type }}">{{ event_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <table id="event-table" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Event Type</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td>{{ event.endpoint }}</td>
+                            <td>{{ event.event_type }}</td>
+                            <td>{{ event.time }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Event Resources</h3>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select id="event-filter" class="form-control">
+                            <option value="">All Events</option>
+                            {% for event in events %}
+                            <option value="{{ event }}">{{ event }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="resource-type-filter" class="form-control">
+                            <option value="">All Resource Types</option>
+                            {% for resource_type in resource_types %}
+                            <option value="{{ resource_type }}">{{ resource_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <table id="event-resource-table" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Resource Type</th>
+                            <th>Resource Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event_resource in event_resources %}
+                        <tr>
+                            <td>{{ event_resource.event }}</td>
+                            <td>{{ event_resource.resource.resource_type }}</td>
+                            <td>{{ event_resource.resource.get_value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        console.log("Document Ready");
+
+        var eventTable = $('#event-table').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+            "searching": true,
+            "dom": 'lrtip',
+            "initComplete": function (settings, json) {
+                console.log("Event Table initialized with settings:", settings);
+                console.log("Event Table data:", json);
+            }
+        });
+
+        var eventResourceTable = $('#event-resource-table').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+            "searching": true,
+            "dom": 'lrtip',
+            "initComplete": function (settings, json) {
+                console.log("Event Resource Table initialized with settings:", settings);
+                console.log("Event Resource Table data:", json);
+            }
+        });
+
+        $('#endpoint-filter, #event-type-filter').on('change', function () {
+            var endpoint = $('#endpoint-filter').val();
+            var eventType = $('#event-type-filter').val();
+
+            console.log("Filtering Event Table with:", endpoint, eventType);
+
+            eventTable.column(0).search(endpoint ? '^' + endpoint + '$' : '', true, false)
+                .column(1).search(eventType ? '^' + eventType + '$' : '', true, false).draw();
+        });
+
+        $('#event-filter, #resource-type-filter').on('change', function () {
+            var event = $('#event-filter').val();
+            var resourceType = $('#resource-type-filter').val();
+
+            console.log("Filtering Event Resource Table with:", event, resourceType);
+
+            eventResourceTable.column(0).search(event ? '^' + event + '$' : '', true, false)
+                .column(1).search(resourceType ? '^' + resourceType + '$' : '', true, false).draw();
+        });
+    });
+</script>
 {% endblock %}
