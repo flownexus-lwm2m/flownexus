@@ -1,24 +1,93 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Firmware Update Dashboard</h1>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Version</th>
-            <th>File Name</th>
-            <th>Download URL</th>
-            <th>Created At</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for update in firmware_updates %}
-        <tr>
-            <td>{{ update.version }}</td>
-            <td>{{ update.file_name }}</td>
-            <td><a href="{{ update.download_url }}">{{ update.download_url }}</a></td>
-            <td>{{ update.created_at }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="container mt-4">
+    <a href="{% url 'admin:sensordata_firmware_add' %}" class="btn btn-primary mb-3">Add New Firmware</a>
+    <form method="post" id="firmware-update-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="firmware_id">Select Firmware to Update:</label>
+            <select name="firmware_id" id="firmware_id" class="form-control" required>
+                {% for version in firmware_versions %}
+                <option value="{{ version }}">{{ version }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success" id="update-firmware-btn">Update Firmware for Selected
+            Devices</button>
+        <br><br>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Device Name/ID</th>
+                    <th>Current Firmware Version</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    <td><input type="checkbox" name="device_ids" value="{{ device.id }}"></td>
+                    <td>{{ device.endpoint }}</td>
+                    <td>{{ device.current_firmware }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+
+    <h3 class="mt-4">Ongoing Firmware Updates</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Device</th>
+                <th>Firmware Version</th>
+                <th>Update State</th>
+                <th>Last Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for update in ongoing_updates %}
+            <tr>
+                <td>{{ update.endpoint.endpoint }}</td>
+                <td>{{ update.firmware.version }}</td>
+                <td>{{ update.get_state_display }}</td>
+                <td>{{ update.timestamp_updated }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<div class="modal fade" id="updateModal" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateModalLabel">Firmware Update</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Firmware updates are being initiated for the selected devices.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('firmware-update-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        var checkboxes = document.querySelectorAll('input[name="device_ids"]:checked');
+        if (checkboxes.length === 0) {
+            alert("Please select at least one device.");
+            return;
+        }
+        $('#updateModal').modal('show');
+    });
+</script>
 {% endblock %}

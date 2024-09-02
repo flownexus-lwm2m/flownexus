@@ -26,57 +26,43 @@
                 <nav class="mt-2">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
 
-                        <li class="nav-item">
-                            <a href="{% url 'admin_dashboard' %}"
-                                class="nav-link {% if request.path == '/admin_dashboard/' %}active{% endif %}">
-                                <i class="nav-icon fas fa-tachometer-alt"></i>
-                                <p>
-                                    Admin Dashboard
-                                </p>
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="{% url 'firmware_dashboard' %}"
-                                class="nav-link {% if request.path == '/firmware_dashboard/' %}active{% endif %}">
-                                <i class="nav-icon fas fa-microchip"></i>
-                                <p>
-                                    Firmware Update
-                                </p>
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="{% url 'event_dashboard' %}"
-                                class="nav-link {% if request.path == '/event_dashboard/' %}active{% endif %}">
-                                <i class="nav-icon fas fa-calendar-alt"></i>
-                                <p>
-                                    Event Dashboard
-                                </p>
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="{% url 'graph_dashboard' %}"
-                                class="nav-link {% if request.path == '/graph_dashboard/' %}active{% endif %}">
-                                <i class="nav-icon fas fa-chart-pie"></i>
-                                <p>
-                                    Graph Dashboard
-                                </p>
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="{% url 'pending_communication_dashboard' %}"
-                                class="nav-link {% if request.path == '/pending_communication_dashboard/' %}active{% endif %}">
-                                <i class="nav-icon fas fa-envelope"></i>
-                                <p>
-                                    Communications
-                                </p>
-                            </a>
-                        </li>
-
-                    </ul>
+                    <li class="nav-item">
+                        <a href="{% url 'admin_dashboard' %}"
+                            class="nav-link {% if request.path == '/admin_dashboard/' %}active{% endif %}">
+                            <i class="nav-icon fas fa-tachometer-alt"></i>
+                            <p>
+                                Admin Dashboard
+                            </p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'device_dashboard' %}"
+                            class="nav-link {% if request.path == '/device_dashboard/' %}active{% endif %}">
+                            <i class="nav-icon fas fa-microchip"></i>
+                            <p>
+                                Device Dashboard
+                            </p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'event_dashboard' %}"
+                            class="nav-link {% if request.path == '/event_dashboard/' %}active{% endif %}">
+                            <i class="nav-icon fas fa-calendar-alt"></i>
+                            <p>
+                                Event Dashboard
+                            </p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'firmware_dashboard' %}"
+                            class="nav-link {% if request.path == '/firmware_dashboard/' %}active{% endif %}">
+                            <i class="nav-icon fas fa-microchip"></i>
+                            <p>
+                                Firmware Update
+                            </p>
+                        </a>
+                    </li>
+</ul>
                 </nav>
             </div>
         </aside>

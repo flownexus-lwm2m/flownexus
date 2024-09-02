@@ -3,27 +3,40 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-import traceback, logging
-from rest_framework.generics import ListAPIView
+import traceback
+import logging
+import numpy as np
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Endpoint, Resource, Event, EndpointOperation, Firmware, ResourceType
 from rest_framework.exceptions import ValidationError
+from .models import Endpoint, Resource, Firmware, EndpointOperation, FirmwareUpdate, ResourceType, Event, EventResource
 from .serializers.single_resource_serializer import SingleResourceSerializer
 from .serializers.composite_resource_serializer import CompositeResourceSerializer
 from .serializers.timestamped_resource_serializer import TimestampedResourceSerializer
-from .serializers.generic_resource_serializer import GenericResourceSerializer
+from .serializers.generic_serializer import EndpointSerializer, FirmwareSerializer, EndpointOperationSerializer, FirmwareUpdateSerializer
+from django.db.models import Count
+from django.db.models.functions import TruncDay, TruncMonth
+from django.utils import timezone
+from datetime import timedelta
+from itertools import chain
+from django.http import JsonResponse
+import csv
+from django.http import HttpResponse
+
 
 logger = logging.getLogger(__name__)
 
+# API Views
+
 class PostSingleResourceView(APIView):
+    """API View for posting a single resource."""
     serializer_class = SingleResourceSerializer
 
     def post(self, request):
-        serializer = SingleResourceSerializer(data=request.data, many=False)
+        serializer = self.serializer_class(data=request.data)
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
@@ -35,10 +48,11 @@ class PostSingleResourceView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PostCompositeResourceView(APIView):
+    """API View for posting a composite resource."""
     serializer_class = CompositeResourceSerializer
 
     def post(self, request):
-        serializer = CompositeResourceSerializer(data=request.data, many=False)
+        serializer = self.serializer_class(data=request.data)
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
@@ -64,57 +78,440 @@ class PostTimestampedResourceView(APIView):
             logger.error("Backtrace: %s", traceback.format_exc())
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ResourceDataView(ListAPIView):
-    serializer_class = GenericResourceSerializer
+class EndpointView(APIView):
+    """API View for retrieving endpoint data."""
+    def get(self, request, endpoint_id=None):
+        if endpoint_id:
+            endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+            serializer = EndpointSerializer(endpoint)
+        else:
+            endpoints = Endpoint.objects.all()
+            serializer = EndpointSerializer(endpoints, many=True)
+        return Response(serializer.data)
 
-    def get_queryset(self):
-        resource_name = self.kwargs.get('resource_name')
-        logger.debug(f"Received request for resource type: {resource_name}")
-        try:
-            resource_type = ResourceType.objects.get(name=resource_name)
-            logger.debug(f"Found resource type: {resource_type}")
-            return Resource.objects.filter(resource_type=resource_type)
-        except ResourceType.DoesNotExist:
-            logger.error(f"Resource type {resource_name} not found")
-            return Response({"error": f"{resource_name} resource type not found"}, status=status.HTTP_404_NOT_FOUND)
+class EndpointResourceView(APIView):
+    """API View for retrieving resources associated with an endpoint."""
+    def get(self, request, endpoint_id, resource_id=None):
+        endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+        if resource_id:
+            resource = get_object_or_404(Resource, endpoint=endpoint, id=resource_id)
+            data = {
+                'resource_id': resource.id,
+                'resource_type': str(resource.resource_type),
+                'value': resource.get_value(),
+                'timestamp_created': resource.timestamp_created,
+            }
+            return Response(data)
+        else:
+            resources = Resource.objects.filter(endpoint=endpoint)
+            data = [{
+                'resource_id': r.id,
+                'resource_type': str(r.resource_type),
+                'value': r.get_value(),
+                'timestamp_created': r.timestamp_created,
+            } for r in resources]
+            return Response(data)
 
-    def get(self, request, *args, **kwargs):
-        resource_name = self.kwargs.get('resource_name')
-        queryset = self.get_queryset()
+class EndpointFirmwareView(APIView):
+    """API View for retrieving and posting firmware updates for an endpoint."""
+    def get(self, request, endpoint_id):
+        endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+        firmware_updates = FirmwareUpdate.objects.filter(endpoint=endpoint)
+        serializer = FirmwareUpdateSerializer(firmware_updates, many=True)
+        return Response(serializer.data)
 
-        if not queryset.exists():
-            logger.error(f"Resource type {resource_name} not found")
-            return Response({"error": f"{resource_name} resource type not found"}, status=status.HTTP_404_NOT_FOUND)
+    def post(self, request, endpoint_id):
+        endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+        firmware_serializer = FirmwareSerializer(data=request.data)
+        if firmware_serializer.is_valid():
+            firmware = firmware_serializer.save()
+            firmware_update = FirmwareUpdate.objects.create(endpoint=endpoint, firmware=firmware)
+            update_serializer = FirmwareUpdateSerializer(firmware_update)
+            return Response(update_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(firmware_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        logger.debug(f"{resource_name.capitalize()} resources: {queryset}")
-        serializer = self.get_serializer(queryset, many=True)
-        logger.debug(f"{resource_name.capitalize()} data: {serializer.data}")
-        return Response(serializer.data, status=status.HTTP_200_OK)
+class EndpointOperationView(APIView):
+    """API View for retrieving and posting operations to be performed on an endpoint."""
+    def get(self, request, endpoint_id):
+        endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+        operations = EndpointOperation.objects.filter(resource__endpoint=endpoint)
+        serializer = EndpointOperationSerializer(operations, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, endpoint_id):
+        endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+        serializer = EndpointOperationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(resource__endpoint=endpoint)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Dashboard Views
+@login_required
+def admin_dashboard_view(request):
+    total_devices = Endpoint.objects.count()
+
+    registered_devices = Endpoint.objects.filter(registered=True).count()
+    unregistered_devices = total_devices - registered_devices
+
+    time_range = request.GET.get('time_range', 'week')
+
+    selected_event_type = request.GET.get('event_type', 'all')
+    event_time_range = request.GET.get('event_time_range', 'week')
+    end_date = timezone.now()
+    if time_range == 'week':
+        start_date = end_date - timedelta(days=7)
+        trunc_func = TruncDay
+        date_format = '%Y-%m-%d'
+    elif time_range == 'month':
+        start_date = end_date - timedelta(days=30)
+        trunc_func = TruncDay
+        date_format = '%Y-%m-%d'
+    elif time_range == 'year':
+        start_date = end_date - timedelta(days=365)
+        trunc_func = TruncMonth
+        date_format = '%Y-%m'
+    else:
+        start_date = end_date - timedelta(days=7)
+        trunc_func = TruncDay
+        date_format = '%Y-%m-%d'
+
+    def get_counts(model, date_field):
+        return model.objects.filter(**{f'{date_field}__range': (start_date, end_date)}).annotate(
+            date=trunc_func(date_field)
+        ).values('date').annotate(count=Count('id')).order_by('date')
+
+
+    resource_counts = get_counts(Resource, 'timestamp_created')
+    event_counts = get_counts(Event, 'time')
+    operation_counts = get_counts(EndpointOperation, 'timestamp_created')
+    firmware_update_counts = get_counts(FirmwareUpdate, 'timestamp_created')
+    all_counts = list(chain(resource_counts, event_counts, operation_counts, firmware_update_counts))
+
+    date_counts = {}
+    for item in all_counts:
+        date = item['date'].strftime(date_format)
+        date_counts[date] = date_counts.get(date, 0) + item['count']
+
+    sorted_dates = sorted(date_counts.keys())
+    counts = [date_counts[date] for date in sorted_dates]
+
+    event_start_date = end_date
+    if event_time_range == 'week':
+        event_start_date = end_date - timedelta(days=7)
+        event_trunc_func = TruncDay
+    elif event_time_range == 'month':
+        event_start_date = end_date - timedelta(days=30)
+        event_trunc_func = TruncDay
+    elif event_time_range == 'year':
+        event_start_date = end_date - timedelta(days=365)
+        event_trunc_func = TruncMonth
+
+    events = Event.objects.filter(time__range=(event_start_date, end_date))
+    if selected_event_type != 'all':
+        events = events.filter(event_type=selected_event_type)
+
+    event_data = events.annotate(date=event_trunc_func('time')).values('date').annotate(count=Count('id')).order_by('date')
+
+    event_date_counts = {}
+    for event in event_data:
+        date_str = event['date'].strftime(date_format)
+        event_date_counts[date_str] = event_date_counts.get(date_str, 0) + event['count']
+
+    event_sorted_dates = sorted(event_date_counts.keys())
+    event_counts = [event_date_counts[date] for date in event_sorted_dates]
+
+    event_types = Event.objects.values_list('event_type', flat=True).distinct()
+
+    firmware_updates_in_progress = FirmwareUpdate.objects.exclude(state=FirmwareUpdate.State.STATE_IDLE).count()
+
+    firmware_state_idle = FirmwareUpdate.objects.filter(state=FirmwareUpdate.State.STATE_IDLE).count()
+    firmware_state_downloading = FirmwareUpdate.objects.filter(state=FirmwareUpdate.State.STATE_DOWNLOADING).count()
+    firmware_state_downloaded = FirmwareUpdate.objects.filter(state=FirmwareUpdate.State.STATE_DOWNLOADED).count()
+    firmware_state_updating = FirmwareUpdate.objects.filter(state=FirmwareUpdate.State.STATE_UPDATING).count()
+
+    firmware_result_default = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_DEFAULT).count()
+    firmware_result_success = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_SUCCESS).count()
+    firmware_result_no_storage = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_NO_STORAGE).count()
+    firmware_result_out_of_memory = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_OUT_OF_MEM).count()
+    firmware_result_connection_lost = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_CONNECTION_LOST).count()
+    firmware_result_integrity_failed = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_INTEGRITY_FAILED).count()
+    firmware_result_unsupported_firmware = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_UNSUP_FW).count()
+    firmware_result_invalid_uri = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_INVALID_URI).count()
+    firmware_result_update_failed = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_UPDATE_FAILED).count()
+    firmware_result_unsupported_protocol = FirmwareUpdate.objects.filter(result=FirmwareUpdate.Result.RESULT_UNSUP_PROTO).count()
+
+    context = {
+        'title': 'Admin Dashboard',
+        'total_devices': total_devices,
+        'registered_devices': registered_devices,
+        'unregistered_devices': unregistered_devices,
+        'time_range': time_range,
+        'added_values_dates': sorted_dates,
+        'added_values_counts': counts,
+        'event_types': event_types,
+        'selected_event_type': selected_event_type,
+        'event_time_range': event_time_range,
+        'event_dates': event_sorted_dates,
+        'event_counts': event_counts,
+        'firmware_updates_in_progress': firmware_updates_in_progress,
+        'firmware_state_idle': firmware_state_idle,
+        'firmware_state_downloading': firmware_state_downloading,
+        'firmware_state_downloaded': firmware_state_downloaded,
+        'firmware_state_updating': firmware_state_updating,
+        'firmware_result_default': firmware_result_default,
+        'firmware_result_success': firmware_result_success,
+        'firmware_result_no_storage': firmware_result_no_storage,
+        'firmware_result_out_of_memory': firmware_result_out_of_memory,
+        'firmware_result_connection_lost': firmware_result_connection_lost,
+        'firmware_result_integrity_failed': firmware_result_integrity_failed,
+        'firmware_result_unsupported_firmware': firmware_result_unsupported_firmware,
+        'firmware_result_invalid_uri': firmware_result_invalid_uri,
+        'firmware_result_update_failed': firmware_result_update_failed,
+        'firmware_result_unsupported_protocol': firmware_result_unsupported_protocol,
+    }
+
+    pending_communications_count = EndpointOperation.objects.exclude(status=EndpointOperation.Status.CONFIRMED).count()
+
+    status_sending = EndpointOperation.objects.filter(status=EndpointOperation.Status.SENDING).count()
+    status_queued = EndpointOperation.objects.filter(status=EndpointOperation.Status.QUEUED).count()
+    status_confirmed = EndpointOperation.objects.filter(status=EndpointOperation.Status.CONFIRMED).count()
+    status_failed = EndpointOperation.objects.filter(status=EndpointOperation.Status.FAILED).count()
+
+    context.update({
+        'pending_communications_count': pending_communications_count,
+        'status_sending': status_sending,
+        'status_queued': status_queued,
+        'status_confirmed': status_confirmed,
+        'status_failed': status_failed,
+    })
+
+    return render(request, 'admin_dashboard.html', context)
+
+@login_required
+def device_dashboard_view(request):
+    """View to display the device dashboard with detailed information and graphs."""
+    REGISTRATION_OBJECT_ID = 10240
+    REGISTRATION_UPDATE_OBJECT_ID = 10240
+    FIRMWARE_OBJECT_ID = 3
+    BATTERY_VOLTAGE_OBJECT_ID = 3
+
+    endpoints = Endpoint.objects.all()  # Fetch all endpoints
+    selected_endpoint = None
+    selected_resource_type = None
+    graph_data = None
+
+    percentile_25 = None
+    percentile_75 = None
+
+    # Handle endpoint selection
+    if 'endpoint' in request.GET:
+        endpoint_id = request.GET['endpoint']
+        selected_endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+
+        last_registered = Resource.objects.filter(
+            endpoint=selected_endpoint,
+            resource_type__object_id=REGISTRATION_OBJECT_ID,
+            resource_type__resource_id=0
+        ).order_by('-timestamp_created').first()
+
+        last_registration_update = Resource.objects.filter(
+            endpoint=selected_endpoint,
+            resource_type__object_id=REGISTRATION_UPDATE_OBJECT_ID,
+            resource_type__resource_id=2
+        ).order_by('-timestamp_created').first()
+
+        current_firmware = Resource.objects.filter(
+            endpoint=selected_endpoint,
+            resource_type__object_id=FIRMWARE_OBJECT_ID,
+            resource_type__resource_id=3
+        ).order_by('-timestamp_created').first()
+
+        battery_voltage = Resource.objects.filter(
+            endpoint=selected_endpoint,
+            resource_type__object_id=BATTERY_VOLTAGE_OBJECT_ID,
+            resource_type__resource_id=9
+        ).order_by('-timestamp_created').first()
+
+        selected_endpoint.last_registered = last_registered.timestamp_created if last_registered else None
+        selected_endpoint.last_registration_update = last_registration_update.timestamp_created if last_registration_update else None
+        selected_endpoint.current_firmware = current_firmware.str_value if current_firmware else None
+        selected_endpoint.battery_voltage = battery_voltage.int_value if battery_voltage else None
+
+        if 'resource_type' in request.GET:
+            selected_resource_type = get_object_or_404(ResourceType, id=request.GET['resource_type'])
+            last_seven_days = timezone.now() - timedelta(days=30)
+            resources = Resource.objects.filter(
+                endpoint=selected_endpoint,
+                resource_type=selected_resource_type,
+                timestamp_created__gte=last_seven_days
+            ).order_by('timestamp_created')
+
+            timestamps = [resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S') for resource in resources]
+            values = [
+                resource.int_value if selected_resource_type.data_type == 'INTEGER'
+                else resource.float_value if selected_resource_type.data_type == 'FLOAT'
+                else resource.int_value if selected_resource_type.data_type == 'TIME'
+                else None for resource in resources
+            ]
+
+            if values:
+                percentile_25 = np.percentile(values, 25)
+                percentile_75 = np.percentile(values, 75)
+
+            graph_data = {
+                'timestamps': timestamps,
+                'values': values
+            }
+
+
+    resource_types = ResourceType.objects.filter(data_type__in=['INTEGER', 'FLOAT', 'TIME'])
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if 'endpoint' in request.GET and 'resource_type' in request.GET:
+            selected_endpoint = get_object_or_404(Endpoint, endpoint=request.GET['endpoint'])
+            selected_resource_type = get_object_or_404(ResourceType, id=request.GET['resource_type'])
+            last_thirty_days = timezone.now() - timedelta(days=30)
+            resources = Resource.objects.filter(
+                endpoint=selected_endpoint,
+                resource_type=selected_resource_type,
+                timestamp_created__gte=last_thirty_days
+            ).order_by('timestamp_created')
+            timestamps = [resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S') for resource in resources]
+            values = [
+                resource.int_value if selected_resource_type.data_type == 'INTEGER'
+                else resource.float_value if selected_resource_type.data_type == 'FLOAT'
+                else resource.int_value if selected_resource_type.data_type == 'TIME'
+                else None for resource in resources
+            ]
+
+            if values:
+                percentile_25 = np.percentile(values, 25)
+                percentile_75 = np.percentile(values, 75)
+
+            return JsonResponse({
+                'timestamps': timestamps,
+                'values': values,
+                'resource_name': selected_resource_type.name,
+                'percentile_25': percentile_25,
+                'percentile_75': percentile_75
+            })
+
+    context = {
+        'endpoints': endpoints,
+        'selected_endpoint': selected_endpoint,
+        'resource_types': resource_types,
+        'selected_resource_type': selected_resource_type,
+        'graph_data': graph_data,
+        'percentile_25': percentile_25,
+        'percentile_75': percentile_75,
+    }
+
+    return render(request, 'device_dashboard.html', context)
 
 @login_required
 def license_dashboard_view(request):
+    """View to display project information and licenses."""
     return render(request, 'license.html', {'title': 'Project Information and Licenses'})
 
 @login_required
-def admin_dashboard_view(request):
-    devices = Endpoint.objects.all()
-    return render(request, 'admin_dashboard.html', {'devices': devices, 'title': 'Admin Dashboard'})
-
-@login_required
 def firmware_dashboard_view(request):
-    firmware_updates = Firmware.objects.all()
-    return render(request, 'firmware_dashboard.html', {'firmware_updates': firmware_updates, 'title': 'Firmware Update Dashboard'})
+    # Get all devices (endpoints)
+    devices = Endpoint.objects.all()
+
+    # Fetch the current firmware version for each device
+    for device in devices:
+        firmware_resource = Resource.objects.filter(
+            endpoint=device,
+            resource_type__object_id=3,
+            resource_type__resource_id=3
+        ).order_by('-timestamp_created').first()
+
+        device.current_firmware = firmware_resource.str_value if firmware_resource else "Unknown"
+
+    firmware_versions = Firmware.objects.values_list('version', flat=True).distinct()
+
+    ongoing_updates = FirmwareUpdate.objects.exclude(
+        state=FirmwareUpdate.State.STATE_IDLE
+    ).select_related('endpoint', 'firmware')
+
+    if request.method == 'POST':
+        selected_devices = request.POST.getlist('device_ids')
+        firmware_id = request.POST.get('firmware_id')
+
+        firmware = get_object_or_404(Firmware, id=firmware_id)
+
+        for device_id in selected_devices:
+            endpoint = get_object_or_404(Endpoint, id=device_id)
+            FirmwareUpdate.objects.create(endpoint=endpoint, firmware=firmware)
+
+        return JsonResponse({'status': 'success', 'message': 'Firmware update initiated for selected devices'})
+
+    context = {
+        'devices': devices,
+        'firmware_versions': firmware_versions,
+        'ongoing_updates': ongoing_updates,
+        'title': 'Firmware Update Dashboard',
+    }
+
+    return render(request, 'firmware_dashboard.html', context)
 
 @login_required
 def event_dashboard_view(request):
-    events = Event.objects.all()
-    return render(request, 'event_dashboard.html', {'events': events, 'title': 'Event Dashboard'})
+    """View to display all significant events and event resources related to devices."""
+    events = Event.objects.all().order_by('-time')
+    event_resources = EventResource.objects.all().select_related('event', 'resource', 'resource__resource_type')
 
-@login_required
-def graph_dashboard_view(request):
-    return render(request, 'graph_dashboard.html', {'title': 'Graph Dashboard'})
+    endpoints = Event.objects.values_list('endpoint', flat=True).distinct()
+    event_types = Event.objects.values_list('event_type', flat=True).distinct()
+    resource_types = ResourceType.objects.all()
 
-@login_required
-def pending_communication_dashboard_view(request):
-    pending_operations = EndpointOperation.objects.filter(status='QUEUED')
-    return render(request, 'pending_communication_dashboard.html', {'pending_operations': pending_operations, 'title': 'Pending Communication'})
+    return render(request, 'event_dashboard.html', {
+        'events': events,
+        'event_resources': event_resources,
+        'endpoints': endpoints,
+        'event_types': event_types,
+        'resource_types': resource_types,
+        'title': 'Event Dashboard'
+    })
+
+def download_csv(request):
+    """View to generate and download CSV file for selected resource data."""
+
+    endpoint_id = request.GET.get('endpoint')
+    resource_type_id = request.GET.get('resource_type')
+
+
+    if not endpoint_id or not resource_type_id:
+        return HttpResponse("Missing parameters", status=400)
+
+    endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+    resource_type = get_object_or_404(ResourceType, id=resource_type_id)
+
+    last_thirty_days = timezone.now() - timedelta(days=30)
+    resources = Resource.objects.filter(
+        endpoint=endpoint,
+        resource_type=resource_type,
+        timestamp_created__gte=last_thirty_days
+    ).order_by('timestamp_created')
+
+
+    # Create the HTTP response with CSV content type
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{resource_type.name}_data.csv"'
+
+    # Create CSV writer
+    writer = csv.writer(response)
+    writer.writerow(['Timestamp', 'Value'])
+
+    for resource in resources:
+        if resource_type.data_type == 'INTEGER':
+            value = resource.int_value
+        elif resource_type.data_type == 'FLOAT':
+            value = resource.float_value
+        else:
+            value = ''
+
+        writer.writerow([resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S'), value])
+
+    return response
