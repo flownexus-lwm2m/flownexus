@@ -99,6 +99,7 @@ public class LeshanSvr{
 
         server.getRegistrationService().addListener(new MyRegistrationListener(this));
         server.getObservationService().addListener(new MyObservationListener(this));
+        server.getSendService().addListener(new MySendListener(this));
     }
 
     public static void main(String[] args) {
@@ -219,10 +220,10 @@ public class LeshanSvr{
 
             /* Subscribe to single resource instances as an example */
             int[][] singleObjectLinks = {
-                {3303, 0, 5700},   /* Temperature Sensor */
-                {3304, 0, 5700},   /* Humidity Sensor */
-                {5, 0, 3},      /* Firmware Update State */
-                {5, 0, 5}      /* Firmware Update Result */
+                //{3303, 0, 5700},   /* Temperature Sensor */
+                //{3304, 0, 5700},   /* Humidity Sensor */
+                //{5, 0, 3},      /* Firmware Update State */
+                //{5, 0, 5}      /* Firmware Update Result */
             };
 
             for (int[] link : singleObjectLinks) {
@@ -242,7 +243,7 @@ public class LeshanSvr{
              * 10300: Custom Object Instance
              */
             int[][] compositeObjectLinks = {
-                {10300},
+                //{10300},
             };
 
             for (int[] link : compositeObjectLinks) {
@@ -358,6 +359,8 @@ public class LeshanSvr{
                                Registration registration,
                                ObserveResponse response) {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
+            log.trace("onResponse: " + response.getContent());
+
             if (registration != null) {
                 ObjectNode node = mapper.createObjectNode();
                 node.put("ep", registration.getEndpoint());
@@ -372,7 +375,7 @@ public class LeshanSvr{
         public void onResponse(CompositeObservation observation,
                                Registration registration,
                                ObserveCompositeResponse response) {
-            log.trace("onResponse: " + response.getObservation());
+            log.trace("onResponse: " + response.getContent());
 
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
             ObjectNode node = mapper.createObjectNode();
@@ -407,7 +410,13 @@ public class LeshanSvr{
                                  TimestampedLwM2mNodes data,
                                  SendRequest request) {
             log.trace("dataReceived from: " + registration.getEndpoint());
-            log.trace("data: " + data);
+
+            mapper.enable(SerializationFeature.INDENT_OUTPUT);
+            ObjectNode node = mapper.createObjectNode();
+            node.put("ep", registration.getEndpoint());
+            node.set("val", mapper.valueToTree(data));
+
+            dataSenderRest.sendData(ApiPath.TIMESTAMPED_RES, node);
         }
 
         @Override
