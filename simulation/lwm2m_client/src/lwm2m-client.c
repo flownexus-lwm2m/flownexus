@@ -51,7 +51,7 @@ static int mem_total = 25;
 static double min_range = 0.0;
 static double max_range = 100;
 
-static struct lwm2m_ctx client_ctx = {0};
+struct lwm2m_ctx client_ctx = {0};
 
 static const char *endpoint =
 	(sizeof(CONFIG_LWM2M_APP_ID) > 1 ? CONFIG_LWM2M_APP_ID : CONFIG_BOARD);
@@ -68,7 +68,9 @@ static struct net_mgmt_event_callback l4_cb;
 static struct net_mgmt_event_callback conn_cb;
 static struct net_mgmt_event_callback wifi_conn_cb;
 
+#if defined(CONFIG_WIFI) && (CONFIG_WIFI == 1)
 static struct wifi_connect_req_params cnx_params;
+#endif
 
 static K_SEM_DEFINE(network_connected_sem, 0, 1);
 
@@ -183,11 +185,11 @@ static int lwm2m_setup(void)
 
 	/* setup FIRMWARE object */
 	if (IS_ENABLED(CONFIG_LWM2M_FIRMWARE_UPDATE_OBJ_SUPPORT)) {
-		init_firmware_update();
+		init_firmware_update(&client_ctx);
 	}
 
 	/* setup TEMP SENSOR object */
-	init_temp_sensor();
+	init_temp_sensor(&client_ctx);
 
 	/* Set multiple TEMP SENSOR resource values in one function call. */
 	int err = lwm2m_set_bulk(temp_sensor_items, ARRAY_SIZE(temp_sensor_items));
