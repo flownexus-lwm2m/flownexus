@@ -101,18 +101,14 @@ class HandleResourceMixin:
             logger.debug(f"Added EventResource: {self.event} - {created_res}")
 
         # Update the registration status if the resource is a registration resource
-        if res_type.name == 'ep_registered':
+        if res_type.name in ['ep_registered', 'ep_registration_update']:
             ep.registered = True
             ep.save()
+            process_pending_operations.delay(ep.endpoint)
             return
         elif res_type.name == 'ep_unregistered':
             ep.registered = False
             ep.save()
-            return
-        elif res_type.name == 'ep_registration_update':
-            ep.registered = True
-            ep.save()
-            process_pending_operations.delay(ep.endpoint)
             return
 
         # Cond 1: Check for fota update after ep registration.
