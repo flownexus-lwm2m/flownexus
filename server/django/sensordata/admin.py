@@ -138,8 +138,7 @@ class FirmwareAdmin(admin.ModelAdmin):
 @admin.register(FirmwareUpdate)
 class FirmwareUpdateAdmin(admin.ModelAdmin):
     list_display = ('endpoint', 'firmware', 'state', 'result',
-                    'timestamp_created', 'timestamp_updated',
-                    'send_uri_operation', 'execute_operation')
+                    'timestamp_created', 'timestamp_updated')
     search_fields = ('endpoint__endpoint', 'firmware__version', 'state', 'result')
     list_filter = ('state', 'result', 'timestamp_created', 'timestamp_updated')
     readonly_fields = ('timestamp_created', 'timestamp_updated',
