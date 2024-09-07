@@ -110,6 +110,8 @@ class HandleResourceMixin:
             ep.save()
             return
         elif res_type.name == 'ep_registration_update':
+            ep.registered = True
+            ep.save()
             process_pending_operations.delay(ep.endpoint)
             return
 
