@@ -1,0 +1,12 @@
+FROM redis:7.4-alpine
+
+# Create and set the working directory in the container
+WORKDIR /redis
+
+# Copy the content of the local src directory to the working directory
+COPY . /redis/
+
+# Give execution rights on the start-up script
+RUN chmod +x /redis/redis_start.sh
+
+ENTRYPOINT ["/redis/redis_start.sh"]
