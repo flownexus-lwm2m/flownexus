@@ -18,7 +18,13 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   redis:
-    image: redis:7.4-alpine
+    stop_grace_period: 1s
+    build:
+      context: ./redis
+      dockerfile: Dockerfile.redis
+    volumes:
+      - ./redis:/redis
+      - ./logs:/redis/logs
     networks:
       - mynetwork
     ports:
