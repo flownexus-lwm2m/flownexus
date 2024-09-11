@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <title>API documentation</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body { margin: 0; padding: 0; }
+    </style>
+  </head>
+  <body>
+    <redoc
+           
+           
+           
+           
+           
+           
+           
+           
+           
+           >
+    </redoc>
+
+    <script src="../_static/redoc.js"></script>
+    
+    <script type="application/json" id="spec">
+    {"components": {"schemas": {"CompositeResource": {"properties": {"ep": {"description": "Unique LwM2M Endpoint", "maxLength": 255, "type": "string"}, "val": {"$ref": "#/components/schemas/Value"}}, "required": ["ep", "val"], "type": "object"}, "GenericResource": {"properties": {"resource_type": {"readOnly": true, "type": "string"}, "timestamp_created": {"format": "date-time", "readOnly": true, "type": "string"}, "value": {"format": "double", "readOnly": true, "type": "number"}}, "required": ["resource_type", "timestamp_created", "value"], "type": "object"}, "Instance": {"properties": {"id": {"description": "Instance Counter", "type": "integer"}, "kind": {"$ref": "#/components/schemas/InstanceKindEnum"}, "resources": {"items": {"$ref": "#/components/schemas/ResourceData"}, "type": "array"}}, "required": ["id", "kind", "resources"], "type": "object"}, "InstanceKindEnum": {"description": "* `instance` - instance", "enum": ["instance"], "type": "string"}, "Object": {"properties": {"id": {"description": "Object ID", "type": "integer"}, "instances": {"items": {"$ref": "#/components/schemas/Instance"}, "type": "array"}, "kind": {"$ref": "#/components/schemas/ObjectKindEnum"}}, "required": ["id", "kind"], "type": "object"}, "ObjectKindEnum": {"description": "* `obj` - obj", "enum": ["obj"], "type": "string"}, "ResourceData": {"properties": {"id": {"description": "Resource ID", "type": "integer"}, "kind": {"$ref": "#/components/schemas/ResourceDataKindEnum"}, "type": {"$ref": "#/components/schemas/TypeEnum"}, "value": {"description": "The value associated with the resource,                                             type-dependent. Provide either the field                                             value or values", "maxLength": 255, "type": "string"}, "values": {"additionalProperties": {"maxLength": 255, "type": "string"}, "description": "The list of values associated with the resource.                                              Provide either the field value or values.", "type": "object"}}, "required": ["id", "kind", "type"], "type": "object"}, "ResourceDataKindEnum": {"description": "* `singleResource` - singleResource\n* `multiResource` - multiResource", "enum": ["singleResource", "multiResource"], "type": "string"}, "SingleResource": {"properties": {"ep": {"description": "Unique LwM2M Endpoint", "maxLength": 255, "type": "string"}, "obj_id": {"description": "Object ID", "type": "integer"}, "val": {"$ref": "#/components/schemas/ResourceData"}}, "required": ["ep", "obj_id", "val"], "type": "object"}, "TimestampedResource": {"properties": {"ep": {"description": "Unique LwM2M Endpoint", "maxLength": 255, "type": "string"}, "val": {"$ref": "#/components/schemas/TsValue"}}, "required": ["ep", "val"], "type": "object"}, "TsValue": {"properties": {"nodes": {"additionalProperties": {"$ref": "#/components/schemas/ResourceData"}, "description": "Dictionary of resource paths (e.g., '/3303/0/5700') to resource data", "type": "object"}}, "required": ["nodes"], "type": "object"}, "TypeEnum": {"description": "* `TIME` - int_value\n* `STRING` - str_value\n* `INTEGER` - int_value\n* `FLOAT` - float_value\n* `BOOLEAN` - int_value", "enum": ["TIME", "STRING", "INTEGER", "FLOAT", "BOOLEAN"], "type": "string"}, "Value": {"properties": {"objects": {"description": "List of LwM2M objects", "items": {"$ref": "#/components/schemas/Object"}, "type": "array"}}, "required": ["objects"], "type": "object"}}, "securitySchemes": {"basicAuth": {"scheme": "basic", "type": "http"}, "cookieAuth": {"in": "cookie", "name": "sessionid", "type": "apiKey"}}}, "info": {"description": "The leshan_api is hosted by Django. The API allows the                    Leshan server to add LwM2M resource data to Django. It is                     an internal API and must not be exposed to the internet.", "title": "Leshan ReST API", "version": "1.0.0"}, "openapi": "3.0.3", "paths": {"/leshan_api/data/{resource_name}/": {"get": {"operationId": "data_list", "parameters": [{"in": "path", "name": "resource_name", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"content": {"application/json": {"schema": {"items": {"$ref": "#/components/schemas/GenericResource"}, "type": "array"}}}, "description": ""}}, "security": [{"cookieAuth": []}, {"basicAuth": []}, {}], "tags": ["data"]}}, "/leshan_api/resource/composite": {"post": {"operationId": "resource_composite_create", "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompositeResource"}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/CompositeResource"}}, "multipart/form-data": {"schema": {"$ref": "#/components/schemas/CompositeResource"}}}, "required": true}, "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompositeResource"}}}, "description": ""}}, "security": [{"cookieAuth": []}, {"basicAuth": []}, {}], "tags": ["resource"]}}, "/leshan_api/resource/single": {"post": {"operationId": "resource_single_create", "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SingleResource"}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/SingleResource"}}, "multipart/form-data": {"schema": {"$ref": "#/components/schemas/SingleResource"}}}, "required": true}, "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SingleResource"}}}, "description": ""}}, "security": [{"cookieAuth": []}, {"basicAuth": []}, {}], "tags": ["resource"]}}, "/leshan_api/resource/timestamped": {"post": {"operationId": "resource_timestamped_create", "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/TimestampedResource"}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/TimestampedResource"}}, "multipart/form-data": {"schema": {"$ref": "#/components/schemas/TimestampedResource"}}}, "required": true}, "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/TimestampedResource"}}}, "description": ""}}, "security": [{"cookieAuth": []}, {"basicAuth": []}, {}], "tags": ["resource"]}}}}
+    </script>
+    
+    <script>
+        
+        var spec = JSON.parse(document.getElementById("spec").innerHTML);
+        
+        Redoc.init(spec);
+    </script>
+  </body>
+</html>
