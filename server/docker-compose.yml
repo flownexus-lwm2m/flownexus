@@ -27,8 +27,6 @@ services:
       - ./logs:/redis/logs
     networks:
       - mynetwork
-    ports:
-      - "6379:6379"
     # Restart the container unless it is explicitly stopped
     restart: unless-stopped
 
