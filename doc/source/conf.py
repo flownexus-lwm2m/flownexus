@@ -19,6 +19,7 @@ master_doc = "index"
 
 project = 'flownexus'
 copyright = '2024, Individual contributors to flownexus'
+author = ''
 
 version = re.sub('', '', os.popen('git describe --tags').read().strip())
 release = version
@@ -37,6 +38,7 @@ exclude_patterns = []
 
 html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
+html_favicon = '_static/flownexus_favicon.svg'
 
 # Single gray logo for both dark and light themes (not used)
 # html_logo = '_static/flownexus_logo_gray.svg'
