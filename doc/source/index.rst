@@ -1,3 +1,6 @@
+flownexus Documentation
+=======================
+
 .. only:: html
 
    📥 Documentation as `PDF <./_static/flownexus.pdf>`_.
