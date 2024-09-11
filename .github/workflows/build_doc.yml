@@ -23,7 +23,7 @@ jobs:
         tox -e py3-pdf
 
     - name: Deploy Preview
-      uses: peaceiris/actions-gh-pages@v3
+      uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: doc/build/html
@@ -31,7 +31,7 @@ jobs:
 
     - name: Create status check with preview link
       run: |
-        PREVIEW_URL="https://jonas-rem.github.io/flownexus/previews/${{ github.event.number }}"
+        PREVIEW_URL="https://flownexus-lwm2m.github.io/flownexus/previews/${{ github.event.number }}"
         PAYLOAD=$(echo '{}' | jq --arg name 'Documentation Preview' --arg url "${PREVIEW_URL}" '{"name": $name, "head_sha": "${{ github.event.pull_request.head.sha }}", "details_url": $url, "status": "completed", "conclusion": "success", "output": {"title": $name, "summary": "Preview available at", "text": $url}}')
         curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
              -H "Content-Type: application/json" \
