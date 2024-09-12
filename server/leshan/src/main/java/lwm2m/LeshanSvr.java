@@ -56,6 +56,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -96,6 +97,7 @@ public class LeshanSvr{
         module.addSerializer(LwM2mNode.class, new JacksonLwM2mNodeSerializer());
         module.addSerializer(Version.class, new JacksonVersionSerializer());
         mapper.registerModule(module);
+        mapper.registerModule(new JavaTimeModule());
 
         server.getRegistrationService().addListener(new MyRegistrationListener(this));
         server.getObservationService().addListener(new MyObservationListener(this));
