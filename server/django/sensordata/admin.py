@@ -42,11 +42,10 @@ class EndpointAdmin(admin.ModelAdmin):
 class ResourceTypeAdmin(admin.ModelAdmin):
     list_display = ('object_id', 'resource_id', 'name', 'data_type')
     search_fields = ('object_id', 'resource_id', 'name')
-    readonly_fields = ('object_id', 'resource_id', 'name', 'data_type')
 
     def get_model_perms(self, request):
         return {
-            'add': False,
+            'add': True,
             'change': False,
             'delete': False,
             'view': True,
