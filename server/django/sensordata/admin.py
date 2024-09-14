@@ -42,11 +42,10 @@ class EndpointAdmin(admin.ModelAdmin):
 class ResourceTypeAdmin(admin.ModelAdmin):
     list_display = ('object_id', 'resource_id', 'name', 'data_type')
     search_fields = ('object_id', 'resource_id', 'name')
-    readonly_fields = ('object_id', 'resource_id', 'name', 'data_type')
 
     def get_model_perms(self, request):
         return {
-            'add': False,
+            'add': True,
             'change': False,
             'delete': False,
             'view': True,
@@ -138,8 +137,7 @@ class FirmwareAdmin(admin.ModelAdmin):
 @admin.register(FirmwareUpdate)
 class FirmwareUpdateAdmin(admin.ModelAdmin):
     list_display = ('endpoint', 'firmware', 'state', 'result',
-                    'timestamp_created', 'timestamp_updated',
-                    'send_uri_operation', 'execute_operation')
+                    'timestamp_created', 'timestamp_updated')
     search_fields = ('endpoint__endpoint', 'firmware__version', 'state', 'result')
     list_filter = ('state', 'result', 'timestamp_created', 'timestamp_updated')
     readonly_fields = ('timestamp_created', 'timestamp_updated',

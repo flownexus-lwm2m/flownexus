@@ -30,6 +30,7 @@ final class ApiPath {
     /* Static factory method for creating instance of ApiPath */
     public static final ApiPath SINGLE_RES = new ApiPath("/leshan_api/resource/single");
     public static final ApiPath COMPOSITE_RES = new ApiPath("/leshan_api/resource/composite");
+    public static final ApiPath TIMESTAMPED_RES = new ApiPath("/leshan_api/resource/timestamped");
 
     @Override
     public String toString() {
