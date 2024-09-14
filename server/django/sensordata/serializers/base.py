@@ -60,7 +60,7 @@ class HandleResourceMixin:
         self.event = Event.objects.create(**event_data)
 
 
-    def handle_resource(self, ep, obj_id, res):
+    def handle_resource(self, ep, obj_id, res, ts=None):
         # Some LwM2M Resources are currently unsupported, we can skip them for now.
         if res['kind'] == 'multiResource':
             logging.error(f"multiResource currently not supported, skipping...")
@@ -90,15 +90,15 @@ class HandleResourceMixin:
         resource_data = {
             'endpoint': ep,
             'resource_type': res_type,
-            data_type: res['value']
+            data_type: res['value'],
+            **({'timestamp_created': ts} if ts is not None else {})
         }
-
         created_res = Resource.objects.create(**resource_data)
 
         # Create EventResource linking the event and the resource
         if self.event is not None:
             EventResource.objects.create(event=self.event, resource=created_res)
-            logger.debug(f"Added EventResource: {self.event} - {created_res}")
+            logger.debug(f"Added Resource to event: {self.event.event_type}")
 
         # Update the registration status if the resource is a registration resource
         if res_type.name in ['ep_registered', 'ep_registration_update']:
