@@ -191,6 +191,9 @@ static int lwm2m_setup(void)
 	/* setup TEMP SENSOR object */
 	init_temp_sensor(&client_ctx);
 
+	/* setup TIME SERIES object */
+	init_time_series_obj(&client_ctx);
+
 	/* Set multiple TEMP SENSOR resource values in one function call. */
 	int err = lwm2m_set_bulk(temp_sensor_items, ARRAY_SIZE(temp_sensor_items));
 
