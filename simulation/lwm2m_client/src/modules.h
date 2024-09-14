@@ -14,5 +14,6 @@ void init_timer_object(void);
 void init_temp_sensor(struct lwm2m_ctx *client);
 void init_firmware_update(struct lwm2m_ctx *client);
 
+void init_time_series_obj(struct lwm2m_ctx *client);
 
 #endif
