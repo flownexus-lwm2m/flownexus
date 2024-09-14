@@ -56,7 +56,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.time.Instant;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -407,18 +410,36 @@ public class LeshanSvr{
             this.server = server;
         }
 
-        @Override
         public void dataReceived(Registration registration,
                                  TimestampedLwM2mNodes data,
                                  SendRequest request) {
+            mapper.enable(SerializationFeature.INDENT_OUTPUT);
+
             log.trace("dataReceived from: " + registration.getEndpoint());
 
-            mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            ObjectNode node = mapper.createObjectNode();
-            node.put("ep", registration.getEndpoint());
-            node.set("val", mapper.valueToTree(data));
+            ObjectNode rootNode = mapper.createObjectNode();
+            rootNode.put("ep", registration.getEndpoint());
 
-            dataSenderRest.sendData(ApiPath.TIMESTAMPED_RES, node);
+            ArrayNode valArray = mapper.createArrayNode();
+
+            for (Instant ts: data.getTimestamps()) {
+                ObjectNode tsNode = mapper.createObjectNode();
+
+                ObjectNode nodesNode = mapper.createObjectNode();
+                Map<LwM2mPath, LwM2mNode> nodesAtTimestamp = data.getNodesAt(ts);
+                if (nodesAtTimestamp != null) {
+                    for (Map.Entry<LwM2mPath, LwM2mNode> e : nodesAtTimestamp.entrySet()) {
+                        ObjectNode nodeDetails = mapper.valueToTree(e.getValue());
+                        nodesNode.set(e.getKey().toString(), nodeDetails);
+                    }
+                }
+
+                tsNode.set("nodes", nodesNode);
+                valArray.addObject().set(ts == null ? "null" : ts.toString(), tsNode);
+            }
+
+            rootNode.set("val", valArray);
+            dataSenderRest.sendData(ApiPath.TIMESTAMPED_RES, rootNode);
         }
 
         @Override
