@@ -301,8 +301,8 @@ def device_dashboard_view(request):
     selected_resource_type = None
     graph_data = None
 
-    percentile_25 = None
-    percentile_75 = None
+    timestamps = []
+    values = []
 
     # Handle endpoint selection
     if 'endpoint' in request.GET:
@@ -339,13 +339,32 @@ def device_dashboard_view(request):
         selected_endpoint.battery_voltage = battery_voltage.int_value if battery_voltage else None
 
         if 'resource_type' in request.GET:
-            selected_resource_type = get_object_or_404(ResourceType, id=request.GET['resource_type'])
-            last_seven_days = timezone.now() - timedelta(days=30)
-            resources = Resource.objects.filter(
-                endpoint=selected_endpoint,
-                resource_type=selected_resource_type,
-                timestamp_created__gte=last_seven_days
-            ).order_by('timestamp_created')
+            if 'event_type' in request.GET and request.GET['event_type'] is not '':
+                selected_resource_type = get_object_or_404(ResourceType,
+                                                           id=request.GET['resource_type'])
+                last_event = Event.objects.filter(
+                    endpoint=selected_endpoint,
+                    event_type=request.GET['event_type']
+                ).order_by('-time').first()
+
+                evt_resources = EventResource.objects.filter(
+                    event=last_event
+                ).order_by('resource__timestamp_created')
+
+                resources = []
+                for evt_resource in evt_resources:
+                    if evt_resource.resource.resource_type == selected_resource_type:
+                        resources.append(evt_resource.resource)
+
+            else:
+                selected_resource_type = get_object_or_404(ResourceType,
+                                                           id=request.GET['resource_type'])
+                last_seven_days = timezone.now() - timedelta(days=30)
+                resources = Resource.objects.filter(
+                    endpoint=selected_endpoint,
+                    resource_type=selected_resource_type,
+                    timestamp_created__gte=last_seven_days
+                ).order_by('timestamp_created')
 
             timestamps = [resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S') for resource in resources]
             values = [
@@ -354,57 +373,28 @@ def device_dashboard_view(request):
                 else resource.int_value if selected_resource_type.data_type == 'TIME'
                 else None for resource in resources
             ]
-
-            if values:
-                percentile_25 = np.percentile(values, 25)
-                percentile_75 = np.percentile(values, 75)
-
             graph_data = {
                 'timestamps': timestamps,
                 'values': values
             }
 
-
     resource_types = ResourceType.objects.filter(data_type__in=['INTEGER', 'FLOAT', 'TIME'])
+    event_types = Event.objects.values_list('event_type', flat=True).distinct()
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        if 'endpoint' in request.GET and 'resource_type' in request.GET:
-            selected_endpoint = get_object_or_404(Endpoint, endpoint=request.GET['endpoint'])
-            selected_resource_type = get_object_or_404(ResourceType, id=request.GET['resource_type'])
-            last_thirty_days = timezone.now() - timedelta(days=30)
-            resources = Resource.objects.filter(
-                endpoint=selected_endpoint,
-                resource_type=selected_resource_type,
-                timestamp_created__gte=last_thirty_days
-            ).order_by('timestamp_created')
-            timestamps = [resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S') for resource in resources]
-            values = [
-                resource.int_value if selected_resource_type.data_type == 'INTEGER'
-                else resource.float_value if selected_resource_type.data_type == 'FLOAT'
-                else resource.int_value if selected_resource_type.data_type == 'TIME'
-                else None for resource in resources
-            ]
-
-            if values:
-                percentile_25 = np.percentile(values, 25)
-                percentile_75 = np.percentile(values, 75)
-
-            return JsonResponse({
+        return JsonResponse({
                 'timestamps': timestamps,
                 'values': values,
                 'resource_name': selected_resource_type.name,
-                'percentile_25': percentile_25,
-                'percentile_75': percentile_75
             })
 
     context = {
         'endpoints': endpoints,
         'selected_endpoint': selected_endpoint,
         'resource_types': resource_types,
+        'event_types': event_types,
         'selected_resource_type': selected_resource_type,
         'graph_data': graph_data,
-        'percentile_25': percentile_25,
-        'percentile_75': percentile_75,
     }
 
     return render(request, 'device_dashboard.html', context)
