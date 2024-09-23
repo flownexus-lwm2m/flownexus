@@ -333,20 +333,23 @@
         });
 
         document.addEventListener('DOMContentLoaded', function () {
-            var downloadButton = document.getElementById('downloadCsv');
+                var downloadButton = document.getElementById('downloadCsv');
 
-            downloadButton.addEventListener('click', function () {
-                var endpoint = '{{ selected_endpoint.endpoint }}';
-                var resourceType = document.getElementById('resource_type').value;
+                downloadButton.addEventListener('click', function () {
+                    var endpoint = '{{ selected_endpoint.endpoint }}';
+                    var resourceType = document.getElementById('resource_type').value;
+                    var eventType = document.getElementById('event_type').value;
 
-                if (endpoint && resourceType) {
-                    console.log(`Downloading CSV for Endpoint: ${endpoint}, ResourceType: ${resourceType}`);
-                    window.location.href = `/download_csv/?endpoint=${endpoint}&resource_type=${resourceType}`;
-                } else {
-                    console.error("Missing endpoint or resourceType");
-                }
+                    var url = `/download_csv/?endpoint=${endpoint}`;
+                    if (resourceType) {
+                        url += `&resource_type=${resourceType}`;
+                    } else if (eventType) {
+                        url += `&event_type=${eventType}`;
+                    }
+
+                    window.location.href = url;
+                });
             });
-        });
     </script>
 
     {% else %}

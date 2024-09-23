@@ -466,42 +466,98 @@ def event_dashboard_view(request):
     })
 
 def download_csv(request):
-    """View to generate and download CSV file for selected resource data."""
-
+    """View to generate and download CSV file for selected resource data or event data."""
     endpoint_id = request.GET.get('endpoint')
     resource_type_id = request.GET.get('resource_type')
+    event_type = request.GET.get('event_type')
 
-
-    if not endpoint_id or not resource_type_id:
-        return HttpResponse("Missing parameters", status=400)
+    if not endpoint_id:
+        return HttpResponse("Missing endpoint parameter", status=400)
 
     endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
-    resource_type = get_object_or_404(ResourceType, id=resource_type_id)
-
-    last_thirty_days = timezone.now() - timedelta(days=30)
-    resources = Resource.objects.filter(
-        endpoint=endpoint,
-        resource_type=resource_type,
-        timestamp_created__gte=last_thirty_days
-    ).order_by('timestamp_created')
-
 
     # Create the HTTP response with CSV content type
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{resource_type.name}_data.csv"'
 
-    # Create CSV writer
-    writer = csv.writer(response)
-    writer.writerow(['Timestamp', 'Value'])
+    if resource_type_id:
+        # Download data for a specific resource
+        resource_type = get_object_or_404(ResourceType, id=resource_type_id)
+        response['Content-Disposition'] = f'attachment; filename="{resource_type.name}_data.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'Value'])
 
-    for resource in resources:
-        if resource_type.data_type == 'INTEGER':
-            value = resource.int_value
-        elif resource_type.data_type == 'FLOAT':
-            value = resource.float_value
-        else:
-            value = ''
+        last_thirty_days = timezone.now() - timedelta(days=30)
+        resources = Resource.objects.filter(
+            endpoint=endpoint,
+            resource_type=resource_type,
+            timestamp_created__gte=last_thirty_days
+        ).order_by('timestamp_created')
 
-        writer.writerow([resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S'), value])
+        for resource in resources:
+            if resource_type.data_type == 'INTEGER':
+                value = resource.int_value
+            elif resource_type.data_type == 'FLOAT':
+                value = resource.float_value
+            elif resource_type.data_type == 'TIME':
+                value = resource.int_value  # Assuming TIME is stored as int
+            else:
+                value = resource.str_value
+
+            writer.writerow([resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S'), value])
+
+    elif event_type:
+        # Download data for a specific event type
+        response['Content-Disposition'] = f'attachment; filename="{event_type}_event_data.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'Resource Type', 'Value'])
+
+        events = Event.objects.filter(endpoint=endpoint, event_type=event_type).order_by('-time')
+        for event in events:
+            event_resources = EventResource.objects.filter(event=event).select_related('resource', 'resource__resource_type')
+            for event_resource in event_resources:
+                resource = event_resource.resource
+                resource_type = resource.resource_type
+                if resource_type.data_type == 'INTEGER':
+                    value = resource.int_value
+                elif resource_type.data_type == 'FLOAT':
+                    value = resource.float_value
+                elif resource_type.data_type == 'TIME':
+                    value = resource.int_value  # Assuming TIME is stored as int
+                else:
+                    value = resource.str_value
+
+                writer.writerow([
+                    event.time.strftime('%Y-%m-%d %H:%M:%S'),
+                    resource_type.name,
+                    value
+                ])
+
+    else:
+        # Download all resource data for the endpoint
+        response['Content-Disposition'] = f'attachment; filename="all_resource_data.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'Resource Type', 'Value'])
+
+        last_thirty_days = timezone.now() - timedelta(days=30)
+        resources = Resource.objects.filter(
+            endpoint=endpoint,
+            timestamp_created__gte=last_thirty_days
+        ).select_related('resource_type').order_by('timestamp_created')
+
+        for resource in resources:
+            if resource.resource_type.data_type == 'INTEGER':
+                value = resource.int_value
+            elif resource.resource_type.data_type == 'FLOAT':
+                value = resource.float_value
+            elif resource.resource_type.data_type == 'TIME':
+                value = resource.int_value  # Assuming TIME is stored as int
+            else:
+                value = resource.str_value
+
+            writer.writerow([
+                resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S'),
+                resource.resource_type.name,
+                value
+            ])
 
     return response
