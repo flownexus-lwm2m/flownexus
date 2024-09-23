@@ -343,7 +343,8 @@
                     var url = `/download_csv/?endpoint=${endpoint}`;
                     if (resourceType) {
                         url += `&resource_type=${resourceType}`;
-                    } else if (eventType) {
+                    }
+                    if (eventType) {
                         url += `&event_type=${eventType}`;
                     }
 

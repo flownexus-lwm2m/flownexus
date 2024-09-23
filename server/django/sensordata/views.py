@@ -476,11 +476,35 @@ def download_csv(request):
 
     endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
 
-    # Create the HTTP response with CSV content type
     response = HttpResponse(content_type='text/csv')
 
-    if resource_type_id:
-        # Download data for a specific resource
+    if resource_type_id and event_type:
+        resource_type = get_object_or_404(ResourceType, id=resource_type_id)
+        response['Content-Disposition'] = f'attachment; filename="{resource_type.name}_{event_type}_data.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'Value'])
+
+        events = Event.objects.filter(endpoint=endpoint, event_type=event_type).order_by('-time')
+        for event in events:
+            event_resources = EventResource.objects.filter(
+                event=event,
+                resource__resource_type=resource_type
+            ).select_related('resource')
+
+            for event_resource in event_resources:
+                resource = event_resource.resource
+                if resource_type.data_type == 'INTEGER':
+                    value = resource.int_value
+                elif resource_type.data_type == 'FLOAT':
+                    value = resource.float_value
+                elif resource_type.data_type == 'TIME':
+                    value = resource.int_value
+                else:
+                    value = resource.str_value
+
+                writer.writerow([event.time.strftime('%Y-%m-%d %H:%M:%S'), value])
+
+    elif resource_type_id:
         resource_type = get_object_or_404(ResourceType, id=resource_type_id)
         response['Content-Disposition'] = f'attachment; filename="{resource_type.name}_data.csv"'
         writer = csv.writer(response)
@@ -499,14 +523,13 @@ def download_csv(request):
             elif resource_type.data_type == 'FLOAT':
                 value = resource.float_value
             elif resource_type.data_type == 'TIME':
-                value = resource.int_value  # Assuming TIME is stored as int
+                value = resource.int_value
             else:
                 value = resource.str_value
 
             writer.writerow([resource.timestamp_created.strftime('%Y-%m-%d %H:%M:%S'), value])
 
     elif event_type:
-        # Download data for a specific event type
         response['Content-Disposition'] = f'attachment; filename="{event_type}_event_data.csv"'
         writer = csv.writer(response)
         writer.writerow(['Timestamp', 'Resource Type', 'Value'])
@@ -522,7 +545,7 @@ def download_csv(request):
                 elif resource_type.data_type == 'FLOAT':
                     value = resource.float_value
                 elif resource_type.data_type == 'TIME':
-                    value = resource.int_value  # Assuming TIME is stored as int
+                    value = resource.int_value
                 else:
                     value = resource.str_value
 
@@ -533,7 +556,6 @@ def download_csv(request):
                 ])
 
     else:
-        # Download all resource data for the endpoint
         response['Content-Disposition'] = f'attachment; filename="all_resource_data.csv"'
         writer = csv.writer(response)
         writer.writerow(['Timestamp', 'Resource Type', 'Value'])
