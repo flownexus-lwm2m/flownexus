@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-8">
+            <form method="GET">
+                <div class="form-group">
+                    <label for="endpoint">Select Endpoint:</label>
+                    <select class="form-control" id="endpoint" name="endpoint" onchange="this.form.submit()">
+                        <option value="">-- Select an Endpoint --</option>
+                        {% for endpoint in endpoints %}
+                        <option value="{{ endpoint.endpoint }}" {% if selected_endpoint and selected_endpoint.endpoint == endpoint.endpoint %}selected{% endif %}>
+                            {{ endpoint.endpoint }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if selected_endpoint %}
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-8">
+            <h3>Endpoint Details</h3>
+            <table class="table table-striped">
+                <tr>
+                    <th>Endpoint ID</th>
+                    <td>{{ selected_endpoint.endpoint }}</td>
+                </tr>
+                <tr>
+                    <th>Registered</th>
+                    <td>{{ selected_endpoint.registered|yesno:"Yes,No" }}</td>
+                </tr>
+                <tr>
+                    <th>Last Registered</th>
+                    <td>
+                        {% if selected_endpoint.last_registered %}
+                        {{ selected_endpoint.last_registered|date:"Y-m-d H:i:s" }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Last Registration Update</th>
+                    <td>
+                        {% if selected_endpoint.last_registration_update %}
+                        {{ selected_endpoint.last_registration_update|date:"Y-m-d H:i:s" }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Current Firmware</th>
+                    <td>
+                        {% if selected_endpoint.current_firmware %}
+                        {{ selected_endpoint.current_firmware }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Battery Voltage</th>
+                    <td>
+                        {% if selected_endpoint.battery_voltage %}
+                        {{ selected_endpoint.battery_voltage }} %
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-12">
+            <h3 id="chartTitle" class="text-center">Chart</h3>
+            <div style="height: 500px;width: 100%;">
+                <canvas id="resourceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="resource_type">Select Resource for Visualization:</label>
+                <select class="form-control" id="resource_type" name="resource_type">
+                    <option value="">-- Select a Resource --</option>
+                    {% for resource_type in resource_types %}
+                    <option value="{{ resource_type.id }}" {% if selected_resource_type and selected_resource_type.id == resource_type.id %}selected{% endif %}>
+                        {{ resource_type.name }} ({{ resource_type.data_type }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="event_type">Select Event for Visualization:</label>
+                <select class="form-control" id="event_type" name="event_type">
+                    <option value="">-- Select an Event --</option>
+                    {% for event_type in event_types %}
+                    <option value="{{ event_type }}"> {{ event_type }} </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-8">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="lower_limit">Lower Reference Limit:</label>
+                        <input type="number" class="form-control" id="lower_limit"
+                            placeholder="Enter lower reference limit">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="upper_limit">Upper Reference Limit:</label>
+                        <input type="number" class="form-control" id="upper_limit"
+                            placeholder="Enter upper reference limit">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="max_y_value">Max Y-Axis Value:</label>
+                        <input type="number" class="form-control" id="max_y_value" placeholder="Enter max y-axis value">
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12 text-center">
+                    <button id="applySettings" class="btn btn-primary">Apply Settings</button>
+                    <button id="downloadCsv" class="btn btn-primary ml-2">Download CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var chart;
+            var ctx = document.getElementById('resourceChart').getContext('2d');
+
+            function updateChart(data, lowerLimit, upperLimit, maxYValue) {
+                if (!data.values || !data.resource_name) {
+                    console.error('Invalid data received for chart update');
+                    return;
+                }
+
+                if (chart) {
+                    chart.destroy();
+                }
+
+                var sequenceLabels = data.values.map((_, index) => index);
+
+                var yMax = maxYValue ? parseFloat(maxYValue) : Math.max(...data.values, upperLimit);
+
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sequenceLabels,
+                        datasets: [
+                            {
+                                label: data.resource_name,
+                                data: data.values,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                                pointBorderColor: 'rgba(255, 255, 255, 0.8)',
+                            },
+                            {
+                                label: 'Lower Reference Limit',
+                                data: Array(data.values.length).fill(lowerLimit),
+                                borderColor: 'rgba(0, 0, 255, 1)',
+                                borderWidth: 1.5,
+                                borderDash: [5, 5],
+                                pointRadius: 0,
+                                fill: false,
+                            },
+                            {
+                                label: 'Upper Reference Limit',
+                                data: Array(data.values.length).fill(upperLimit),
+                                borderColor: 'rgba(255, 0, 0, 1)',
+                                borderWidth: 1.5,
+                                borderDash: [5, 5],
+                                pointRadius: 0,
+                                fill: false,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: 'rgba(0,0,0,0.7)',
+                                    font: {
+                                        size: 14,
+                                    },
+                                },
+                            },
+                            tooltip: {
+                                enabled: true,
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                titleFont: {
+                                    size: 16,
+                                },
+                                bodyFont: {
+                                    size: 14,
+                                },
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        return 'Value: ' + tooltipItem.raw.toFixed(2);
+                                    },
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Sequence Number',
+                                    color: '#666',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold',
+                                    },
+                                },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 10,
+                                    color: '#333',
+                                    font: {
+                                        size: 12,
+                                    },
+                                    maxRotation: 0,
+                                },
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Value',
+                                    color: '#666',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold',
+                                    },
+                                },
+                                min: 0,
+                                max: yMax,
+                                ticks: {
+                                    stepSize: Math.ceil(yMax / 5),
+                                    color: '#333',
+                                    font: {
+                                        size: 12,
+                                    },
+                                }
+                            }
+                        }
+                    }
+                });
+
+                document.getElementById('chartTitle').textContent = 'Chart for ' + data.resource_name;
+            }
+
+            var resourceTypeElement = document.getElementById('resource_type');
+            var eventTypeElement = document.getElementById('event_type');
+            var lowerLimitInput = document.getElementById('lower_limit');
+            var upperLimitInput = document.getElementById('upper_limit');
+            var maxYValueInput = document.getElementById('max_y_value');
+            var applySettingsButton = document.getElementById('applySettings');
+
+            function fetchData(lowerLimit, upperLimit, maxYValue) {
+                var endpoint = '{{ selected_endpoint.endpoint }}';
+                var resourceType = resourceTypeElement ? resourceTypeElement.value : '';
+                var eventType = eventTypeElement ? eventTypeElement.value : '';
+
+                if (endpoint && resourceType) {
+                    fetch(`?endpoint=${endpoint}&resource_type=${resourceType}&event_type=${eventType}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            updateChart(data, lowerLimit, upperLimit, maxYValue);
+                        })
+                        .catch(error => console.error('Error fetching resource data:', error));
+                }
+            }
+
+            if (resourceTypeElement) {
+                resourceTypeElement.addEventListener('change', function () {
+                    var lowerLimit = parseFloat(lowerLimitInput.value) || 0;
+                    var upperLimit = parseFloat(upperLimitInput.value) || 100;
+                    var maxYValue = parseFloat(maxYValueInput.value) || null;
+                    fetchData(lowerLimit, upperLimit, maxYValue);
+                });
+            }
+
+            applySettingsButton.addEventListener('click', function () {
+                var lowerLimit = parseFloat(lowerLimitInput.value) || 0;
+                var upperLimit = parseFloat(upperLimitInput.value) || 100;
+                var maxYValue = parseFloat(maxYValueInput.value) || null;
+                fetchData(lowerLimit, upperLimit, maxYValue);
+            });
+
+            // Automatically fetch data every 5 seconds
+            setInterval(function () {
+                var lowerLimit = parseFloat(lowerLimitInput.value) || 0;
+                var upperLimit = parseFloat(upperLimitInput.value) || 100;
+                var maxYValue = parseFloat(maxYValueInput.value) || null;
+                fetchData(lowerLimit, upperLimit, maxYValue);
+            }, 1000); // 1 second interval
+
+            {% if graph_data %}
+            updateChart({
+                values: {{ graph_data.values | safe }},
+            resource_name: '{{ selected_resource_type.name }}'
+            }, null);
+        {% endif %}
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var downloadButton = document.getElementById('downloadCsv');
+
+            downloadButton.addEventListener('click', function () {
+                var endpoint = '{{ selected_endpoint.endpoint }}';
+                var resourceType = document.getElementById('resource_type').value;
+                var eventType = document.getElementById('event_type').value;
+
+                var url = `/download_csv/?endpoint=${endpoint}`;
+                if (resourceType) {
+                    url += `&resource_type=${resourceType}`;
+                }
+                if (eventType) {
+                    url += `&event_type=${eventType}`;
+                }
+
+                window.location.href = url;
+            });
+        });
+    </script>
+
+    {% else %}
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-8 text-center">
+            <p>Please select an endpoint to view its details and graphs.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

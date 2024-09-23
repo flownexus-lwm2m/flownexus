@@ -7,6 +7,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 import os
 
 
@@ -59,7 +60,12 @@ class Resource(models.Model):
     int_value = models.IntegerField(null=True, blank=True)
     float_value = models.FloatField(null=True, blank=True)
     str_value = models.CharField(max_length=512, null=True, blank=True)
-    timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
+    timestamp_created = models.DateTimeField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.timestamp_created:
+            self.timestamp_created = timezone.now()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.endpoint} - {self.resource_type} - {self.timestamp_created}"
