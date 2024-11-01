@@ -31,6 +31,8 @@ static char download_url[MAX_URL_LENGTH];
 static char response[CONFIG_NET_BUF_DATA_SIZE];
 unsigned int cur_bytes;
 
+static struct lwm2m_ctx *client_ctx;
+
 #define SSTRLEN(s) (sizeof(s) - 1)
 
 static ssize_t sendall(int sock, const void *buf, size_t len)
@@ -328,6 +330,8 @@ static int firmware_update_cb(uint16_t obj_inst_id,
 	 * In reality, it should be set at function lwm2m_setup()
 	 */
 	lwm2m_firmware_set_update_result(RESULT_SUCCESS);
+	lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 3), 1, NULL);
+	lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 5), 1, NULL);
 	return 0;
 }
 
@@ -342,9 +346,13 @@ static int firmware_download_cb(uint16_t obj_inst_id,
 	LOG_INF("Download Link: %s", data);
 
 	lwm2m_firmware_set_update_state(STATE_DOWNLOADING);
+	lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 3), 1, NULL);
+
+	/* download is a blocking method */
 	ret = download(CONFIG_DL_SERVER_HOSTNAME, data);
 	if (ret == 0) {
 		lwm2m_firmware_set_update_state(STATE_DOWNLOADED);
+		lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 3), 1, NULL);
 		return 0;
 	}
 
@@ -353,14 +361,19 @@ static int firmware_download_cb(uint16_t obj_inst_id,
 		case -ENOTSUP:
 		case -EINVAL:
 		lwm2m_firmware_set_update_result(RESULT_UNSUP_PROTO);
+		lwm2m_firmware_set_update_state(STATE_IDLE);
 		break;
 		case -ENOTCONN:
 		lwm2m_firmware_set_update_result(RESULT_CONNECTION_LOST);
+		lwm2m_firmware_set_update_state(STATE_IDLE);
 		break;
 		default:
 		lwm2m_firmware_set_update_result(RESULT_UPDATE_FAILED);
+		lwm2m_firmware_set_update_state(STATE_IDLE);
 	}
-	lwm2m_firmware_set_update_state(STATE_IDLE);
+
+	lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 3), 1, NULL);
+	lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 5), 1, NULL);
 
 	return ret;
 }
@@ -372,12 +385,17 @@ static int firmware_cancel_cb(const uint16_t obj_inst_id)
 	lwm2m_firmware_set_update_state(STATE_IDLE);
 	lwm2m_firmware_set_update_result(RESULT_UPDATE_FAILED);
 
+	lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 3), 1, NULL);
+	lwm2m_send_cb(client_ctx, &LWM2M_OBJ(5, 0, 5), 1, NULL);
+
 	return 0;
 }
 
-void init_firmware_update(void)
+void init_firmware_update(struct lwm2m_ctx *client)
 {
 	int ret;
+
+	client_ctx = client;
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 	LOG_INF("Adding CA certificate");

@@ -14,6 +14,7 @@ from .models import Endpoint, Resource, Event, EndpointOperation, Firmware, Reso
 from rest_framework.exceptions import ValidationError
 from .serializers.single_resource_serializer import SingleResourceSerializer
 from .serializers.composite_resource_serializer import CompositeResourceSerializer
+from .serializers.timestamped_resource_serializer import TimestampedResourceSerializer
 from .serializers.generic_resource_serializer import GenericResourceSerializer
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,21 @@ class PostCompositeResourceView(APIView):
 
     def post(self, request):
         serializer = CompositeResourceSerializer(data=request.data, many=False)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            logger.error("Validation error: %s", e)
+            logger.error("Request data: %s", request.data)
+            logger.error("Backtrace: %s", traceback.format_exc())
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PostTimestampedResourceView(APIView):
+    serializer_class = TimestampedResourceSerializer
+
+    def post(self, request):
+        serializer = TimestampedResourceSerializer(data=request.data, many=False)
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
