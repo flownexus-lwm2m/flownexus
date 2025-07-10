@@ -1,0 +1,13 @@
+paramiko
+django
+celery
+django_extensions
+djangorestframework
+requests
+pandas
+openpyxl
+matplotlib
+numpy
+
+# Generation of API documentation
+drf-spectacular
