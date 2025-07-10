@@ -89,7 +89,11 @@ class HandleResourceMixin:
         resource_data = {
             'endpoint': ep,
             'resource_type': res_type,
-            data_type: res['value'],
+            data_type: (
+                bytes.fromhex(res['value'])
+                if res_type.data_type == ResourceType.OPAQUE
+                else res['value']
+            ),
             **({'timestamp_created': ts} if ts is not None else {})
         }
         created_res = Resource.objects.create(**resource_data)
