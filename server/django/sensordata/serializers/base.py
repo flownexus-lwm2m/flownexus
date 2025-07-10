@@ -27,14 +27,13 @@ class ResourceDataSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=KIND_CHOICES)
     id = serializers.IntegerField(help_text="Resource ID")
     type = serializers.ChoiceField(choices=ResourceType.TYPE_CHOICES)
-    value = serializers.CharField(max_length=255,
-                                  required=False,
+    value = serializers.CharField(required=False,
                                   allow_blank=True,
                                   help_text="The value associated with the resource,\
                                              type-dependent. Provide either the field\
                                              value or values"
     )
-    values = serializers.DictField(child=serializers.CharField(max_length=255),
+    values = serializers.DictField(child=serializers.CharField(),
                                    required=False,
                                    allow_empty=True,
                                    help_text="The list of values associated with the resource.\
