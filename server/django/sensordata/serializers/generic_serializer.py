@@ -22,7 +22,7 @@ class GenericResourceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Resource
-        fields = ['id', 'endpoint', 'resource_type', 'int_value', 'float_value', 'str_value', 'timestamp_created']
+        fields = ['id', 'endpoint', 'resource_type', 'int_value', 'float_value', 'str_value', 'binary_value', 'timestamp_created']
 
 class FirmwareSerializer(serializers.ModelSerializer):
     class Meta:

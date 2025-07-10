@@ -36,6 +36,7 @@ class ResourceType(models.Model):
         (INTEGER, 'int_value'),
         (FLOAT, 'float_value'),
         (BOOLEAN, 'int_value'),
+        (OPAQUE, 'binary_value'),
     ]
 
     object_id = models.IntegerField()
@@ -60,6 +61,7 @@ class Resource(models.Model):
     int_value = models.IntegerField(null=True, blank=True)
     float_value = models.FloatField(null=True, blank=True)
     str_value = models.CharField(max_length=512, null=True, blank=True)
+    binary_value = models.BinaryField(null=True, blank=True)
     timestamp_created = models.DateTimeField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
