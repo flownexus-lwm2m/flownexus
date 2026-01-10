@@ -1,5 +1,5 @@
 # Use the official OpenJDK 21 base image
-FROM openjdk:21-slim
+FROM eclipse-temurin:21-jdk-jammy
 
 # Set the working directory in the container
 WORKDIR /leshan
