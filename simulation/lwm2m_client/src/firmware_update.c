@@ -13,10 +13,16 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL);
 
 #include <zephyr/net/lwm2m.h>
 #include "lwm2m_engine.h"
-#include <sys/socket.h>
+#include <zephyr/posix/sys/socket.h>
+#include <zephyr/posix/netdb.h>
+#include <zephyr/posix/unistd.h>
 #include <zephyr/net/http/client.h>
 #include "modules.h"
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 #include <zephyr/net/tls_credentials.h>
@@ -315,6 +321,7 @@ static int download(char *host, char *path)
 
 error:
 	(void)close(sock);
+	freeaddrinfo(res);
 
 	return ret;
 }
@@ -393,8 +400,6 @@ static int firmware_cancel_cb(const uint16_t obj_inst_id)
 
 void init_firmware_update(struct lwm2m_ctx *client)
 {
-	int ret;
-
 	client_ctx = client;
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
