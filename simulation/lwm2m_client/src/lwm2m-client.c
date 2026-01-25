@@ -343,10 +343,10 @@ static void on_net_event_l4_connected(void)
 }
 
 static void l4_event_handler(struct net_mgmt_event_callback *cb,
-			     uint32_t event,
+			     uint64_t event,
 			     struct net_if *iface)
 {
-	LOG_DBG("Event %d", event);
+	LOG_DBG("Event %llu", event);
 
 	switch (event) {
 	case NET_EVENT_L4_CONNECTED:
@@ -363,10 +363,10 @@ static void l4_event_handler(struct net_mgmt_event_callback *cb,
 }
 
 static void connectivity_event_handler(struct net_mgmt_event_callback *cb,
-				       uint32_t event,
+				       uint64_t event,
 				       struct net_if *iface)
 {
-	LOG_DBG("Event %d", event);
+	LOG_DBG("Event %llu", event);
 	switch (event) {
 		case NET_EVENT_CONN_IF_FATAL_ERROR:
 			LOG_INF("Failed to connect to network");
