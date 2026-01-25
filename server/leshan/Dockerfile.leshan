@@ -1,16 +1,11 @@
 # Use the official OpenJDK 21 base image
-FROM openjdk:21-slim
+FROM maven:3.9-eclipse-temurin-21
 
 # Set the working directory in the container
 WORKDIR /leshan
 
 # Copy the source code, build files, and other necessary files
 COPY . /leshan/
-
-# Install Maven
-RUN apt-get update && \
-    apt-get install -y maven && \
-    rm -rf /var/lib/apt/lists/*
 
 # Startup script that handles running Leshan and logging
 RUN chmod +x /leshan/leshan_build_run.sh
