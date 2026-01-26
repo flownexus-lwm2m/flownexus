@@ -400,6 +400,8 @@ static int firmware_cancel_cb(const uint16_t obj_inst_id)
 
 void init_firmware_update(struct lwm2m_ctx *client)
 {
+	int ret;
+
 	client_ctx = client;
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)

@@ -130,6 +130,6 @@ void init_time_series_obj(struct lwm2m_ctx *client)
 		LOG_ERR("Failed to enable cache for LWM2M Pump Mon instance 0: %d", ret);
 	}
 
-	k_work_init_delayable(&time_series_work, time_series_work_cb);
-	k_work_schedule(&time_series_work, PERIOD);
+	//k_work_init_delayable(&time_series_work, time_series_work_cb);
+	//k_work_schedule(&time_series_work, PERIOD);
 }
