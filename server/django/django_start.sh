@@ -28,7 +28,7 @@ fi
 #
 # -P gevent -c 100: 100 concurrent workers
 echo "Starting the Celery worker..."
-celery -A server worker --loglevel=info -P gevent -c 100 2>&1 | tee -a "logs/celery_$(date +%Y-%m-%d_%H-%M-%S).log" &
+celery -A core worker --loglevel=info -P gevent -c 100 2>&1 | tee -a "logs/celery_$(date +%Y-%m-%d_%H-%M-%S).log" &
 
 echo "Starting the server..."
 python manage.py runserver 0.0.0.0:8000 2>&1 | tee -a "$logfile"

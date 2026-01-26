@@ -13,9 +13,6 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 
-MEDIA_URL = '/binaries/'
-MEDIA_ROOT = Path('/var/www/flownexus') / 'binaries'
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
@@ -56,6 +53,11 @@ LOGGING = {
             'propagate': False,
         },
         'sensordata': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'frontend': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
@@ -110,7 +112,9 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-ROOT_URLCONF = "server.urls"
+ROOT_URLCONF = "core.urls"
+
+WSGI_APPLICATION = "core.wsgi.application"
 
 TEMPLATES = [
     {
@@ -128,8 +132,10 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "server.wsgi.application"
 
+# Media files (Firmware binaries)
+MEDIA_URL = os.getenv('MEDIA_URL', '/binaries/')
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', BASE_DIR / 'media' / 'binaries')
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
