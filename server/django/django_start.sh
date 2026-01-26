@@ -8,8 +8,6 @@ touch "$logfile"
 
 # Start Django Server
 # python manage.py collectstatic --noinput 2>&1 | tee -a "$logfile"
-echo "Running makemigrations for sensordata..."
-python manage.py makemigrations sensordata 2>&1 | tee -a "$logfile"
 echo "Running migrate..."
 python manage.py migrate 2>&1 | tee -a $logfile
 echo "Loading initial data..."
