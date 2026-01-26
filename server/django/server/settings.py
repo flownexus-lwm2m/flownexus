@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "sensordata",
+    "frontend",
 ]
 
 MIDDLEWARE = [
