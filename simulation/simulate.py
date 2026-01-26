@@ -185,11 +185,12 @@ class DockerManager:
             self.container = None
 
 
-docker_manager = DockerManager(CONTAINER_VOLUME_MAPPING)
+docker_manager = None
 
 
 def signal_handler(sig, frame):
-    docker_manager.stop_container()
+    if docker_manager:
+        docker_manager.stop_container()
     sys.exit(0)
 
 # Build Zephyr clients to control certain parameters like ipaddr, IMEI.
@@ -289,6 +290,7 @@ def start_clients(num_clients, time_gap, logging):
 def main():
     global num_clients
     global ZEPHYR_CONF
+    global docker_manager
     os.makedirs(TEMP_CONF_DIR, exist_ok=True)
     os.makedirs(BINDIR, exist_ok=True)
 
@@ -339,8 +341,15 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGHUP, signal_handler)
 
-    docker_manager.build_container()
-    docker_manager.start_container()
+    try:
+        docker_manager = DockerManager(CONTAINER_VOLUME_MAPPING)
+        docker_manager.build_container()
+        docker_manager.start_container()
+    except Exception as e:
+        print(f"Error: Could not connect to Docker. {e}")
+        print("Make sure the Docker daemon is running and you have the necessary permissions.")
+        print("You may need to add your user to the 'docker' group: sudo usermod -aG docker $USER")
+        sys.exit(1)
 
     if args.local:
         if not docker_manager.get_ip_from_domain("leshan"):
