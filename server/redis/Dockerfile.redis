@@ -1,12 +1,17 @@
+# Use the latest stable Redis alpine image
 FROM redis:7.4-alpine
+
+# Update and upgrade packages for security patches
+RUN apk update && apk upgrade
 
 # Create and set the working directory in the container
 WORKDIR /redis
 
-# Copy the content of the local src directory to the working directory
+# Copy the configuration and scripts to the container
 COPY . /redis/
 
 # Give execution rights on the start-up script
 RUN chmod +x /redis/redis_start.sh
 
+# Entry point for the container
 ENTRYPOINT ["/redis/redis_start.sh"]
