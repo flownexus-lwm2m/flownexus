@@ -8,7 +8,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
-import os
+from pathlib import Path
 
 
 class Endpoint(models.Model):
@@ -17,7 +17,7 @@ class Endpoint(models.Model):
     registered = models.BooleanField(default=False)
 
     def __str__(self):
-        return os.path.basename(self.endpoint)
+        return Path(self.endpoint).name
 
 
 class ResourceType(models.Model):
@@ -118,7 +118,7 @@ class EndpointOperation(models.Model):
     )
     transmit_counter = models.IntegerField(default=0)
     timestamp_created = models.DateTimeField(auto_now_add=True, blank=True)
-    last_attempt = models.DateTimeField(auto_now_add=False, null=True)
+    last_attempt = models.DateTimeField(null=True)
 
     def __str__(self):
         return f"{self.resource} - {self.operation_type} - {self.status}"
@@ -140,7 +140,7 @@ class Firmware(models.Model):
             raise ValidationError("The file size must be under 1 MB.")
 
     def __str__(self):
-        return os.path.basename(self.version)
+        return Path(self.version).name
 
 
 class FirmwareUpdate(models.Model):
@@ -208,5 +208,4 @@ class FirmwareUpdate(models.Model):
 
                 self.send_uri_operation = EndpointOperation(resource=send_resource)
                 self.send_uri_operation.save()
-                print("New instance created")
             super().save(*args, **kwargs)

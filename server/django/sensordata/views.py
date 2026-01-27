@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from .models import Endpoint, Resource, EndpointOperation, FirmwareUpdate, ResourceType, Event
 from .serializers.single_resource_serializer import SingleResourceSerializer
-# from .serializers.composite_resource_serializer import CompositeResourceSerializer
+from .serializers.composite_resource_serializer import CompositeResourceSerializer
 from .serializers.timestamped_resource_serializer import TimestampedResourceSerializer
 from .serializers.generic_serializer import EndpointSerializer, FirmwareSerializer, EndpointOperationSerializer, FirmwareUpdateSerializer
 
@@ -39,8 +39,6 @@ class PostSingleResourceView(APIView):
 
 class PostCompositeResourceView(APIView):
     """API View for posting a composite resource."""
-    # serializer_class = CompositeResourceSerializer
-    from .serializers.composite_resource_serializer import CompositeResourceSerializer
     serializer_class = CompositeResourceSerializer
 
     def post(self, request):
