@@ -1,17 +1,17 @@
-Django==6.0
+Django==6.0.1
 django-extensions==4.1
-requests==2.32.3
-djangorestframework==3.15.2
-whitenoise==6.7.0
-celery[redis]==5.4.0
+requests==2.32.5
+djangorestframework==3.16.1
+whitenoise==6.11.0
+celery[redis]==5.6.2
 gevent==25.9.1
-numpy==2.1.1
-python-dateutil==2.9.0
+numpy==2.4.1
+python-dateutil==2.9.0.post0
 
 # Generation of Entity-Relationship Diagrams
-graphviz==0.20.3
-pyparsing==3.1.4
-pydot==3.0.1
+graphviz==0.21
+pyparsing==3.3.2
+pydot==4.0.1
 
 # Generation of API documentation
-drf-spectacular==0.27.2
+drf-spectacular==0.29.0
