@@ -1,34 +1,33 @@
-Waterlevel Monitor
-==================
+flownexus Documentation
+=======================
 
-.. inclusion-marker-do-not-remove
+This directory contains the source code for the flownexus documentation.
 
-Standalone Installation
+System Requirements
+###################
+
+To build the documentation, you need the following system packages installed:
+
+- Python 3
+- tox
+- Graphviz (for ERD diagrams)
+- Default JRE and PlantUML (for sequence diagrams)
+
+On Debian/Ubuntu-based systems, you can install them with::
+
+    sudo apt-get install python3 tox graphviz default-jre plantuml
+
+Build the Documentation
 #######################
 
-- The packets virtualenv and tox must be installed on your distribution::
+The documentation is built using ``tox``.
 
-        apt install virtualenv tox
+Build HTML documentation::
 
-- Clone the repository locally::
+    tox -e html
 
-        cd doc
+The generated documentation will be available in ``build/html/index.html``.
 
-- Create a virtualenv::
+Build PDF documentation (requires LaTeX)::
 
-        virtualenv -p python3 venv
-        . venv/bin/activate
-
-- Install all dependencies::
-
-        pip install -r requirements.txt
-
-You can leave the virtualenv by running ``deactivate`` in the bash. Do not
-forget to source the virtualenv again next time you want to use it.
-
-Build with tox
-**************
-
-Build the documentation as html and pdf::
-
-    tox -e py3-doc
+    tox -e pdf

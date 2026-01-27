@@ -45,7 +45,7 @@ configured:
   host:~$ source venv/bin/activate
   host:~$ pip install --upgrade pip && pip install west
   host:~$ mkdir workspace && cd workspace
-  host:~/workspace$ west init -m https://github.com/jonas-rem/flownexus --mr main
+  host:~/workspace$ west init -m https://github.com/flownexus-lwm2m/flownexus --mr main
   host:~/workspace$ west update
 
 Container Environment
@@ -309,7 +309,7 @@ in the ``settings.py`` file before deploying.:
    :caption: Start flownexus with docker compose
 
 
-   vserver:~/ git clone https://github.com/jonas-rem/flownexus.git
+   vserver:~/ git clone https://github.com/flownexus-lwm2m/flownexus.git
    # Change the DEPLOY_SECRET_KEY and DEBUG flag in the settings.py file
    vserver:~/flownexus/server$ docker-compose up -d
 
