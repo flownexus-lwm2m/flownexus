@@ -7,7 +7,7 @@
 from django.core.management.base import BaseCommand
 from drf_spectacular.generators import SchemaGenerator
 import yaml
-import os
+from pathlib import Path
 
 class Command(BaseCommand):
     help = 'Generates the OpenAPI schema'
@@ -21,10 +21,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        output_path = options['o']
+        output_path = Path(options['o'])
 
         # Ensure the directory exists
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Generate the OpenAPI schema
         generator = SchemaGenerator()
@@ -32,7 +32,7 @@ class Command(BaseCommand):
         schema_yaml = yaml.dump(schema, default_flow_style=False)
 
         # Write the schema to the specified file
-        with open(output_path, 'w') as file:
+        with output_path.open('w') as file:
             file.write(schema_yaml)
 
         self.stdout.write(self.style.SUCCESS(f'Exported OpenAPI schema to {output_path}'))

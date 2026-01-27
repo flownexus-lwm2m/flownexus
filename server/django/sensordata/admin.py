@@ -8,7 +8,7 @@ import logging
 from django.utils import timezone
 from django.contrib import admin
 from .tasks import process_pending_operations
-import os
+from pathlib import Path
 from .models import (
     Endpoint,
     ResourceType,
@@ -113,7 +113,7 @@ class FirmwareAdmin(admin.ModelAdmin):
     list_display = ('version', 'file_name', 'file_link', 'created_at')
 
     def file_name(self, obj):
-        return os.path.basename(obj.binary.name)
+        return Path(obj.binary.name).name
     file_name.short_description = 'File Name'
 
     def file_link(self, obj):
