@@ -10,6 +10,6 @@ Build the documentation
   host:~$ source venv/bin/activate
   host:~$ cd workspace/flownexus/doc
   host:~/workspace/flownexus/doc$ pip install -r requirements.txt
-  host:~/workspace/flownexus/doc$ tox -e py3-html
+  host:~/workspace/flownexus/doc$ tox -e html
 
 Open the generated index.html in the doc/build directory in your browser.
