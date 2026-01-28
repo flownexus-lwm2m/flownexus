@@ -1,0 +1,45 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Device Overview{% endblock %}
+{% block page_title %}Device Overview{% endblock %}
+
+{% block content %}
+<div class="row row-cards">
+  <div class="col-12">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>Endpoint</th>
+              <th>Status</th>
+              <th class="w-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for endpoint in endpoints %}
+            <tr>
+              <td>{{ endpoint.endpoint }}</td>
+              <td class="text-secondary">
+                {% if endpoint.registered %}
+                <span class="badge bg-success me-1"></span> Online
+                {% else %}
+                <span class="badge bg-danger me-1"></span> Offline
+                {% endif %}
+              </td>
+              <td>
+                <a href="#">Details</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-center text-secondary">No devices found</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
