@@ -27,8 +27,8 @@
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
 
                     <li class="nav-item">
-                        <a href="{% url 'admin_dashboard' %}"
-                            class="nav-link {% if request.path == '/admin_dashboard/' %}active{% endif %}">
+                        <a href="{% url 'frontend_deprecated:admin_dashboard' %}"
+                            class="nav-link {% if request.path == '/deprecated/admin_dashboard/' %}active{% endif %}">
                             <i class="nav-icon fas fa-tachometer-alt"></i>
                             <p>
                                 Admin Dashboard
@@ -36,8 +36,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'device_dashboard' %}"
-                            class="nav-link {% if request.path == '/device_dashboard/' %}active{% endif %}">
+                        <a href="{% url 'frontend_deprecated:device_dashboard' %}"
+                            class="nav-link {% if request.path == '/deprecated/device_dashboard/' %}active{% endif %}">
                             <i class="nav-icon fas fa-microchip"></i>
                             <p>
                                 Device Dashboard
@@ -45,8 +45,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'event_dashboard' %}"
-                            class="nav-link {% if request.path == '/event_dashboard/' %}active{% endif %}">
+                        <a href="{% url 'frontend_deprecated:event_dashboard' %}"
+                            class="nav-link {% if request.path == '/deprecated/event_dashboard/' %}active{% endif %}">
                             <i class="nav-icon fas fa-calendar-alt"></i>
                             <p>
                                 Event Dashboard
@@ -54,8 +54,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'firmware_dashboard' %}"
-                            class="nav-link {% if request.path == '/firmware_dashboard/' %}active{% endif %}">
+                        <a href="{% url 'frontend_deprecated:firmware_dashboard' %}"
+                            class="nav-link {% if request.path == '/deprecated/firmware_dashboard/' %}active{% endif %}">
                             <i class="nav-icon fas fa-microchip"></i>
                             <p>
                                 Firmware Update
@@ -83,7 +83,7 @@
                         About
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown2">
-                        <a class="dropdown-item" href="{% url 'license_dashboard' %}">Licenses</a>
+                        <a class="dropdown-item" href="{% url 'frontend_deprecated:license_dashboard' %}">Licenses</a>
                         <a class="dropdown-item" href="https://github.com/jonas-rem/flownexus">Contact</a>
                     </div>
                 </li>

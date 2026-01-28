@@ -1,4 +1,4 @@
-{% extends "frontend/base.html" %}
+{% extends "frontend_deprecated/base.html" %}
 {% load static %}
 
 {% block content %}
@@ -208,15 +208,15 @@
         });
 
     document.getElementById('timeRangeSelector').addEventListener('change', function () {
-        window.location.href = '{% url "admin_dashboard" %}?time_range=' + this.value;
+        window.location.href = '{% url "frontend_deprecated:admin_dashboard" %}?time_range=' + this.value;
     });
 
     document.getElementById('eventTypeSelector').addEventListener('change', function () {
-        window.location.href = '{% url "admin_dashboard" %}?event_type=' + this.value + '&event_time_range=' + document.getElementById('eventTimeRangeSelector').value;
+        window.location.href = '{% url "frontend_deprecated:admin_dashboard" %}?event_type=' + this.value + '&event_time_range=' + document.getElementById('eventTimeRangeSelector').value;
     });
 
     document.getElementById('eventTimeRangeSelector').addEventListener('change', function () {
-        window.location.href = '{% url "admin_dashboard" %}?event_type=' + document.getElementById('eventTypeSelector').value + '&event_time_range=' + this.value;
+        window.location.href = '{% url "frontend_deprecated:admin_dashboard" %}?event_type=' + document.getElementById('eventTypeSelector').value + '&event_time_range=' + this.value;
     });
     });
 </script>
