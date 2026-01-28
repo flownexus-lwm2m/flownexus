@@ -51,16 +51,16 @@ configured:
 Container Environment
 ---------------------
 
-Both components run in a Docker container. The Leshan server is running in a
+Both components run in a container. The Leshan server is running in a
 ``openjdk:17-slim`` container and the Django server is running in a
 ``python:3.11-slim`` container. This allows for an easy and reproducible setup
 of the server.
 
   .. uml::
-   :caption: Both components running in one machine using Docker Compose
+   :caption: Both components running in one machine using Podman Compose
 
    @startuml
-   package "Docker Compose Environment"  #DDDDDD {
+   package "Container Environment"  #DDDDDD {
      [Leshan] as Leshan
      [Django] as Django
      database "Database" as DB
@@ -69,8 +69,8 @@ of the server.
    }
    @enduml
 
-The following diagram shows the Docker Compose environment. The file
-``docker-compose.yml`` defines the services and their configuration. The file
+The following diagram shows the Container Environment. The file
+``compose.yml`` defines the services and their configuration. The file
 ``Dockerfile.leshan`` defines the Leshan container and the file
 ``Dockerfile.django`` defines the Django container.
 
@@ -83,44 +83,9 @@ The container can be build and started with the following commands:
 
 .. code-block:: console
 
-  host:~/workspace/flownexus/server$ docker compose build
-  [+] Building 0.5s (20/20) FINISHED                               docker:default
-   => [leshan internal] load build definition from Dockerfile.leshan         0.0s
-   => [leshan internal] load metadata for docker.io/library/openjdk:17-slim  0.4s
-   => [django internal] load build definition from Dockerfile.django         0.0s
-   => [django internal] load metadata for docker.io/library/python:3.11-sli  0.4s
-   => [leshan 1/5] FROM docker.io/library/openjdk:17-slim@sha256:aaa3b3cb27  0.0s
-   => [django 1/5] FROM docker.io/library/python:3.11-slim@sha256:d11b9bd5e  0.0s
-   => CACHED [leshan 2/5] WORKDIR /leshan                                    0.0s
-   => CACHED [leshan 3/5] COPY . /leshan/                                    0.0s
-   => CACHED [leshan 4/5] RUN apt-get update &&     apt-get install -y mave  0.0s
-   => CACHED [leshan 5/5] RUN chmod +x /leshan/leshan_build_run.sh           0.0s
-   => => exporting layers                                                    0.0s
-   => => writing image sha256:a017577ba2b175374148f5c3f128ac117ba5436ceaeff  0.0s
-   => => naming to docker.io/library/server-leshan                           0.0s
-   => CACHED [django 2/5] WORKDIR /django                                    0.0s
-   => CACHED [django 3/5] COPY . /django/                                    0.0s
-   => CACHED [django 4/5] RUN pip install --no-cache-dir -r /django/require  0.0s
-   => CACHED [django 5/5] RUN chmod +x /django/django_start.sh               0.0s
-   => => writing image sha256:1c88f1227753b08cf994c4e61d5cdcf97d68f260c99ad  0.0s
-   => => naming to docker.io/library/server-django                           0.0s
+  host:~/workspace/flownexus/server$ podman-compose build
+  host:~/workspace/flownexus/server$ podman-compose up
 
-
-.. code-block:: console
-
-  host:~/workspace/flownexus/server$ docker compose up
-  [+] Running 2/0
-   ✔ Container server-leshan-1  Created                                      0.0s
-   ✔ Container server-django-1  Created                                      0.0s
-  Attaching to django-1, leshan-1
-  [..]
-  django-1  | Starting development server at http://0.0.0.0:8000/
-  leshan-1  | [main] INFO org.eclipse.leshan.server.LeshanServer - CoAP over UDP endpoint based on Californium library available at coap://0.0.0.0:5683.
-  leshan-1  | LeshanServer started
-  ^CGracefully stopping... (press Ctrl+C again to force)
-  [+] Stopping 2/2
-   ✔ Container server-django-1  Stopped                                     10.3s
-   ✔ Container server-leshan-1  Stopped                                     10.5s
 
 .. _setup-a-virtual-server-label:
 
@@ -204,7 +169,7 @@ requests to the Django server running on port 8000:
 
    # Update Sytem, install required packages and enable the firewall
    vserver:~/ apt update
-   vserver:~/ apt install git docker docker-compose nginx certbot python3-certbot-nginx
+   vserver:~/ apt install git podman podman-compose nginx certbot python3-certbot-nginx
 
    # Generate a certificate with letsencrypt:
    vserver:~/ certbot --nginx -d flownexus.org -d www.flownexus.org
@@ -301,17 +266,17 @@ available at https://fw.flownexus.org/binaries. If you uncomment the option
 Start flownexus
 ...............
 
-After the setup, download flownexus and start it with using docker compose in
+After the setup, download flownexus and start it with using podman-compose in
 detached mode. Make sure to change the ``DEPLOY_SECRET_KEY`` and ``DEBUG`` flag
 in the ``settings.py`` file before deploying.:
 
 .. code-block:: console
-   :caption: Start flownexus with docker compose
+   :caption: Start flownexus with podman-compose
 
 
    vserver:~/ git clone https://github.com/flownexus-lwm2m/flownexus.git
    # Change the DEPLOY_SECRET_KEY and DEBUG flag in the settings.py file
-   vserver:~/flownexus/server$ docker-compose up -d
+   vserver:~/flownexus/server$ podman-compose up -d
 
 flownexus is now available at https://flownexus.org. The server is running in a
 Docker container and the Nginx server is used as a reverse proxy.

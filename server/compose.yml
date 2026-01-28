@@ -16,6 +16,7 @@ services:
       - LESHAN_URI=http://leshan:8080
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - C_FORCE_ROOT=true
 
   redis:
     stop_grace_period: 1s

@@ -21,7 +21,7 @@ infrastructure that supports the entire IoT ecosystem by:
 Build and Run
 -------------
 
-The Django server can also run locally, without the need of a docker container.
+The Django server can also run locally, without the need of a container.
 Make sure to create a virtual environment and install the requirements:
 
 .. code-block:: console
