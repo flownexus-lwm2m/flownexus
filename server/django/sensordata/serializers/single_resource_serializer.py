@@ -5,8 +5,9 @@
 #
 
 from rest_framework import serializers
-from .base import HandleResourceMixin, ResourceDataSerializer
+
 from ..models import Endpoint
+from .base import HandleResourceMixin, ResourceDataSerializer
 
 
 class SingleResourceSerializer(HandleResourceMixin, serializers.Serializer):
@@ -15,9 +16,9 @@ class SingleResourceSerializer(HandleResourceMixin, serializers.Serializer):
     val = ResourceDataSerializer()
 
     def create(self, validated_data):
-        ep = validated_data['ep']
-        obj_id = validated_data['obj_id']
-        val = validated_data['val']
+        ep = validated_data["ep"]
+        obj_id = validated_data["obj_id"]
+        val = validated_data["val"]
 
         endpoint, _ = Endpoint.objects.get_or_create(endpoint=ep)
         try:

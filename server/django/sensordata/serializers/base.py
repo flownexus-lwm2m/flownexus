@@ -4,41 +4,38 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-from rest_framework import serializers
-from ..models import (
-        ResourceType,
-        Resource,
-        Event,
-        EventResource,
-        FirmwareUpdate,
-        EndpointOperation
-)
-from ..tasks import process_pending_operations
 import logging
+
+from rest_framework import serializers
+
+from ..models import EndpointOperation, Event, EventResource, FirmwareUpdate, Resource, ResourceType
+from ..tasks import process_pending_operations
 
 logger = logging.getLogger(__name__)
 
 
 class ResourceDataSerializer(serializers.Serializer):
     KIND_CHOICES = [
-        'singleResource',
-        'multiResource',
+        "singleResource",
+        "multiResource",
     ]
     kind = serializers.ChoiceField(choices=KIND_CHOICES)
     id = serializers.IntegerField(help_text="Resource ID")
     type = serializers.ChoiceField(choices=ResourceType.TYPE_CHOICES)
-    value = serializers.CharField(max_length=255,
-                                  required=False,
-                                  allow_blank=True,
-                                  help_text="The value associated with the resource,\
+    value = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        help_text="The value associated with the resource,\
                                              type-dependent. Provide either the field\
-                                             value or values"
+                                             value or values",
     )
-    values = serializers.DictField(child=serializers.CharField(max_length=255),
-                                   required=False,
-                                   allow_empty=True,
-                                   help_text="The list of values associated with the resource.\
-                                              Provide either the field value or values."
+    values = serializers.DictField(
+        child=serializers.CharField(max_length=255),
+        required=False,
+        allow_empty=True,
+        help_text="The list of values associated with the resource.\
+                                              Provide either the field value or values.",
     )
 
 
@@ -47,26 +44,24 @@ class HandleResourceMixin:
         super().__init__(*args, **kwargs)
         self.event = None
 
-
     def create_event(self, ep, event_type):
         """
         Create an Event instance for the given endpoint and event type. If no event
         is created, the resource data won't be associated with any event.
         """
         event_data = {
-            'endpoint': ep,
-            'event_type': event_type,
+            "endpoint": ep,
+            "event_type": event_type,
         }
         self.event = Event.objects.create(**event_data)
 
-
     def handle_resource(self, ep, obj_id, res, ts=None):
         # Some LwM2M Resources are currently unsupported, we can skip them for now.
-        if res['kind'] == 'multiResource':
-            logging.error(f"multiResource currently not supported, skipping...")
+        if res["kind"] == "multiResource":
+            logging.error("multiResource currently not supported, skipping...")
             return
 
-        res_id = res['id']
+        res_id = res["id"]
         # Fetch resource information from Database
         res_type = ResourceType.objects.get(object_id=obj_id, resource_id=res_id)
         if not res_type:
@@ -74,24 +69,26 @@ class HandleResourceMixin:
             raise serializers.ValidationError(err)
 
         # Validate that datatype is matching the resource type
-        data_type = dict(ResourceType.TYPE_CHOICES).get(res['type'])
+        data_type = dict(ResourceType.TYPE_CHOICES).get(res["type"])
         res_data_type = dict(ResourceType.TYPE_CHOICES).get(res_type.data_type)
         if not data_type:
             err = f"Unsupported data type '{res['type']}', skipping..."
             logger.error(err)
             raise serializers.ValidationError(err)
         if data_type != res_data_type:
-            err = f"Mismatch between ResourceType.data_type '{res_data_type}' " \
-                  f"and Resource value type '{data_type}'"
+            err = (
+                f"Mismatch between ResourceType.data_type '{res_data_type}' "
+                f"and Resource value type '{data_type}'"
+            )
             raise serializers.ValidationError(err)
 
         # Create the Resource instance based on value type
         logger.debug(f"Adding resource_type: {res_type}")
         resource_data = {
-            'endpoint': ep,
-            'resource_type': res_type,
-            data_type: res['value'],
-            **({'timestamp_created': ts} if ts is not None else {})
+            "endpoint": ep,
+            "resource_type": res_type,
+            data_type: res["value"],
+            **({"timestamp_created": ts} if ts is not None else {}),
         }
         created_res = Resource.objects.create(**resource_data)
 
@@ -101,12 +98,12 @@ class HandleResourceMixin:
             logger.debug(f"Added Resource to event: {self.event.event_type}")
 
         # Update the registration status if the resource is a registration resource
-        if res_type.name in ['ep_registered', 'ep_registration_update']:
+        if res_type.name in ["ep_registered", "ep_registration_update"]:
             ep.registered = True
             ep.save()
             process_pending_operations.delay(ep.endpoint)
             return
-        elif res_type.name == 'ep_unregistered':
+        elif res_type.name == "ep_unregistered":
             ep.registered = False
             ep.save()
             return
@@ -115,17 +112,16 @@ class HandleResourceMixin:
         # "Firmware Version - 3/0/3" Resource.
         #
         # Cond 2: Handle FOTA Update
-        elif ((res_type.object_id == 3 and res_type.resource_id == 3) or
-               res_type.object_id == 5):
-            self.handle_fota(ep, res_type, res['value'])
+        elif (res_type.object_id == 3 and res_type.resource_id == 3) or res_type.object_id == 5:
+            self.handle_fota(ep, res_type, res["value"])
             return
-
 
     def handle_fota(self, ep, res_type, value):
         # There must be exactly one FirmwareUpdate object with
         # result = 0 (RESULT_DEFAULT).
-        fw_query = FirmwareUpdate.objects.filter(endpoint=ep,
-                             result=FirmwareUpdate.Result.RESULT_DEFAULT)
+        fw_query = FirmwareUpdate.objects.filter(
+            endpoint=ep, result=FirmwareUpdate.Result.RESULT_DEFAULT
+        )
 
         # Check for exactly one FirmwareUpdate object
         if fw_query.count() == 0:
@@ -144,8 +140,10 @@ class HandleResourceMixin:
 
         # Device Rebooted
         if res_type.object_id == 3 and res_type.resource_id == 3:
-            if (fw_obj.state == FirmwareUpdate.State.STATE_IDLE and \
-               fw_obj.result == FirmwareUpdate.Result.RESULT_DEFAULT):
+            if (
+                fw_obj.state == FirmwareUpdate.State.STATE_IDLE
+                and fw_obj.result == FirmwareUpdate.Result.RESULT_DEFAULT
+            ):
                 # Update hasn't been started yet
                 return
             expected_version = fw_obj.firmware.version
@@ -164,8 +162,8 @@ class HandleResourceMixin:
             fw_obj.state = value
             if int(value) == FirmwareUpdate.State.STATE_DOWNLOADED:
                 # Create "Update" resource to execute the update, no payload
-                exec_update = ResourceType.objects.get(object_id = 5, resource_id = 2)
-                exec_res = Resource.objects.create( endpoint = ep, resource_type = exec_update)
+                exec_update = ResourceType.objects.get(object_id=5, resource_id=2)
+                exec_res = Resource.objects.create(endpoint=ep, resource_type=exec_update)
                 exec_operation = EndpointOperation.objects.create(resource=exec_res)
                 fw_obj.execute_operation = exec_operation
                 process_pending_operations.delay(ep.endpoint)
@@ -178,7 +176,6 @@ class HandleResourceMixin:
         else:
             return
         fw_obj.save()
-
 
     # In case an update is finished (success/failure), abort any pending
     # operations (send URI, execute update). All communications should usually
