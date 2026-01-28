@@ -1,0 +1,10 @@
+[general]
+# Ignore certain rules
+ignore=body-is-missing,body-min-length
+
+# Enable contrib rules
+# Note: contrib-body-requires-signed-off-by is the correct name for the sign-off rule
+contrib=contrib-title-conventional-commits,contrib-body-requires-signed-off-by
+
+# This rule enforces the presence of a Signed-off-by line
+[contrib-body-requires-signed-off-by]
