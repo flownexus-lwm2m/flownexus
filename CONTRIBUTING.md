@@ -1,38 +1,57 @@
-# Contributing
+# Contributing to flownexus
 
-Thank you for considering contributing to the flownexus project! We appreciate
-your support and effort to improve this open-source project. Below are some
-guidelines to help you get started.
+Welcome to the flownexus project! We're excited that you're interested in
+helping us build a better local-first IoT framework. Whether you're fixing a
+bug, improving documentation, or proposing new features, your contributions are
+highly valued.
 
-## Making Changes and submitting a Pull Request
+If you have questions, ideas, or find a bug, please feel free to open a
+[GitHub Issue](https://github.com/jonasremmert/flownexus/issues) or start a
+discussion.
 
-1. **Commit Messages**: Use clear and descriptive commit messages. Follow the
-   convention:
-   ```plaintext
-   Component: Brief description of the change
-   ```
-2. **Push Your Changes**: Push your changes to your forked repository:
-   ```bash
-   git push origin my-feature-branch
-   ```
-2. **Open a Pull Request**: Navigate to the original repository and open a pull
-   request from your forked branch. Provide a clear and detailed description of
-   your changes.
-3. **Sign Your Commits**: Ensure all your commits are signed off. Use the
-   `--signoff` option when committing:
-   ```bash
-   git commit --signoff
-   ```
+## How to Contribute
+
+### 1. Development Workflow
+- Fork the repository and create your branch from `main`.
+- If you're adding a new feature, consider opening an issue first to discuss
+  the design.
+- Ensure your code follows the existing style (see `AGENTS.md` for detailed
+  Python/Django conventions).
+
+### 2. Local CI Testing
+Before opening a Pull Request, please run the basic CI tests locally. This
+helps keep the build green and speeds up the review process.
+
+The project uses a `Makefile` to simplify these checks:
+
+- **Run Django Unit Tests**:
+  ```bash
+  make test-django
+  ```
+- **Run Compliance Checks** (Linting, Formatting, Git History):
+  ```bash
+  make compliance
+  ```
+- **(Optional) Run End-to-End Tests**:
+  If you have Podman installed, you can run the full stack integration tests:
+  ```bash
+  make test-e2e
+  ```
+
+### 3. Commit & PR Requirements
+To maintain a clean and legal history, we require the following:
+
+- **Signed-off-by**: Every commit must be signed off to certify compliance with
+  the Developer Certificate of Origin (DCO). Use the `-s` or `--signoff` flag:
+  ```bash
+  git commit --signoff -m "Sensordata: Add validation for composite resources"
+  ```
+- **Commit Format**: Use the format `Component: Brief description`.
+- **Atomic Commits**: Keep commits focused on a single change.
 
 ## License
 
-By contributing to this project, you agree that your contributions are licensed
-under the [Apache License 2.0](LICENSE). This includes granting a patent
-license for your contributions as specified in Section 3 of the license.
-
-## Contact
-
-If you have any questions or need further assistance, feel free to open an
-issue on GitHub or contact the maintainers directly.
+By contributing to flownexus, you agree that your contributions will be
+licensed under the project's [Apache License 2.0](LICENSE).
 
 Happy coding!
