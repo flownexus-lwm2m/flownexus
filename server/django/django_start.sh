@@ -14,9 +14,9 @@ echo "Loading initial data..."
 python manage.py loaddata db_initial_data.json 2>&1 | tee -a $logfile
 
 # Check for existing records
-exists=$(echo "from sensordata.models import ResourceType; print(ResourceType.objects.count())" | python manage.py shell)
+exists=$(python manage.py shell -c "from sensordata.models import ResourceType; print(ResourceType.objects.count())" | tail -n 1)
 
-if [ "$exists" -eq "0" ]; then
+if [ -z "$exists" ] || [ "$exists" -eq "0" ]; then
     echo "Loading lwm2m resource types data..."
     python manage.py loaddata db_initial_resource_types.json 2>&1 | tee -a $logfile
 else

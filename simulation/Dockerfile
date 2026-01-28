@@ -1,4 +1,4 @@
-FROM debian:latest
+FROM docker.io/library/debian:latest
 
 # Set the frontend to noninteractive to avoid debconf issues
 ENV DEBIAN_FRONTEND=noninteractive

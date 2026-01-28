@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Exit immediately if a command fails, and ensure pipeline failures are captured
+set -e
+set -o pipefail
+
 # Ensure logs directory exists
 mkdir -p logs
 

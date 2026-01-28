@@ -1,5 +1,5 @@
 # Use the official OpenJDK 21 base image
-FROM maven:3.9-eclipse-temurin-21
+FROM docker.io/library/maven:3.9-eclipse-temurin-21
 
 # Set the working directory in the container
 WORKDIR /leshan

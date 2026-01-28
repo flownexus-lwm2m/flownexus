@@ -66,6 +66,19 @@ class DockerManager:
         self.container = None
         self.image = None
         self.leshan_ip = None
+        self.network_name = self._find_network()
+
+
+    def _find_network(self, target="mynetwork"):
+        """ Try to find the correct network name, especially for podman-compose. """
+        try:
+            for net in self.client.networks.list():
+                name = net.name
+                if name and (name == target or name.endswith(f"_{target}")):
+                    return name
+        except Exception:
+            pass
+        return f"server_{target}"
 
 
     def build_container(self):
@@ -82,23 +95,33 @@ class DockerManager:
 
 
     def get_ip_from_domain(self, domain="leshan"):
-        """ Gets the IP address of the specified domain by pinging it inside the container. """
-        if not self.container:
-            raise RuntimeError("Container is not running. Call start_container first.")
+        """ Gets the IP address of the specified domain by inspecting all containers. """
+        try:
+            containers = self.client.containers.list()
+            for container in containers:
+                # Check container name
+                name = container.name
+                if name and (domain == name or f"_{domain}_" in name or name.endswith(f"_{domain}")):
+                    networks = container.attrs.get('NetworkSettings', {}).get('Networks', {})
+                    for net_info in networks.values():
+                        ip = net_info.get('IPAddress', '')
+                        if ip:
+                            self.leshan_ip = ip
+                            return True
 
-        # Execute the command
-        command = f"ping -c 1 {domain}"
-        exit_code, output = self.run_cmd_sync(command, logging=False)
+                # Check aliases in all networks
+                networks = container.attrs.get('NetworkSettings', {}).get('Networks', {})
+                for net_info in networks.values():
+                    aliases = net_info.get('Aliases', [])
+                    if aliases and domain in aliases:
+                        ip = net_info.get('IPAddress', '')
+                        if ip:
+                            self.leshan_ip = ip
+                            return True
+        except Exception as e:
+            print(f"Error finding container for domain {domain}: {e}")
 
-        if exit_code == 0:
-            ip_address_match = re.search(r'\((\d+\.\d+\.\d+\.\d+)\)', output)
-            if ip_address_match:
-                self.leshan_ip = ip_address_match.group(1)
-                return True
-            else:
-                return False
-        else:
-            return False
+        return False
 
 
     def start_container(self):
@@ -112,7 +135,7 @@ class DockerManager:
                 working_dir=os.getcwd(),
                 detach=True,
                 privileged=True,
-                network="server_mynetwork"
+                network=self.network_name
             )
 
 
@@ -287,10 +310,41 @@ def start_clients(num_clients, time_gap, logging):
         process.wait()
 
 
+def setup_podman_env():
+    """ Automatically setup Podman environment if available and needed. """
+    # If DOCKER_HOST is already set, assume the user knows what they are doing
+    if os.environ.get('DOCKER_HOST'):
+        return
+
+    # Check if podman is installed
+    if not shutil.which('podman'):
+        return
+
+    # Construct the default rootless podman socket path
+    uid = os.getuid()
+    socket_path = f'/run/user/{uid}/podman/podman.sock'
+
+    # Check if socket exists, if not, try to start it
+    if not os.path.exists(socket_path):
+        print(f"Podman socket not found at {socket_path}. Attempting to start...")
+        try:
+            subprocess.run(['systemctl', '--user', 'start', 'podman.socket'], check=True)
+            time.sleep(1) # Give it a moment to initialize
+        except Exception as e:
+            print(f"Warning: Failed to start podman socket: {e}")
+            return
+
+    # If socket exists (or was just started), set the environment variable
+    if os.path.exists(socket_path):
+        print(f"Configuring environment to use Podman socket: {socket_path}")
+        os.environ['DOCKER_HOST'] = f"unix://{socket_path}"
+
+
 def main():
     global num_clients
     global ZEPHYR_CONF
     global docker_manager
+    setup_podman_env()
     os.makedirs(TEMP_CONF_DIR, exist_ok=True)
     os.makedirs(BINDIR, exist_ok=True)
 

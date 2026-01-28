@@ -1,18 +1,19 @@
 # Use the official lightweight Python image.
-FROM python:3.13-slim
+FROM docker.io/library/python:3.13-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Create and set the working directory in the container
 WORKDIR /django
 
-# Copy the content of the local src directory to the working directory
-COPY . /django/
-
-# Install dependencies in the container
+# Install dependencies
+COPY requirements.txt /django/
 RUN pip install --no-cache-dir -r /django/requirements.txt
+
+# Copy the rest of the code
+COPY . /django/
 
 # Collect static files
 RUN python manage.py collectstatic --noinput
