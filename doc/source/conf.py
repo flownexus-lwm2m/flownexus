@@ -11,91 +11,95 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import os
-import sys
 import re
+import sys
 
-sys.path.insert(0, os.path.abspath('../../src/'))
+sys.path.insert(0, os.path.abspath("../../src/"))
 master_doc = "index"
 
-project = 'flownexus'
-copyright = '2024, Individual contributors to flownexus'
-author = ''
+project = "flownexus"
+copyright = "2024, Individual contributors to flownexus"
+author = ""
 
-version = re.sub('', '', os.popen('git describe --tags').read().strip())
+version = re.sub("", "", os.popen("git describe --tags").read().strip())
 release = version
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
-    'sphinxcontrib.plantuml',
-    'sphinx.ext.imgconverter',
-    'sphinx.ext.todo',
-    'sphinxcontrib.redoc',
-    'sphinx_sitemap',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinxcontrib.plantuml",
+    "sphinx.ext.imgconverter",
+    "sphinx.ext.todo",
+    "sphinxcontrib.redoc",
+    "sphinx_sitemap",
 ]
 
 exclude_patterns = []
 
-html_theme = 'sphinx_book_theme'
-html_static_path = ['_static']
-html_favicon = '_static/flownexus_favicon.svg'
-html_baseurl = 'https://flownexus-lwm2m.github.io/flownexus/'
+html_theme = "sphinx_book_theme"
+html_static_path = ["_static"]
+html_favicon = "_static/flownexus_favicon.svg"
+html_baseurl = "https://flownexus-lwm2m.github.io/flownexus/"
 
 sitemap_url_scheme = "{link}"
 sitemap_locales = [None]
 # Add robots.txt so search engines can index the site
-html_extra_path = ['_static/robots.txt',
-                   '_static/google70331152569d412b.html']
+html_extra_path = ["_static/robots.txt", "_static/google70331152569d412b.html"]
 
 # Single gray logo for both dark and light themes (not used)
 # html_logo = '_static/flownexus_logo_gray.svg'
 
 html_css_files = [
-  'custom.css',
+    "custom.css",
 ]
 
 # Automatically generate ReST API documentation
 redoc = [
     {
-    'spec': '../build/generated/openapi-schema.yaml',
-    'page': 'api_doc/api',
-    'embed': True,
+        "spec": "../build/generated/openapi-schema.yaml",
+        "page": "api_doc/api",
+        "embed": True,
     },
 ]
 # Specify a more recent version for API Doc v
-redoc_uri = 'https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js'
+redoc_uri = "https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"
 
 html_theme_options = {
-    'repository_url': 'https://github.com/flownexus-lwm2m/flownexus',
-    'repository_branch': 'main',
-    'path_to_docs': 'doc/source/',
-    'use_repository_button': True,
-    'use_issues_button': True,
-    'use_edit_page_button': True,
-    'use_download_button': False,
-    'collapse_navbar': False,
-    'home_page_in_toc': False,
-    'navigation_with_keys': False,
-    'logo': {
-      "image_light": "_static/flownexus_logo_dark.svg",
-      "image_dark": "_static/flownexus_logo_light.svg",
-   }
+    "repository_url": "https://github.com/flownexus-lwm2m/flownexus",
+    "repository_branch": "main",
+    "path_to_docs": "doc/source/",
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_edit_page_button": True,
+    "use_download_button": False,
+    "collapse_navbar": False,
+    "home_page_in_toc": False,
+    "navigation_with_keys": False,
+    "logo": {
+        "image_light": "_static/flownexus_logo_dark.svg",
+        "image_dark": "_static/flownexus_logo_light.svg",
+    },
 }
 
 latex_elements = {
-    'fontpkg': '\\usepackage{lmodern}',
-    'papersize': 'a4paper',
-    'extraclassoptions': 'oneside',
-    'pointsize': '10pt',
-    'preamble': r'''
+    "fontpkg": "\\usepackage{lmodern}",
+    "papersize": "a4paper",
+    "extraclassoptions": "oneside",
+    "pointsize": "10pt",
+    "preamble": r"""
         \usepackage{microtype}
         \setcounter{tocdepth}{2}
         \usepackage{tocbibind} % Adds LoT and LoF to the ToC
-    ''',
+    """,
 }
 
 latex_documents = [
-    (master_doc, f'flownexus_{version}.tex', 'flownexus Documentation',
-     'Jonas Remmert, Akarshan Kapoor', 'manual'),
+    (
+        master_doc,
+        f"flownexus_{version}.tex",
+        "flownexus Documentation",
+        "Jonas Remmert, Akarshan Kapoor",
+        "manual",
+    ),
 ]

@@ -9,18 +9,22 @@ jobs:
 
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
       - name: Install tox
         run: pip install tox
 
-      - name: Run compliance checks with tox
+      - name: Run compliance checks
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-            export ZEPHYR_BASE=$PWD
             git fetch origin $BASE_REF
-            tox -c utils/ci/tox.ini -e compliance -- -c origin/$BASE_REF..
+            make compliance
