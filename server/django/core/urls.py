@@ -13,6 +13,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('leshan_api/', include('sensordata.urls')),
     path('', include('frontend.urls')),
+    path('deprecated/', include('frontend_deprecated.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
 ]
 

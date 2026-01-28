@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "sensordata",
     "frontend",
+    "frontend_deprecated",
 ]
 
 MIDDLEWARE = [
@@ -196,5 +197,5 @@ STATICFILES_DIRS = [ BASE_DIR / 'staticfiles']
 WHITENOISE_USE_FINDERS = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-LOGIN_REDIRECT_URL = '/admin_dashboard/'
+LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
