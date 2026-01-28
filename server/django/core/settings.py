@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,52 +24,52 @@ SECRET_KEY = "django-insecure-ttm_sr56l7mv#4smgm*+tffm*$q%!qqp@#q7*_*y38^^#9%@7*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-CSRF_TRUSTED_ORIGINS = ['https://flownexus.org', 'https://www.flownexus.org']
+CSRF_TRUSTED_ORIGINS = ["https://flownexus.org", "https://www.flownexus.org"]
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
         },
-        'simple': {
-            'format': '{levelname} {module}: {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+        "simple": {
+            "format": "{levelname} {module}: {message}",
+            "style": "{",
         },
     },
-    'loggers': {
-        '': {  # Root logger
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
         },
-        'sensordata': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
+    },
+    "loggers": {
+        "": {  # Root logger
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
         },
-        'frontend': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
+        "sensordata": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
         },
-        'celery': {
-            'handlers': ['console'],
-            'level': 'INFO',
+        "frontend": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "celery": {
+            "handlers": ["console"],
+            "level": "INFO",
         },
     },
 }
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -97,20 +97,20 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 # Automatic ReST API documentation
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Leshan ReST API',
-    'DESCRIPTION': 'The leshan_api is hosted by Django. The API allows the\
+    "TITLE": "Leshan ReST API",
+    "DESCRIPTION": "The leshan_api is hosted by Django. The API allows the\
                     Leshan server to add LwM2M resource data to Django. It is \
-                    an internal API and must not be exposed to the internet.',
-    'VERSION': '1.0.0',
+                    an internal API and must not be exposed to the internet.",
+    "VERSION": "1.0.0",
 }
 
 ROOT_URLCONF = "core.urls"
@@ -135,8 +135,8 @@ TEMPLATES = [
 
 
 # Media files (Firmware binaries)
-MEDIA_URL = os.getenv('MEDIA_URL', '/binaries/')
-MEDIA_ROOT = os.getenv('MEDIA_ROOT', BASE_DIR / 'media' / 'binaries')
+MEDIA_URL = os.getenv("MEDIA_URL", "/binaries/")
+MEDIA_ROOT = os.getenv("MEDIA_ROOT", BASE_DIR / "media" / "binaries")
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -151,12 +151,12 @@ DATABASES = {
 # Celery asynchroneous task queue
 # Set Redis environment depending on on whether the application runs in a
 # container or native.
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -177,8 +177,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 GRAPH_MODELS = {
-    'group_models': True,
-    }
+    "group_models": True,
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -191,11 +191,11 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'static_collect'
-STATICFILES_DIRS = [ BASE_DIR / 'staticfiles']
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "static_collect"
+STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 WHITENOISE_USE_FINDERS = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"

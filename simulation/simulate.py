@@ -4,26 +4,26 @@
 #
 
 import argparse
+import os
+import shutil
+import signal
 import subprocess
 import sys
-import signal
-import shutil
-import os
-import time
-import docker
 import threading
-import re
+import time
+
+import docker
 
 BASE_IMEI = 100000000000000
-TEMP_CONF_DIR = './conf_tmp'
-APP = 'lwm2m_client'
-BINDIR = os.path.abspath(f'./{APP}/endpoint_binaries')
-NET_TOOLS_DIR = os.path.abspath('../../tools/net-tools')
+TEMP_CONF_DIR = "./conf_tmp"
+APP = "lwm2m_client"
+BINDIR = os.path.abspath(f"./{APP}/endpoint_binaries")
+NET_TOOLS_DIR = os.path.abspath("../../tools/net-tools")
 DOCKER_BUILD_LOG_ENABLE = False
 CWD = os.getcwd()
 CONTAINER_VOLUME_MAPPING = {
-    CWD: {'bind': CWD, 'mode': 'rw'},
-    NET_TOOLS_DIR: {'bind': '/net-tools', 'mode': 'rw'}
+    CWD: {"bind": CWD, "mode": "rw"},
+    NET_TOOLS_DIR: {"bind": "/net-tools", "mode": "rw"},
 }
 # Check if NET_TOOLS_DIR is a directory
 if not os.path.isdir(NET_TOOLS_DIR):
@@ -68,9 +68,8 @@ class DockerManager:
         self.leshan_ip = None
         self.network_name = self._find_network()
 
-
     def _find_network(self, target="mynetwork"):
-        """ Try to find the correct network name, especially for podman-compose. """
+        """Try to find the correct network name, especially for podman-compose."""
         try:
             for net in self.client.networks.list():
                 name = net.name
@@ -80,41 +79,41 @@ class DockerManager:
             pass
         return f"server_{target}"
 
-
     def build_container(self):
         print("Building image from ./Dockerfile")
-        image, build_logs = self.client.images.build(path=os.getcwd(),
-                                                     dockerfile='Dockerfile',
-                                                     tag='net-tools-img')
+        image, build_logs = self.client.images.build(
+            path=os.getcwd(), dockerfile="Dockerfile", tag="net-tools-img"
+        )
         if DOCKER_BUILD_LOG_ENABLE:
             for chunk in build_logs:
-                if 'stream' in chunk:
-                    print(chunk['stream'], end='')
+                if "stream" in chunk:
+                    print(chunk["stream"], end="")
 
         self.image = image
 
-
     def get_ip_from_domain(self, domain="leshan"):
-        """ Gets the IP address of the specified domain by inspecting all containers. """
+        """Gets the IP address of the specified domain by inspecting all containers."""
         try:
             containers = self.client.containers.list()
             for container in containers:
                 # Check container name
                 name = container.name
-                if name and (domain == name or f"_{domain}_" in name or name.endswith(f"_{domain}")):
-                    networks = container.attrs.get('NetworkSettings', {}).get('Networks', {})
+                if name and (
+                    domain == name or f"_{domain}_" in name or name.endswith(f"_{domain}")
+                ):
+                    networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
                     for net_info in networks.values():
-                        ip = net_info.get('IPAddress', '')
+                        ip = net_info.get("IPAddress", "")
                         if ip:
                             self.leshan_ip = ip
                             return True
 
                 # Check aliases in all networks
-                networks = container.attrs.get('NetworkSettings', {}).get('Networks', {})
+                networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
                 for net_info in networks.values():
-                    aliases = net_info.get('Aliases', [])
+                    aliases = net_info.get("Aliases", [])
                     if aliases and domain in aliases:
-                        ip = net_info.get('IPAddress', '')
+                        ip = net_info.get("IPAddress", "")
                         if ip:
                             self.leshan_ip = ip
                             return True
@@ -123,9 +122,8 @@ class DockerManager:
 
         return False
 
-
     def start_container(self):
-        print(f"Starting container")
+        print("Starting container")
 
         if not self.container:
             self.container = self.client.containers.run(
@@ -135,9 +133,8 @@ class DockerManager:
                 working_dir=os.getcwd(),
                 detach=True,
                 privileged=True,
-                network=self.network_name
+                network=self.network_name,
             )
-
 
     def _stream_output(self, exec_id):
         """
@@ -145,8 +142,7 @@ class DockerManager:
         """
         output_stream = self.client.api.exec_start(exec_id, stream=True)
         for chunk in output_stream:
-            print(chunk.decode('utf-8'), end='')
-
+            print(chunk.decode("utf-8"), end="")
 
     def run_cmd_async(self, command, logging=False):
         """
@@ -166,7 +162,6 @@ class DockerManager:
             self.client.api.exec_start(exec_id, detach=True)
         return exec_id
 
-
     def run_cmd_sync(self, command, logging=False):
         """
         Execute a command inside the container and wait for the process to finish.
@@ -178,30 +173,28 @@ class DockerManager:
         exec_id = self.client.api.exec_create(self.container.id, command)
         output_stream = self.client.api.exec_start(exec_id, stream=True)
 
-        output = ''
+        output = ""
         for chunk in output_stream:
-            line = chunk.decode('utf-8')
+            line = chunk.decode("utf-8")
             output += line
             if logging:
-                print(line, end='')  # Print each line as it is generated
+                print(line, end="")  # Print each line as it is generated
 
         # Check the exit code of the command
         exec_inspect = self.client.api.exec_inspect(exec_id)
-        exit_code = exec_inspect.get('ExitCode')
+        exit_code = exec_inspect.get("ExitCode")
 
         return exit_code, output
-
 
     def attach_to_container(self):
         if self.container is None:
             raise RuntimeError("Container is not running. Please run the container first.")
 
         # Use subprocess to attach to the container's shell
-        subprocess.run(["docker", "exec", "-it", str(self.container.id), "/bin/bash"])
-
+        subprocess.run(["podman", "exec", "-it", str(self.container.id), "/bin/bash"])
 
     def stop_container(self):
-        print(f"Stopping container.")
+        print("Stopping container.")
         if self.container:
             self.container.stop(timeout=1)
             self.container.remove()
@@ -216,38 +209,42 @@ def signal_handler(sig, frame):
         docker_manager.stop_container()
     sys.exit(0)
 
+
 # Build Zephyr clients to control certain parameters like ipaddr, IMEI.
 def build_clients(num_clients, logging):
-
     for i in range(num_clients):
-        print(f'Building Zephyr client [{i + 1}/{num_clients}]', end='\r')
+        print(f"Building Zephyr client [{i + 1}/{num_clients}]", end="\r")
         if (i + 1) == num_clients:
             print()
 
-        file_path = os.path.join(TEMP_CONF_DIR, f'ep.{i}.conf')
-        ip_addr = f'192.0.{i}.3'
-        hwaddr = f'00:00:5e:01:{i:02x}:00'
-        gw_addr = f'192.0.{i}.1'
+        file_path = os.path.join(TEMP_CONF_DIR, f"ep.{i}.conf")
+        ip_addr = f"192.0.{i}.3"
+        hwaddr = f"00:00:5e:01:{i:02x}:00"
+        gw_addr = f"192.0.{i}.1"
         imei = str(BASE_IMEI + i)
-        zeth_name = f'zeth.{i}'
+        zeth_name = f"zeth.{i}"
 
         # Create a temporary file for the Kconfig options
-        with open(file_path, 'w') as config_file:
-            config_file.write(ZEPHYR_CONF.format(ip_addr=ip_addr,
-                                                 gw_addr=gw_addr,
-                                                 hwaddr=hwaddr,
-                                                 imei=imei,
-                                                 zeth_name=zeth_name))
+        with open(file_path, "w") as config_file:
+            config_file.write(
+                ZEPHYR_CONF.format(
+                    ip_addr=ip_addr, gw_addr=gw_addr, hwaddr=hwaddr, imei=imei, zeth_name=zeth_name
+                )
+            )
 
         build_cmd = [
-            'west', 'build', '-p=auto', '-b', 'native_sim/native/64', APP, '--',
-            '-DEXTRA_CONF_FILE=overlay-lwm2m-1.1.conf '
-            'overlay-tls.conf '
-            f'../{file_path}'
+            "west",
+            "build",
+            "-p=auto",
+            "-b",
+            "native_sim/native/64",
+            APP,
+            "--",
+            f"-DEXTRA_CONF_FILE=overlay-lwm2m-1.1.conf overlay-tls.conf ../{file_path}",
         ]
 
         # Run the command, capturing both stdout and stderr
-        result = subprocess.run(build_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(build_cmd, capture_output=True)
 
         # Check if the command failed
         if result.returncode:
@@ -261,44 +258,45 @@ def build_clients(num_clients, logging):
             print("Standard Error:\n", result.stderr.decode())
 
         # Copy files to the endpoint_binaries directory
-        source = 'build/zephyr/zephyr.exe'
-        destination = f'{BINDIR}/ep_{i}.exe'
+        source = "build/zephyr/zephyr.exe"
+        destination = f"{BINDIR}/ep_{i}.exe"
         shutil.copy(source, destination)
 
 
 def setup_net_ifaces(num_clients, logging):
     for i in range(num_clients):
-        file_path = os.path.join(TEMP_CONF_DIR, f'zeth.{i}.conf')
+        file_path = os.path.join(TEMP_CONF_DIR, f"zeth.{i}.conf")
 
-        if_ip_addr = f'192.0.{i}.1/24'
-        if_ip_route = f'192.0.{i}.0/24'
-        hwaddr = f'00:00:5e:00:00:{i:02x}'
-        if_name = f'zeth.{i}'
+        if_ip_addr = f"192.0.{i}.1/24"
+        if_ip_route = f"192.0.{i}.0/24"
+        hwaddr = f"00:00:5e:00:00:{i:02x}"
+        if_name = f"zeth.{i}"
 
-        with open(file_path, 'w') as config_file:
-            config_file.write(IF_CONF.format(if_ip_addr=if_ip_addr,
-                                             if_ip_route=if_ip_route,
-                                             hwaddr=hwaddr,
-                                             if_name=if_name))
+        with open(file_path, "w") as config_file:
+            config_file.write(
+                IF_CONF.format(
+                    if_ip_addr=if_ip_addr, if_ip_route=if_ip_route, hwaddr=hwaddr, if_name=if_name
+                )
+            )
 
-        print(f'Starting zeth [{i + 1}/{num_clients}]           ', end='\r')
+        print(f"Starting zeth [{i + 1}/{num_clients}]           ", end="\r")
         if (i + 1) == num_clients:
             print()
 
         # Create the network interface inside the container
-        cmd = f'/net-tools/net-setup.sh --config {file_path} -i zeth.{i} start'
+        cmd = f"/net-tools/net-setup.sh --config {file_path} -i zeth.{i} start"
         exit_code, _ = docker_manager.run_cmd_sync(cmd, logging=logging)
         if exit_code != 0:
-            print('Failed to start zeth')
+            print("Failed to start zeth")
             signal_handler(signal.SIGINT, None)
 
 
 def start_clients(num_clients, time_gap, logging):
     processes = []
     for i in range(num_clients):
-        cmd = f'{BINDIR}/ep_{i}.exe'
+        cmd = f"{BINDIR}/ep_{i}.exe"
         docker_manager.run_cmd_async(cmd, logging=logging)
-        print(f'Starting Zephyr client [{i + 1}/{num_clients}]', end='\r')
+        print(f"Starting Zephyr client [{i + 1}/{num_clients}]", end="\r")
         if (i + 1) == num_clients:
             print()
 
@@ -311,25 +309,25 @@ def start_clients(num_clients, time_gap, logging):
 
 
 def setup_podman_env():
-    """ Automatically setup Podman environment if available and needed. """
+    """Automatically setup Podman environment if available and needed."""
     # If DOCKER_HOST is already set, assume the user knows what they are doing
-    if os.environ.get('DOCKER_HOST'):
+    if os.environ.get("DOCKER_HOST"):
         return
 
     # Check if podman is installed
-    if not shutil.which('podman'):
+    if not shutil.which("podman"):
         return
 
     # Construct the default rootless podman socket path
     uid = os.getuid()
-    socket_path = f'/run/user/{uid}/podman/podman.sock'
+    socket_path = f"/run/user/{uid}/podman/podman.sock"
 
     # Check if socket exists, if not, try to start it
     if not os.path.exists(socket_path):
         print(f"Podman socket not found at {socket_path}. Attempting to start...")
         try:
-            subprocess.run(['systemctl', '--user', 'start', 'podman.socket'], check=True)
-            time.sleep(1) # Give it a moment to initialize
+            subprocess.run(["systemctl", "--user", "start", "podman.socket"], check=True)
+            time.sleep(1)  # Give it a moment to initialize
         except Exception as e:
             print(f"Warning: Failed to start podman socket: {e}")
             return
@@ -337,7 +335,7 @@ def setup_podman_env():
     # If socket exists (or was just started), set the environment variable
     if os.path.exists(socket_path):
         print(f"Configuring environment to use Podman socket: {socket_path}")
-        os.environ['DOCKER_HOST'] = f"unix://{socket_path}"
+        os.environ["DOCKER_HOST"] = f"unix://{socket_path}"
 
 
 def main():
@@ -349,42 +347,38 @@ def main():
     os.makedirs(BINDIR, exist_ok=True)
 
     parser = argparse.ArgumentParser(
-        description='Zephyr Build and Run Script',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description="Zephyr Build and Run Script",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    parser.add_argument('-n', type=int, default=1,
-                        dest='num_clients',
-                        help='Number of client instances to start. (1 - 254)')
-    parser.add_argument('-v', action='store_true',
-                        dest='verbose',
-                        help='Enable logging')
-    parser.add_argument('-b', action='store_true',
-                        dest='build',
-                        help='Build the client')
-    parser.add_argument('-r', action='store_true',
-                        dest='run',
-                        help='Run the client.')
-    parser.add_argument('-d', type=int, default=0,
-                        dest='delay',
-                        help='Client start delay [ms]')
-    parser.add_argument('-l', action='store_true',
-                        dest='local',
-                        help='Connect to locally running Leshan server')
+    parser.add_argument(
+        "-n",
+        type=int,
+        default=1,
+        dest="num_clients",
+        help="Number of client instances to start. (1 - 254)",
+    )
+    parser.add_argument("-v", action="store_true", dest="verbose", help="Enable logging")
+    parser.add_argument("-b", action="store_true", dest="build", help="Build the client")
+    parser.add_argument("-r", action="store_true", dest="run", help="Run the client.")
+    parser.add_argument("-d", type=int, default=0, dest="delay", help="Client start delay [ms]")
+    parser.add_argument(
+        "-l", action="store_true", dest="local", help="Connect to locally running Leshan server"
+    )
 
     args = parser.parse_args()
     if not args.build and not args.run:
-        print('No build/run options provided, build and run n clients with logging:')
-        print('  Warning: bindir will be cleaned, do you want to continue? [y/n]')
+        print("No build/run options provided, build and run n clients with logging:")
+        print("  Warning: bindir will be cleaned, do you want to continue? [y/n]")
         response = input()
-        if response.lower() != 'y':
+        if response.lower() != "y":
             signal_handler(signal.SIGINT, None)
         args.verbose = True
         args.build = True
         args.run = True
 
     if args.num_clients < 1 or args.num_clients > 254:
-        print('Number of clients must be inbetween 1 and 254')
+        print("Number of clients must be inbetween 1 and 254")
         sys.exit(1)
 
     # Automatically discard output if more than one client is started
@@ -413,9 +407,9 @@ def main():
         ZEPHYR_CONF += f"\n{zephyr_conf_lwm2m_ip}"
 
     if args.build:
-        print(f'Cleaning ./{APP}/endpoint_binaries/, ./conf_tmp/')
-        subprocess.run(f'rm -f {BINDIR}/*', shell=True, check=True)
-        subprocess.run(f'rm -f ./conf_tmp/*', shell=True, check=True)
+        print(f"Cleaning ./{APP}/endpoint_binaries/, ./conf_tmp/")
+        subprocess.run(f"rm -f {BINDIR}/*", shell=True, check=True)
+        subprocess.run("rm -f ./conf_tmp/*", shell=True, check=True)
 
         build_clients(num_clients, args.verbose)
 
@@ -425,21 +419,27 @@ def main():
     setup_net_ifaces(num_clients, args.verbose)
     start_clients(num_clients, args.delay, args.verbose)
 
-    print('Quit <q>;   Attach to Container <a>')
-    response = ''
-    while response.lower() not in ['q', 'a']:
-        response = input()
-        if response.lower() == 'q':
-            signal_handler(signal.SIGINT, None)
-        elif response.lower() == 'a':
-            docker_manager.attach_to_container()
-        else:
-            print('Invalid input')
+    if sys.stdin.isatty():
+        print("Quit <q>;   Attach to Container <a>")
+        response = ""
+        while response.lower() not in ["q", "a"]:
+            try:
+                response = input()
+            except EOFError:
+                break
 
+            if response.lower() == "q":
+                signal_handler(signal.SIGINT, None)
+            elif response.lower() == "a":
+                docker_manager.attach_to_container()
+            else:
+                print("Invalid input")
+    else:
+        print("Non-interactive mode, staying alive...")
 
     while True:
         time.sleep(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

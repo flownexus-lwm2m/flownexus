@@ -4,10 +4,12 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-from rest_framework import serializers
-from .base import HandleResourceMixin, ResourceDataSerializer
-from ..models import Endpoint
 import logging
+
+from rest_framework import serializers
+
+from ..models import Endpoint
+from .base import HandleResourceMixin, ResourceDataSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 class InstanceSerializer(serializers.Serializer):
     resources = ResourceDataSerializer(many=True)
     KIND_CHOICES = [
-        'instance',
+        "instance",
     ]
     kind = serializers.ChoiceField(choices=KIND_CHOICES)
     id = serializers.IntegerField(help_text="Instance Counter")
@@ -24,7 +26,7 @@ class InstanceSerializer(serializers.Serializer):
 class ObjectSerializer(serializers.Serializer):
     instances = InstanceSerializer(many=True, required=False)
     KIND_CHOICES = [
-        'obj',
+        "obj",
     ]
     kind = serializers.ChoiceField(choices=KIND_CHOICES)
     id = serializers.IntegerField(help_text="Object ID")
@@ -32,10 +34,7 @@ class ObjectSerializer(serializers.Serializer):
 
 class ValueSerializer(serializers.Serializer):
     # Annotation for Django Rest Framework for documentation generation
-    objects = serializers.ListField(
-        child=ObjectSerializer(),
-        help_text="List of LwM2M objects"
-    )
+    objects = serializers.ListField(child=ObjectSerializer(), help_text="List of LwM2M objects")
 
     def to_representation(self, instance):
         ret = {}
@@ -58,16 +57,16 @@ class CompositeResourceSerializer(HandleResourceMixin, serializers.Serializer):
     val = ValueSerializer()
 
     def create(self, validated_data):
-        ep = validated_data['ep']
-        val = validated_data['val']
+        ep = validated_data["ep"]
+        val = validated_data["val"]
 
         endpoint, _ = Endpoint.objects.get_or_create(endpoint=ep)
 
         for _, obj in val.items():
-            obj_id = obj.get('id')
+            obj_id = obj.get("id")
             self.create_event(endpoint, obj_id)
-            for instance in obj['instances']:
-                for resource in instance['resources']:
+            for instance in obj["instances"]:
+                for resource in instance["resources"]:
                     try:
                         self.handle_resource(endpoint, obj_id, resource)
                     except serializers.ValidationError as e:

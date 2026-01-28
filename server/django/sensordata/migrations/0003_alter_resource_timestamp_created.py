@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('sensordata', '0002_alter_firmware_binary'),
+        ("sensordata", "0002_alter_firmware_binary"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='resource',
-            name='timestamp_created',
+            model_name="resource",
+            name="timestamp_created",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

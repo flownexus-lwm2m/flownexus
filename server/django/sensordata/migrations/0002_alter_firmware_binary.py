@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('sensordata', '0001_initial'),
+        ("sensordata", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='firmware',
-            name='binary',
-            field=models.FileField(upload_to=''),
+            model_name="firmware",
+            name="binary",
+            field=models.FileField(upload_to=""),
         ),
     ]

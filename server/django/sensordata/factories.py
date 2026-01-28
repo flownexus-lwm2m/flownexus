@@ -52,7 +52,9 @@ class ResourceFactory(DjangoModelFactory):
 
     endpoint = factory.SubFactory(EndpointFactory)
     resource_type = factory.SubFactory(ResourceTypeFactory)
-    float_value = factory.Faker("pyfloat", left_digits=2, right_digits=1, min_value=15.0, max_value=30.0)
+    float_value = factory.Faker(
+        "pyfloat", left_digits=2, right_digits=1, min_value=15.0, max_value=30.0
+    )
 
 
 class EventFactory(DjangoModelFactory):

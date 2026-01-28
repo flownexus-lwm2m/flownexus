@@ -4,15 +4,17 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-from celery import shared_task
-import requests
-from .models import Endpoint, EndpointOperation
 import logging
 import os
+
+import requests
+from celery import shared_task
 from django.utils import timezone
 
+from .models import Endpoint, EndpointOperation
+
 # Check if we run in a container or locally
-LESHAN_URI = os.getenv('LESHAN_URI', 'http://0.0.0.0:8080') + '/api'
+LESHAN_URI = os.getenv("LESHAN_URI", "http://0.0.0.0:8080") + "/api"
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def send_operation(endpointOperation_id: int) -> None:
-
     try:
         e_ops = EndpointOperation.objects.get(id=endpointOperation_id)
     except EndpointOperation.DoesNotExist:
@@ -33,17 +34,14 @@ def send_operation(endpointOperation_id: int) -> None:
     logger.debug(f"Sending data to endpoint {ep}")
 
     # Construct the URL based on the endpoint, object_id, and resource_id
-    url = (
-        f'{LESHAN_URI}/clients/{ep}/'
-        f'{resource_type.object_id}/0/{resource_type.resource_id}'
-    )
-    params = {'timeout': 5, 'format': 'CBOR'}
-    headers = {'Content-Type': 'application/json'}
+    url = f"{LESHAN_URI}/clients/{ep}/{resource_type.object_id}/0/{resource_type.resource_id}"
+    params = {"timeout": 5, "format": "CBOR"}
+    headers = {"Content-Type": "application/json"}
     data = {
         "id": resource_type.resource_id,
         "kind": "singleResource",
         "value": resource.get_value(),
-        "type": resource_type.data_type
+        "type": resource_type.data_type,
     }
 
     # Store the current attempt in the database as the request may take a while
@@ -53,16 +51,16 @@ def send_operation(endpointOperation_id: int) -> None:
 
     # NONE type means this resource is an execute command. An execute command
     # is send with a POST instead of PUT. It does not have data.
-    if resource_type.data_type == 'NONE':
+    if resource_type.data_type == "NONE":
         response = requests.post(url, params=params, headers=headers)
     else:
         response = requests.put(url, params=params, headers=headers, json=data)
     if response.status_code == 200:
-        logger.debug(f'Data sent to endpoint {ep} successfully')
-        logger.debug(f'Response: {response.status_code} - {response.json()}')
+        logger.debug(f"Data sent to endpoint {ep} successfully")
+        logger.debug(f"Response: {response.status_code} - {response.json()}")
         e_ops.status = e_ops.Status.CONFIRMED
     else:
-        logger.error(f'Failed to send data: {response.status_code}')
+        logger.error(f"Failed to send data: {response.status_code}")
         e_ops.transmit_counter += 1
 
         if e_ops.transmit_counter >= 3:
@@ -83,8 +81,7 @@ def process_pending_operations(endpoint_id):
 
     # Get all pending operations for the endpoint
     pending_operations = EndpointOperation.objects.filter(
-        resource__endpoint=endpoint,
-        status=EndpointOperation.Status.QUEUED
+        resource__endpoint=endpoint, status=EndpointOperation.Status.QUEUED
     )
     logger.info(f"Found {pending_operations.count()} pending operations for {endpoint.endpoint}")
     logger.info(f"Pending operations: {pending_operations}")
