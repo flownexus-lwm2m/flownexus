@@ -4,6 +4,8 @@ services:
     build:
       context: ./django
       dockerfile: Dockerfile.django
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
     volumes:
       - ./django:/django
       - ./logs:/django/logs

@@ -79,12 +79,12 @@ The following diagram shows the Container Environment. The file
   Make sure to change the password to the admin console as well as other
   settings like SECRET_KEY, DEBUG flag in a production environment!
 
-The container can be build and started with the following commands:
+The container can be built and started with the following commands:
 
 .. code-block:: console
 
-  host:~/workspace/flownexus/server$ podman-compose build
-  host:~/workspace/flownexus/server$ podman-compose up
+  host:~/workspace/flownexus$ make server-build
+  host:~/workspace/flownexus$ podman-compose -f server/compose.yml up
 
 
 .. _setup-a-virtual-server-label:
@@ -276,7 +276,8 @@ in the ``settings.py`` file before deploying.:
 
    vserver:~/ git clone https://github.com/flownexus-lwm2m/flownexus.git
    # Change the DEPLOY_SECRET_KEY and DEBUG flag in the settings.py file
-   vserver:~/flownexus/server$ podman-compose up -d
+   vserver:~/flownexus$ make server-build
+   vserver:~/flownexus$ podman-compose -f server/compose.yml up -d
 
 flownexus is now available at https://flownexus.org. The server is running in a
 Docker container and the Nginx server is used as a reverse proxy.

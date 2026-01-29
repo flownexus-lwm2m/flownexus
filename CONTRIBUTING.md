@@ -32,6 +32,10 @@ The project uses a `Makefile` to simplify these checks:
   ```bash
   make compliance
   ```
+- **Build the Server Stack**:
+  ```bash
+  make server-build
+  ```
 - **(Optional) Run End-to-End Tests**:
   If you have Podman installed, you can run the full stack integration tests:
   ```bash

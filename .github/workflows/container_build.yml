@@ -1,0 +1,21 @@
+name: Container Build CI
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0 # Necessary for git describe to work
+
+    - name: Install podman-compose
+      run: pip install podman-compose
+
+    - name: Build Containers
+      run: make server-build

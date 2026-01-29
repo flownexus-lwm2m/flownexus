@@ -5,6 +5,10 @@ FROM docker.io/library/python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Accept version as a build argument and set it as an environment variable
+ARG APP_VERSION=unknown
+ENV APP_VERSION=${APP_VERSION}
+
 # Create and set the working directory in the container
 WORKDIR /django
 
