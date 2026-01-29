@@ -13,7 +13,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("flownexus/ingest/", include("sensordata.urls")),
     path("", include("frontend.urls")),
-    path("deprecated/", include("frontend_deprecated.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
 ]
 
