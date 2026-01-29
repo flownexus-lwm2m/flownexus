@@ -1,255 +1,175 @@
 Simulation
 ==========
 
-IoT Devices with Zephyr
------------------------
+flownexus provides a modular simulation platform located in the ``simulation/``
+directory. This platform allows you to simulate IoT devices at different levels
+of fidelity, from lightweight API mocks to full-stack Zephyr firmware
+simulations.
 
-Zephyr implements an LwM2M client library [1]_ and has an LwM2M client sample
-[2]_. The Zephyr works with the flownexus server out of the box e.g. with an
-nRF9160 DK board.
+Simulation Backends
+-------------------
 
-flownexus provides a modified sample at ``simulation/lwm2m_client`` to showcase
-all server features.
+The platform supports two primary backends:
+
+1.  **Mock Backend**: A lightweight Python-based simulator that interacts
+    directly with the Django Ingestion API. It is ideal for frontend development
+    and load testing.
+2.  **Zephyr Backend**: A high-fidelity simulator that builds and runs actual
+    Zephyr OS binaries (``native_sim``) inside a containerized network
+    environment.
+
+Simulation Dispatcher (simulate.py)
+-----------------------------------
+
+The ``simulate.py`` script is the central entry point for all simulations. It
+uses YAML configuration files to define the simulation behavior.
+
+.. code-block:: console
+  :caption: Usage of simulate.py
+
+  host:~/flownexus/simulation$ python3 simulate.py --help
+  usage: simulate.py [-h] --config CONFIG [--build] [--run]
+                     [--type {mock,zephyr}] [--count DEVICE_COUNT]
+
+  Flownexus Device Simulation Dispatcher
+
+  options:
+    -h, --help            show this help message and exit
+    --config CONFIG       Path to simulation YAML config file (Required)
+    --build               Build binaries (Zephyr only)
+    --run                 Run simulation
+    --type {mock,zephyr}  Override simulation type
+    --count DEVICE_COUNT  Override number of devices
+
+Mock Simulation
+---------------
+
+The Mock backend is designed for rapid development of the flownexus frontend.
+It bypasses the complexity of LwM2M and Zephyr, sending telemetry data directly
+to the server.
+
+Features
+........
+
+*   **Sine-wave Data**: Generates smooth temperature and humidity curves,
+    making it easy to verify frontend charts.
+*   **Zero Dependencies**: Does not require Docker, Podman, or Zephyr
+    toolchains.
+*   **Fast**: Instant startup and low resource overhead.
+
+Running the Mock Simulation
+...........................
+
+The easiest way to start a mock simulation is via the project ``Makefile``:
+
+.. code-block:: console
+
+  host:~/flownexus$ make run-mock
+
+Alternatively, you can use the provided ``sim_mock.yaml`` configuration with the
+script directly:
+
+.. code-block:: console
+
+  host:~/flownexus/simulation$ python3 simulate.py --config sim_mock.yaml
 
 .. note::
-   The lwm2m_client sample is a copy of the original Zephyr sample. Distinct
-   features that showcase flownexus capabilities are planned for the upcoming
-   releases.
+   Ensure your Django server is running before starting the simulation. By
+   default, it targets ``http://localhost:8000/flownexus/ingest``.
 
-Client Simulation
+Zephyr Simulation
 -----------------
 
-The lwm2m_client sample can run in simulation mode (``native_sim``) [3]_.
-Building the sample with ``native_sim`` will generate a binary that can be
-executed directly on the host machine. This allows to test all components
-locally.
-
-The native_sim simulation allows to connect the simulated Zephyr instance to
-the host network [4]_. Furthermore, simulated Zephyr endpoints have access to
-the internet via the host network, allowing testing of both a locally hosted
-instance of flownexus as well as a remote instance.
-
-To simulate endpoints easily, a script is provided that builds and runs the
-endpoints in a container. Setting up the network and running the
-simulation in a container ensures interoperability with different host
-systems.
-
-.. note::
-   The native_sim simulation does not have a true random number generator and
-   therefore the entropy source is limited. If a built simulation
-   image is run multiple times, the CoAP message that registers the endpoint with
-   the server may have the same message ID. The CoAP internal deduplicator will
-   ignore this message if a previous message within ``NON_LIFETIME`` seconds
-   (default 145 s) had the same message content and the same message ID. This
-   can lead to the device not being properly registered with the server.
-
-   This issue only shows if the same client registers multiple times within 145
-   s and only during simulation. Hardware with a true random number generator
-   is not affected, in face the CoAP deduplication feature is necessary for
-   reliable function. You can either wait for 145 s or rebuild the client. In
-   case of a rebuild the entropy seed will be different and the resulting
-   message ID will be different.
+The Zephyr backend runs actual firmware binaries. This is used for
+end-to-end (E2E) testing and verifying LwM2M protocol compliance.
 
 Prerequisites
 .............
 
-The simulation requires a working Podman installation and the Python ``docker``
-library.
-
-.. note::
-   The simulation script uses the Python Docker SDK to interact with Podman.
-   Ensure that the Podman socket is active and the ``DOCKER_HOST`` environment
-   variable is set if necessary (e.g., ``export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock``).
-
-   Furthermore, the flownexus server stack should be running.
-   The script expects the network ``server_mynetwork`` to be available,
-   which is created when starting the server via ``podman-compose`` in the
-   ``server/`` directory.
+The Zephyr simulation requires a working Podman installation and the
+Python ``docker`` and ``PyYAML`` libraries.
 
 .. code-block:: console
 
    host:~$ apt install podman podman-compose
-   host:~$ pip install docker
+   host:~$ pip install docker PyYAML
 
+Furthermore, the flownexus server stack should be running. The script expects
+the network ``server_mynetwork`` to be available.
 
-Simulating a single Endpoint
-............................
-
-The easiest way to run the simulation is to execute the simulate.py script
-without any arguments:
-
-.. code-block:: console
-
-  host:~/workspace/flownexus/simulation$ python3 ./simulate.py
-  No build/run options provided, build and run n clients with logging:
-    Warning: bindir will be cleaned, do you want to continue? [y/n]
-  y
-
-  Cleaning ./lwm2m_client/endpoint_binaries/, ./conf_tmp/
-  Building Zephyr client [1/1]
-  Building image from ./Dockerfile
-  Starting container
-  Starting zeth [1/1]
-  Starting Zephyr client [1/1]
-
-  *** Booting Zephyr OS build v3.7.0-rc3-75-gd06e95c49b75 ***
-  [..]
-
-You should now be able see one active endoint with the registration name
-``urn:imei:100000000000000`` the registered node in the Django Admin dashboard
-at ``https://flownexus.org/admin/``.
-
-Simulation Script (simulate.py)
-...............................
-
-.. code-block:: console
-  :caption: Options of the simulate.py script
-
-  host:~/workspace/flownexus/simulation$ python3 simulate.py --help
-  usage: simulate.py [-h] [-n NUM_CLIENTS] [-v] [-b] [-r] [-d DELAY] [-l]
-
-  Zephyr Build and Run Script
-
-  options:
-    -h, --help      show this help message and exit
-    -n NUM_CLIENTS  Number of client instances to start. (1 - 254) (default: 1)
-    -v              Enable logging (default: False)
-    -b              Build the client (default: False)
-    -r              Run the client. (default: False)
-    -d DELAY        Client start delay [ms] (default: 0)
-    -l              Connect to locally running Leshan server (default: False)
-
-Simulating Multiple Endpoints
+Running the Zephyr Simulation
 .............................
 
-The simulation allows to configure and start multiple Zephyr endpoints. The
-script takes care of assigning individual IP addresses and gateway settings to
-each endpoint. Furthermore it sets up the virtual network adapter (zeth) that
-connects the endpoints to the host network. For that reason, each endpoint has
-to be build before it can be started. The resulting binaries are stored in the
-lwm2m_client sample (e.g. ``lwm2m_client/endpoint_binaries/ep_0.exe``). A set
-of devices can be build once and started by omitting the parameter ``-b``.
+The easiest way to build and run the Zephyr simulation is via the project
+``Makefile``:
 
 .. code-block:: console
-  :caption: Build and run 10 endpoints without logging
 
-  host:~/workspace/flownexus/simulation$ python3 simulate.py -b -r -n 10
-  Cleaning ./lwm2m_client/endpoint_binaries/, ./conf_tmp/
-  Building Zephyr client [10/10]
-  Building image from ./Dockerfile
-  Starting container
-  Starting zeth [10/10]
-  Starting Zephyr client [10/10]
-  # Stop the simulation with <Ctrl+c>
-  Stopping container
+  # Build the binaries (Required once or after code changes)
+  host:~/flownexus$ make build-sim
 
-.. warning::
-   The simulate.py script supports max. 254 clients.
+  # Run the E2E test suite
+  host:~/flownexus$ make test-e2e
 
-Connecting to a locally hosted Leshan server
-............................................
+Manual Control
+..............
 
-Connecting to a locally hosted Leshan server is possible by setting the ``-l``
-flag. The script will connect the simulated Zephyr instances to the Leshan
-server running on the host machine. Internally, the script attaches the
-simulation container to the ``server_mynetwork`` network and identifies
-the IP address of the Leshan server by resolving the hostname ``leshan``
-(e.g., via ping).
-
-The script then overwrites the ``LWM2M_APP_SERVER`` configuration option in the
-Zephyr lwm2m_client sample with this identified IP address.
-
-If the Leshan server is started on the host natively (without podman-compose),
-change the IP address in the Kconfig file (see next chapter) to
-``coap://192.0.2.2:5683``.
-
-Configuring the Firmware
-........................
-
-You can change the flownexus domain that you want to connect to by modifying
-the ``Kconfig`` file in the lwm2m_client sample.
-
-.. code-block:: diff
-  :caption: Change LwM2M server to the public hosted eclipse leshan server
-
-   ./simulation/lwm2m_client/Kconfig
-   config LWM2M_APP_SERVER
-          string "LwM2M server address"
-  -       default "coap://flownexus.org:5683" if !LWM2M_DTLS_SUPPORT
-  +       default "coap://leshan.eclipseprojects.io:5683" if !LWM2M_DTLS_SUPPORT
-
-Leshan URLs:
-  - flownexus public server: ``coap://flownexus.org:5683``
-  - Eclipse public Leshan server: ``coap://leshan.eclipseprojects.io:5683``
-
-If you want to modify the firmware further, check :ref:`firmware_setup` for
-more details on this topic.
-
-.. note::
-   After making changes to Kconfig, make sure to delete the build directory
-   to ensure that the changes are applied.
-
-
-Attach to the running Container
-...............................
-
-After starting the simulation, you can attach to the running container e.g. to
-attach to the Shell terminal of a running Zephyr instance:
+You can also use ``simulate.py`` directly with the Zephyr configuration:
 
 .. code-block:: console
-  :caption: Attach to the running container
 
-  host:~/workspace/flownexus/simulation$ python3 simulate.py -b -r -n 1
-  Cleaning ./lwm2m_client/endpoint_binaries/, ./conf_tmp/
-  Building Zephyr client [1/1]
-  Building image from ./Dockerfile
-  Starting container
-  Starting zeth [1/1]
-  Starting Zephyr client [1/1]
-  Quit <q>;   Attach to Container <a>
-  a
+  # Build 5 devices
+  host:~/flownexus/simulation$ python3 simulate.py --config sim_zephyr.yaml --build --count 5
 
-  root@855c499d5a09:/home/workspace/flownexus/simulation# tio /dev/pts/0
-  tio v2.7
-  Press ctrl-t q to quit
-  Connected
-  (Press <Tab> to interact with the Zephyr Shell)
+  # Run the simulation and connect to the local server
+  host:~/flownexus/simulation$ python3 simulate.py --config sim_zephyr.yaml --run --local
 
-    clear    device   devmem   help     history  kernel   lwm2m    net
-    rem      resize   retval   shell
+Configuration (YAML)
+--------------------
 
-By having access to individual nodes, you can interact with the Zephyr Shell
-and test different features. In particular, interacting with the LwM2M Shell
-can be useful to test the LwM2M client features.
+Simulations are configured via YAML files. This allows you to check in specific
+test scenarios into version control.
 
-Manual build and run
-....................
+.. code-block:: yaml
+  :caption: Example sim_mock.yaml
 
-For development purposes, it can be useful to build and run the simulation
-manually. The following steps show how to setup zeth network, build and run the
-Zephyr lwm2m_client sample.
+  type: mock
+  url: "http://localhost:8000/flownexus/ingest"
+  device_count: 5
+  interval: 2.0  # Seconds between updates
+  duration: 0    # 0 = Run forever
+  run: true      # Automatically start simulation
+
+.. code-block:: yaml
+  :caption: Example sim_zephyr.yaml
+
+  type: zephyr
+  device_count: 1
+  local_leshan: true  # Connect to the Leshan container
+  verbose: false
+  delay: 0            # Startup delay between instances (ms)
+  build: false
+  run: false
+
+Integration Testing
+-------------------
+
+The mock simulation is integrated into the Django test suite. You can run
+automated ingestion tests using:
 
 .. code-block:: console
-  :caption: Manual build and run of the Zephyr lwm2m_client sample
 
-  host:~/workspace/flownexus$ west update # Update the Zephyr repository
-  host:~/workspace/flownexus$ ../tools/net-tools/net-setup.sh start
-  Using ../tools/net-tools/./zeth.conf configuration file.
-  Creating zeth
-  host:~/workspace/flownexus$ west build -b native_sim simulation/lwm2m_client -p -- -DCONF=overlay-lwm2m-1.1.conf
-  host:~/workspace/flownexus$ west build -t run
-  *** Booting Zephyr OS build v3.7.0-rc3-75-gd06e95c49b75 ***
-  [..]
-  <inf> net_config: IPv4 address: 192.0.2.1
-  <inf> net_lwm2m_client_app: Run LWM2M client
+  host:~/flownexus/server/django$ python manage.py test sensordata.tests.test_mock_simulation
 
-  # Stop the simulation with <Ctrl+c>, do not forget to stop the zeth network
-  host:~/workspace/flownexus$ ../tools/net-tools/net-setup.sh stop
-  Using ../tools/net-tools/./zeth.conf configuration file.
-  Removing zeth
+This test uses Django's ``LiveServerTestCase`` to spin up a real HTTP server
+and verify that the simulation backend can successfully register devices and
+ingest data.
 
+External Resources
+------------------
 
-.. [1] https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html
-.. [2] https://docs.zephyrproject.org/latest/samples/net/lwm2m_client/README.html
-.. [3] https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html.
-.. [4] https://docs.zephyrproject.org/latest/connectivity/networking/networking_with_multiple_instances.html
+.. seealso::
+   * `Zephyr LwM2M API <https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html>`_
+   * `Zephyr LwM2M Client Sample <https://docs.zephyrproject.org/latest/samples/net/lwm2m_client/README.html>`_
+   * `Zephyr Native Sim Board <https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html>`_
+   * `Zephyr Networking with Multiple Instances <https://docs.zephyrproject.org/latest/connectivity/networking/networking_with_multiple_instances.html>`_
