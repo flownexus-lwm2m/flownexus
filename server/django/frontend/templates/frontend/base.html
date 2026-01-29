@@ -4,7 +4,7 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
-    <title>flownexus - {% block title %}Dashboard{% endblock %}</title>
+    <title>flownexus - {% block title %}Overview{% endblock %}</title>
     <!-- CSS files -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -62,7 +62,7 @@
                 <li class="nav-item active">
                   <a class="nav-link" href="{% url 'frontend:dashboard' %}" >
                     <span class="nav-link-title">
-                      Dashboard
+                      Overview
                     </span>
                   </a>
                 </li>
@@ -79,18 +79,20 @@
         </div>
       </header>
       <div class="page-wrapper">
+        {% block page_header %}
         <!-- Page header -->
         <div class="page-header d-print-none">
           <div class="container-xl">
             <div class="row g-2 align-items-center">
               <div class="col">
                 <h2 class="page-title">
-                  {% block page_title %}Dashboard{% endblock %}
+                  {% block page_title %}Overview{% endblock %}
                 </h2>
               </div>
             </div>
           </div>
         </div>
+        {% endblock %}
         <!-- Page body -->
         <div class="page-body">
           <div class="container-xl">

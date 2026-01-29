@@ -1,45 +1,120 @@
 {% extends "frontend/base.html" %}
 
-{% block title %}Device Overview{% endblock %}
-{% block page_title %}Device Overview{% endblock %}
+{% block title %}Overview{% endblock %}
+
+{% block page_header %}{% endblock %}
 
 {% block content %}
-<div class="row row-cards">
+<!-- Stats and Device List (HTMX Polled) -->
+<div id="stats-section">
+  {% include "frontend/dashboard_stats.html" %}
+</div>
+
+<!-- Chart Section (JS Polled) -->
+<div class="row row-cards mb-3">
   <div class="col-12">
     <div class="card">
-      <div class="table-responsive">
-        <table class="table table-vcenter card-table">
-          <thead>
-            <tr>
-              <th>Endpoint</th>
-              <th>Status</th>
-              <th class="w-1"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for endpoint in endpoints %}
-            <tr>
-              <td>{{ endpoint.endpoint }}</td>
-              <td class="text-secondary">
-                {% if endpoint.registered %}
-                <span class="badge bg-success me-1"></span> Online
-                {% else %}
-                <span class="badge bg-danger me-1"></span> Offline
-                {% endif %}
-              </td>
-              <td>
-                <a href="#">Details</a>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="3" class="text-center text-secondary">No devices found</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="card-header">
+        <h3 class="card-title">Added Values Over Time</h3>
+        <div class="card-actions">
+          <div class="btn-group">
+            <button onclick="updateViewMode('five_min')" id="btn-five_min" class="btn btn-outline-primary {% if view_mode == 'five_min' %}active{% endif %}">5 Min (4h)</button>
+            <button onclick="updateViewMode('hourly')" id="btn-hourly" class="btn btn-outline-primary {% if view_mode == 'hourly' %}active{% endif %}">Hourly (48h)</button>
+            <button onclick="updateViewMode('daily')" id="btn-daily" class="btn btn-outline-primary {% if view_mode == 'daily' %}active{% endif %}">Daily (10d)</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="chart-container" style="height: 300px;">
+          <canvas id="addedValuesChart"></canvas>
+        </div>
       </div>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  let viewMode = "{{ view_mode }}";
+  let chart;
+
+  function initChart() {
+    const ctx = document.getElementById('addedValuesChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [{
+          label: 'Added Values',
+          data: {{ chart_data|safe }},
+          backgroundColor: 'rgba(32, 107, 196, 0.2)',
+          borderColor: 'rgba(32, 107, 196, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        animation: false,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  async function fetchChartData() {
+    try {
+      const response = await fetch(`?view=${viewMode}&format=json`);
+      const data = await response.json();
+
+      chart.data.labels = data.labels;
+      chart.data.datasets[0].data = data.data;
+      chart.update('none'); // Update without animation
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    }
+  }
+
+  function updateViewMode(mode) {
+    viewMode = mode;
+
+    // Update button active states
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-${mode}`).classList.add('active');
+
+    // Update URL without reloading
+    const url = new URL(window.location);
+    url.searchParams.set('view', mode);
+    window.history.pushState({}, '', url);
+
+    // Immediately fetch new data
+    fetchChartData();
+
+    // Also tell HTMX to update the stats container with the new view mode if it cares
+    // (though stats are view-mode independent currently, the endpoint list might need the URN)
+    // For now, we just let the next poll handle it or trigger it.
+    htmx.trigger('#stats-container', 'refresh');
+  }
+
+  // Handle HTMX "refresh" event
+  document.addEventListener('htmx:configRequest', (event) => {
+    event.detail.parameters['view'] = viewMode;
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initChart();
+    // Poll for chart data every 10s
+    setInterval(fetchChartData, 10000);
+  });
+</script>
 {% endblock %}

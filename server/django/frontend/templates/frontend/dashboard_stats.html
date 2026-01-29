@@ -1,0 +1,70 @@
+<div id="stats-container"
+     hx-get="{{ request.get_full_path }}"
+     hx-trigger="every 10s"
+     hx-swap="outerHTML">
+  <div class="row row-cards mb-3">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card card-sm">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-primary text-white avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M13.45 11.55l2.05 -2.05" /><path d="M6.4 20a9 9 0 1 1 11.2 0z" /></svg>
+              </span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">
+                {{ total_devices }} Total Devices
+              </div>
+              <div class="text-secondary">
+                Ever registered
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card card-sm">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-success text-white avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
+              </span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">
+                {{ registered_devices }} Registered
+              </div>
+              <div class="text-secondary">
+                Currently active
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card card-sm">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-danger text-white avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+              </span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">
+                {{ offline_devices }} Offline
+              </div>
+              <div class="text-secondary">
+                Not reachable
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+</div>
+
