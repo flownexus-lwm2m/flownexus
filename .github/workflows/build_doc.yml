@@ -10,6 +10,9 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -19,7 +22,7 @@ jobs:
     - name: Install Packages
       run: |
         sudo apt-get update
-        sudo apt-get install default-jre plantuml graphviz jq tox texlive-latex-extra texlive-xetex latexmk python3-pip -y
+        sudo apt-get install default-jre plantuml graphviz jq tox texlive-latex-extra texlive-xetex latexmk python3-pip imagemagick librsvg2-bin -y
 
     - name: Build static site
       run: |

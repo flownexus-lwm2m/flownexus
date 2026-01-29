@@ -11,7 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import os
-import re
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.abspath("../../src/"))
@@ -21,7 +21,13 @@ project = "flownexus"
 copyright = "2024, Individual contributors to flownexus"
 author = ""
 
-version = re.sub("", "", os.popen("git describe --tags").read().strip())
+try:
+    version = (
+        subprocess.check_output(["git", "describe", "--tags", "--dirty"]).decode("utf-8").strip()
+    )
+except subprocess.CalledProcessError as e:
+    raise RuntimeError("No git tags found. Documentation build requires at least one tag.") from e
+
 release = version
 
 extensions = [
