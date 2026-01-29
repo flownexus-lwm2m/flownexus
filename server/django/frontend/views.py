@@ -79,19 +79,10 @@ def dashboard(request):
         data.append(val)
         current_step += delta
 
-    # Firmware Distribution (last 30 days active devices)
-    thirty_days_ago = now - timedelta(days=30)
-    active_eps = (
-        Resource.objects.filter(timestamp_created__gte=thirty_days_ago)
-        .values_list("endpoint", flat=True)
-        .distinct()
-    )
-
-    # Get the latest firmware version (Object 3, Resource 3) for each active device
+    # Firmware Distribution (latest version for all devices)
+    # Get the latest firmware version (Object 3, Resource 3) for each device
     latest_firmware_ids = (
-        Resource.objects.filter(
-            endpoint__in=active_eps, resource_type__object_id=3, resource_type__resource_id=3
-        )
+        Resource.objects.filter(resource_type__object_id=3, resource_type__resource_id=3)
         .values("endpoint")
         .annotate(max_id=Max("id"))
         .values_list("max_id", flat=True)
