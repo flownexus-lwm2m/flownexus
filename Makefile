@@ -40,3 +40,7 @@ doc-pdf:
 
 # Placeholder for all tests
 test-all: test-django test-e2e compliance
+
+# Build the server containers with the current git version
+server-build:
+	@APP_VERSION=$$(git describe --always --dirty --tags) podman-compose -f server/compose.yml build
