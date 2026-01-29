@@ -86,7 +86,6 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "sensordata",
     "frontend",
-    "frontend_deprecated",
 ]
 
 MIDDLEWARE = [
