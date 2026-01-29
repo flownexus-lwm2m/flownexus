@@ -106,23 +106,56 @@ def dashboard(request):
 
 @login_required
 def firmware_list(request):
-    from .forms import FirmwareUploadForm
+    from sensordata.models import FirmwareUpdate
+    from sensordata.tasks import process_pending_operations
+
+    from .forms import FirmwareUpdateForm, FirmwareUploadForm
+
+    upload_form = FirmwareUploadForm()
+    update_form = FirmwareUpdateForm()
 
     if request.method == "POST":
-        form = FirmwareUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect("frontend:firmware_list")
-    else:
-        form = FirmwareUploadForm()
+        if "upload_fw" in request.POST:
+            upload_form = FirmwareUploadForm(request.POST, request.FILES)
+            if upload_form.is_valid():
+                upload_form.save()
+                return redirect("frontend:firmware_list")
+        elif "start_update" in request.POST:
+            update_form = FirmwareUpdateForm(request.POST)
+            if update_form.is_valid():
+                fw_update = update_form.save()
+                process_pending_operations.delay(fw_update.endpoint.endpoint)
+                return redirect("frontend:firmware_list")
+        else:
+            # Handle cases where hidden fields are missing (e.g. legacy tests)
+            # Try to guess which form it is
+            if "version" in request.POST:
+                upload_form = FirmwareUploadForm(request.POST, request.FILES)
+                if upload_form.is_valid():
+                    upload_form.save()
+                    return redirect("frontend:firmware_list")
+            elif "endpoint" in request.POST:
+                update_form = FirmwareUpdateForm(request.POST)
+                if update_form.is_valid():
+                    fw_update = update_form.save()
+                    process_pending_operations.delay(fw_update.endpoint.endpoint)
+                    return redirect("frontend:firmware_list")
 
     firmwares = Firmware.objects.all().order_by("-created_at")
+    updates = (
+        FirmwareUpdate.objects.all()
+        .select_related("endpoint", "firmware")
+        .order_by("-timestamp_created")
+    )
+
     return render(
         request,
         "frontend/firmware.html",
         {
-            "form": form,
+            "upload_form": upload_form,
+            "update_form": update_form,
             "firmwares": firmwares,
+            "updates": updates,
         },
     )
 

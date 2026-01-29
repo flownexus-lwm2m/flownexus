@@ -31,6 +31,7 @@ class MockSimulationIntegrationTest(LiveServerTestCase):
             "device_count": 2,
             "interval": 0.1,
             "duration": 0.5,  # Run for 0.5 seconds
+            "enable_leshan_api": False,
         }
 
         backend = MockBackend(config)

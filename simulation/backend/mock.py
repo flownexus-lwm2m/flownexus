@@ -3,14 +3,98 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
+import http.server
 import logging
 import math
 import random
+import threading
 import time
+from urllib.parse import urlparse
 
 import requests
 
 logger = logging.getLogger(__name__)
+
+
+class MockLeshanHandler(http.server.BaseHTTPRequestHandler):
+    def do_PUT(self):
+        # Handle /api/clients/{ep}/5/0/1 (Package URI)
+        path = urlparse(self.path).path
+        content_length = int(self.headers.get("Content-Length", 0))
+        post_data = self.rfile.read(content_length).decode("utf-8")
+        import json
+
+        print(f"Mock Leshan received PUT: {path}")
+
+        try:
+            data = json.loads(post_data)
+            path_parts = path.strip("/").split("/")
+            print(f"Parsed path parts: {path_parts}")
+
+            if "clients" in path_parts:
+                idx = path_parts.index("clients")
+                # Expected: .../clients/{ep}/{obj}/{inst}/{res}
+                if len(path_parts) >= idx + 5:
+                    endpoint = path_parts[idx + 1]
+                    obj_id = path_parts[idx + 2]
+                    inst_id = path_parts[idx + 3]
+                    res_id = path_parts[idx + 4]
+                    print(f"Endpoint: {endpoint}, Obj: {obj_id}, Inst: {inst_id}, Res: {res_id}")
+
+                    if obj_id == "5" and res_id == "1":
+                        uri = data.get("value")
+                        print(f"FOTA Triggered for {endpoint}: {uri}")
+                        self.send_response(200)
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"status": "SUCCESS"}).encode())
+                        # Start FOTA thread
+                        threading.Thread(
+                            target=self.server.mock_backend.process_fota, args=(endpoint, uri)
+                        ).start()
+                        return
+        except Exception as e:
+            print(f"Error in MockLeshanHandler PUT: {e}")
+
+        print(f"Mock Leshan 404 on PUT: {path}")
+        self.send_response(404)
+        self.end_headers()
+
+    def do_POST(self):
+        # Handle /api/clients/{ep}/5/0/2 (Execute Update)
+        path = urlparse(self.path).path
+        print(f"Mock Leshan received POST: {path}")
+        path_parts = path.strip("/").split("/")
+
+        try:
+            if "clients" in path_parts:
+                idx = path_parts.index("clients")
+                if len(path_parts) >= idx + 5:
+                    endpoint = path_parts[idx + 1]
+                    obj_id = path_parts[idx + 2]
+                    inst_id = path_parts[idx + 3]
+                    res_id = path_parts[idx + 4]
+                    print(f"Endpoint: {endpoint}, Obj: {obj_id}, Inst: {inst_id}, Res: {res_id}")
+
+                    if obj_id == "5" and res_id == "2":
+                        self.send_response(200)
+                        self.end_headers()
+                        import json
+
+                        self.wfile.write(json.dumps({"status": "SUCCESS"}).encode())
+                        # Trigger Update execution
+                        threading.Thread(
+                            target=self.server.mock_backend.execute_fota, args=(endpoint,)
+                        ).start()
+                        return
+        except Exception as e:
+            print(f"Error in MockLeshanHandler POST: {e}")
+
+        print(f"Mock Leshan 404 on POST: {path}")
+        self.send_response(404)
+        self.end_headers()
+
+    def log_message(self, format, *args):
+        return  # Silence standard logging
 
 
 class MockBackend:
@@ -23,6 +107,9 @@ class MockBackend:
         self.run = config.get("run", True)
         self.endpoints = []
         self.start_time = time.time()
+        self.fota_states = {}  # ep -> current_fota_info
+        self.enable_leshan_api = config.get("enable_leshan_api", True)
+        self.leshan_api_port = config.get("leshan_api_port", 8081)
 
     def _register_device(self, imei):
         urn = f"urn:imei:{imei}"
@@ -146,10 +233,111 @@ class MockBackend:
         except Exception as e:
             logger.error(f"Error sending telemetry for {urn}: {e}")
 
+    def report_fota_state(self, endpoint, state):
+        payload = {
+            "ep": endpoint,
+            "obj_id": 5,
+            "val": {
+                "kind": "singleResource",
+                "id": 3,
+                "type": "INTEGER",
+                "value": str(state),
+            },
+        }
+        url = f"{self.target_url}/resource/single"
+        try:
+            requests.post(url, json=payload, timeout=5)
+            logger.info(f"Reported FOTA state {state} for {endpoint}")
+        except Exception as e:
+            logger.error(f"Error reporting FOTA state: {e}")
+
+    def process_fota(self, endpoint, uri):
+        logger.info(f"Processing FOTA for {endpoint} with URI: {uri}")
+        time.sleep(11)
+        self.report_fota_state(endpoint, 1)  # DOWNLOADING
+
+        # Verify download
+        try:
+            # Construct absolute URL if it's relative
+            base_url = urlparse(self.target_url)
+            if uri.startswith("/"):
+                download_url = f"{base_url.scheme}://{base_url.netloc}{uri}"
+            else:
+                download_url = uri
+
+            logger.info(f"Mock downloading from: {download_url}")
+            resp = requests.get(download_url, timeout=10)
+            if resp.status_code == 200:
+                print(f"Download successful, size: {len(resp.content)} bytes")
+                # Extract version from filename
+                import os
+
+                filename = os.path.basename(uri)
+                # If the filename contains 'v' and numbers, it's likely the version
+                # Otherwise, it might be an arbitrary name.
+                # We'll strip common extensions.
+                version = filename
+                for ext in [".bin", ".exe", ".xlsx", ".zip"]:
+                    if version.endswith(ext):
+                        version = version[: -len(ext)]
+
+                print(f"Mock device '{endpoint}' parsed version '{version}' from file")
+                self.fota_states[endpoint] = {"version": version}
+            else:
+                logger.error(f"Download failed: {resp.status_code}")
+                # We could report a failure result here (5/0/5)
+                return
+        except Exception as e:
+            logger.error(f"FOTA Download error: {e}")
+            return
+
+        time.sleep(11)
+        self.report_fota_state(endpoint, 2)  # DOWNLOADED
+
+    def execute_fota(self, endpoint):
+        print(f"Executing FOTA for {endpoint}")
+        time.sleep(11)
+        self.report_fota_state(endpoint, 3)  # UPDATING
+        time.sleep(11)
+
+        # Simulate reboot and report new version
+
+        version = self.fota_states.get(endpoint, {}).get("version", "v1.0.0-mock")
+        print(f"Mock device '{endpoint}' rebooting and reporting version: {version}")
+        payload = {
+            "ep": endpoint,
+            "obj_id": 3,
+            "val": {
+                "kind": "singleResource",
+                "id": 3,
+                "type": "STRING",
+                "value": version,
+            },
+        }
+        url = f"{self.target_url}/resource/single"
+        try:
+            requests.post(url, json=payload, timeout=5)
+            logger.info(f"Reported new version {version} for {endpoint}")
+        except Exception as e:
+            logger.error(f"Error reporting new version: {e}")
+
     def start(self):
         if not self.run:
             print("Mock backend started, but 'run' is false. Doing nothing.")
             return
+
+        # Start Mock Leshan API
+        if self.enable_leshan_api:
+            server_address = ("", self.leshan_api_port)
+            try:
+                httpd = http.server.HTTPServer(server_address, MockLeshanHandler)
+                httpd.mock_backend = self
+                threading.Thread(target=httpd.serve_forever, daemon=True).start()
+                print(f"Mock Leshan API listening on port {self.leshan_api_port}")
+            except OSError as e:
+                print(
+                    f"Warning: Could not start Mock Leshan API on port {self.leshan_api_port}: {e}"
+                )
 
         print(f"Starting Mock Simulation: {self.device_count} devices at {self.target_url}")
 
