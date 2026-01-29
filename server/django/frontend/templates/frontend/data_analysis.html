@@ -61,7 +61,7 @@
           <input type="hidden" name="page" value="1">
           <input type="hidden" name="sort" value="time">
           <input type="hidden" name="dir" value="desc">
-          
+
           <div class="mb-3">
             <label class="form-label">Mode</label>
             <select class="form-select" name="mode" onchange="toggleResourceFilter(); updateData();">
@@ -159,7 +159,7 @@
         </ul>
       </div>
     </div>
-    
+
     <div id="empty-state" class="card" style="display: none;">
         <div class="card-body text-center py-5">
             <div class="text-secondary mb-3" id="empty-state-text">No data found for the selected filters.</div>
@@ -279,17 +279,17 @@
         eventCard.style.display = 'none';
         if (data.data.length > 0) {
           emptyState.style.display = 'none';
-          
+
           if (data.is_numeric) {
             chartCard.style.display = 'block';
             stringValuesCard.style.display = 'none';
-            
+
             // Determine best time unit based on range
             const timeRange = formData.get('time_range');
             let unit = 'hour';
             if (timeRange === '1h') unit = 'minute';
             else if (timeRange === '7d' || timeRange === '30d' || timeRange === 'all') unit = 'day';
-            
+
             chart.options.scales.x.time.unit = unit;
             chart.data.datasets[0].data = data.data.map(item => ({
               x: item.t,
@@ -319,7 +319,7 @@
         if (data.events.length > 0) {
           eventCard.style.display = 'block';
           emptyState.style.display = 'none';
-          
+
           updateEventTable(data);
           updatePagination(data);
           updateSortIcons(formData.get('sort'), formData.get('dir'));
@@ -339,7 +339,7 @@
     data.events.forEach(e => {
       const row = document.createElement('tr');
       const time = luxon.DateTime.fromISO(e.time).toLocaleString(luxon.DateTime.DATETIME_SHORT);
-      
+
       let dataHtml = '<ul class="event-data-list">';
       for (const [key, value] of Object.entries(e.data)) {
         dataHtml += `<li class="event-data-item"><span class="event-data-key">${key}:</span> ${value}</li>`;
@@ -360,7 +360,7 @@
     const container = document.getElementById('pagination-controls');
     const info = document.getElementById('pagination-info');
     container.innerHTML = '';
-    
+
     info.textContent = `Page ${data.number} of ${data.num_pages}`;
 
     const prevLi = document.createElement('li');
@@ -403,7 +403,7 @@
         const sort = th.dataset.sort;
         const sortInput = document.querySelector('input[name="sort"]');
         const dirInput = document.querySelector('input[name="dir"]');
-        
+
         if (sortInput.value === sort) {
             dirInput.value = dirInput.value === 'asc' ? 'desc' : 'asc';
         } else {
