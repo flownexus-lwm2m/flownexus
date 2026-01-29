@@ -52,6 +52,9 @@ firmware/
 # Database files
 *.sqlite3
 
+# Media files
+server/django/media/
+
 # Build artifacts from simulate.py script
 simulation/lwm2m_client/endpoint_binaries/
 simulation/conf_tmp/

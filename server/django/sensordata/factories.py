@@ -8,7 +8,7 @@ import factory
 from django.contrib.auth.models import User
 from factory.django import DjangoModelFactory
 
-from .models import Endpoint, EndpointOperation, Event, Resource, ResourceType
+from .models import Endpoint, EndpointOperation, Event, Firmware, Resource, ResourceType
 
 
 class UserFactory(DjangoModelFactory):
@@ -72,3 +72,11 @@ class EndpointOperationFactory(DjangoModelFactory):
     resource = factory.SubFactory(ResourceFactory)
     operation_type = "send"
     status = EndpointOperation.Status.QUEUED
+
+
+class FirmwareFactory(DjangoModelFactory):
+    class Meta:
+        model = Firmware
+
+    version = factory.Sequence(lambda n: f"v1.0.{n}")
+    binary = factory.django.FileField(filename="firmware.bin", data=b"binary content")

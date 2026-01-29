@@ -7,7 +7,7 @@
 import pytest
 from django.urls import reverse
 
-from sensordata.factories import EndpointFactory, ResourceFactory, UserFactory
+from sensordata.factories import EndpointFactory, FirmwareFactory, ResourceFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -63,3 +63,39 @@ class TestFrontendViews:
         assert response.status_code == 200
         assert response.context["view_mode"] == "five_min"
         assert len(response.context["chart_labels"]) == 48
+
+    def test_firmware_list_view(self, client):
+        user = UserFactory()
+        client.force_login(user)
+
+        FirmwareFactory.create_batch(3)
+
+        url = reverse("frontend:firmware_list")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.context["firmwares"]) == 3
+        assert b"Firmware Management" in response.content
+        assert b"v1.0.0" in response.content
+
+    def test_firmware_upload(self, client):
+        user = UserFactory()
+        client.force_login(user)
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        firmware_file = SimpleUploadedFile("new_firmware.bin", b"new content")
+
+        url = reverse("frontend:firmware_list")
+        data = {
+            "version": "v2.0.0",
+            "binary": firmware_file,
+        }
+        response = client.post(url, data)
+
+        assert response.status_code == 302
+        assert response.url == reverse("frontend:firmware_list")
+
+        from sensordata.models import Firmware
+
+        assert Firmware.objects.filter(version="v2.0.0").exists()
