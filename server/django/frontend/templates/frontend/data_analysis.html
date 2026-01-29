@@ -1,0 +1,443 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Data Analyzer{% endblock %}
+
+{% block page_title %}Data Analyzer{% endblock %}
+
+{% block extra_css %}
+<style>
+  .content-column {
+    min-height: 600px;
+  }
+  .table-responsive-scroll {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  .sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+  .sortable:hover {
+    background-color: rgba(0,0,0,0.05);
+  }
+  .sort-icon::after {
+    content: ' \2195';
+    opacity: 0.3;
+  }
+  .sort-asc::after {
+    content: ' \2191';
+    opacity: 1;
+  }
+  .sort-desc::after {
+    content: ' \2193';
+    opacity: 1;
+  }
+  .event-data-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.85rem;
+  }
+  .event-data-item {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  .event-data-key {
+    font-weight: 600;
+    color: var(--tblr-secondary);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Filters</h3>
+      </div>
+      <div class="card-body">
+        <form id="filter-form">
+          <input type="hidden" name="page" value="1">
+          <input type="hidden" name="sort" value="time">
+          <input type="hidden" name="dir" value="desc">
+          
+          <div class="mb-3">
+            <label class="form-label">Mode</label>
+            <select class="form-select" name="mode" onchange="toggleResourceFilter(); updateData();">
+              <option value="values" {% if selected_mode == 'values' %}selected{% endif %}>Sensor Values</option>
+              <option value="events" {% if selected_mode == 'events' %}selected{% endif %}>Events</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Endpoint</label>
+            <select class="form-select" name="endpoint">
+              <option value="">All Devices</option>
+              {% for ep in endpoints %}
+              <option value="{{ ep.endpoint }}" {% if selected_endpoint == ep.endpoint %}selected{% endif %}>{{ ep.endpoint }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3" id="resource-type-filter">
+            <label class="form-label">Resource Type</label>
+            <select class="form-select" name="resource_type">
+              <option value="">All Types</option>
+              {% for rt in resource_types %}
+              <option value="{{ rt.id }}" {% if selected_resource_type == rt.id|stringformat:"s" %}selected{% endif %}>{{ rt.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Time Range</label>
+            <select class="form-select" name="time_range">
+              <option value="1h" {% if selected_time_range == '1h' %}selected{% endif %}>Last Hour</option>
+              <option value="24h" {% if selected_time_range == '24h' %}selected{% endif %}>Last 24 Hours</option>
+              <option value="7d" {% if selected_time_range == '7d' %}selected{% endif %}>Last 7 Days</option>
+              <option value="30d" {% if selected_time_range == '30d' %}selected{% endif %}>Last 30 Days</option>
+              <option value="all" {% if selected_time_range == 'all' %}selected{% endif %}>All</option>
+            </select>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-9 content-column">
+    <div class="card" id="chart-card" style="display: none;">
+      <div class="card-header">
+        <h3 class="card-title">Data Trends</h3>
+      </div>
+      <div class="card-body">
+        <div id="chart-container" style="height: 400px;">
+          <canvas id="analysisChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="string-values-card" style="display: none;">
+      <div class="card-header">
+        <h3 class="card-title">Data Values</h3>
+      </div>
+      <div class="table-responsive table-responsive-scroll">
+        <table class="table table-vcenter card-table table-striped">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody id="string-values-table-body">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="event-card" style="display: none;">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">Events</h3>
+        <div id="pagination-info" class="text-muted small"></div>
+      </div>
+      <div class="table-responsive table-responsive-scroll">
+        <table class="table table-vcenter card-table table-striped">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="time">Time <span class="sort-icon" id="sort-time"></span></th>
+              <th class="sortable" data-sort="endpoint">Endpoint <span class="sort-icon" id="sort-endpoint"></span></th>
+              <th class="sortable" data-sort="event_type">Type <span class="sort-icon" id="sort-event_type"></span></th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="event-table-body">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer d-flex align-items-center">
+        <ul class="pagination m-0 ms-auto" id="pagination-controls">
+          <!-- Populated via JS -->
+        </ul>
+      </div>
+    </div>
+    
+    <div id="empty-state" class="card" style="display: none;">
+        <div class="card-body text-center py-5">
+            <div class="text-secondary mb-3" id="empty-state-text">No data found for the selected filters.</div>
+        </div>
+    </div>
+
+    <div id="filter-prompt" class="card">
+        <div class="card-body text-center py-5">
+            <div class="text-secondary mb-3">Please select a device and resource type to analyze sensor data.</div>
+        </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+
+<script>
+  let chart;
+
+  function toggleResourceFilter() {
+    const mode = document.querySelector('select[name="mode"]').value;
+    const resFilter = document.getElementById('resource-type-filter');
+    resFilter.style.display = mode === 'values' ? 'block' : 'none';
+  }
+
+  function initChart() {
+    const ctx = document.getElementById('analysisChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Value',
+          data: [],
+          borderColor: 'rgba(32, 107, 196, 1)',
+          backgroundColor: 'rgba(32, 107, 196, 0.1)',
+          fill: true,
+          tension: 0.1
+        }]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              tooltipFormat: 'yyyy-MM-dd HH:mm:ss',
+            },
+            ticks: {
+                autoSkip: true,
+                maxRotation: 0,
+            },
+            title: {
+              display: true,
+              text: 'Time'
+            }
+          },
+          y: {
+            beginAtZero: false,
+            title: {
+              display: true,
+              text: 'Value'
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function(context) {
+                return luxon.DateTime.fromISO(context[0].raw.x).toLocaleString(luxon.DateTime.DATETIME_SHORT);
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  async function updateData() {
+    const form = document.getElementById('filter-form');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    params.set('format', 'json');
+
+    const mode = formData.get('mode');
+    const endpoint = formData.get('endpoint');
+    const resourceType = formData.get('resource_type');
+
+    const chartCard = document.getElementById('chart-card');
+    const stringValuesCard = document.getElementById('string-values-card');
+    const eventCard = document.getElementById('event-card');
+    const emptyState = document.getElementById('empty-state');
+    const filterPrompt = document.getElementById('filter-prompt');
+
+    if (mode === 'values' && (!endpoint || !resourceType)) {
+      chartCard.style.display = 'none';
+      stringValuesCard.style.display = 'none';
+      eventCard.style.display = 'none';
+      emptyState.style.display = 'none';
+      filterPrompt.style.display = 'block';
+      return;
+    }
+
+    try {
+      const response = await fetch(`?${params.toString()}`);
+      const data = await response.json();
+
+      filterPrompt.style.display = 'none';
+
+      if (mode === 'values') {
+        eventCard.style.display = 'none';
+        if (data.data.length > 0) {
+          emptyState.style.display = 'none';
+          
+          if (data.is_numeric) {
+            chartCard.style.display = 'block';
+            stringValuesCard.style.display = 'none';
+            
+            // Determine best time unit based on range
+            const timeRange = formData.get('time_range');
+            let unit = 'hour';
+            if (timeRange === '1h') unit = 'minute';
+            else if (timeRange === '7d' || timeRange === '30d' || timeRange === 'all') unit = 'day';
+            
+            chart.options.scales.x.time.unit = unit;
+            chart.data.datasets[0].data = data.data.map(item => ({
+              x: item.t,
+              y: item.y
+            }));
+            chart.update();
+          } else {
+            chartCard.style.display = 'none';
+            stringValuesCard.style.display = 'block';
+            const tbody = document.getElementById('string-values-table-body');
+            tbody.innerHTML = '';
+            data.data.forEach(item => {
+              const row = document.createElement('tr');
+              const time = luxon.DateTime.fromISO(item.t).toLocaleString(luxon.DateTime.DATETIME_SHORT);
+              row.innerHTML = `<td>${time}</td><td>${item.y}</td>`;
+              tbody.appendChild(row);
+            });
+          }
+        } else {
+          chartCard.style.display = 'none';
+          stringValuesCard.style.display = 'none';
+          emptyState.style.display = 'block';
+        }
+      } else {
+        chartCard.style.display = 'none';
+        stringValuesCard.style.display = 'none';
+        if (data.events.length > 0) {
+          eventCard.style.display = 'block';
+          emptyState.style.display = 'none';
+          
+          updateEventTable(data);
+          updatePagination(data);
+          updateSortIcons(formData.get('sort'), formData.get('dir'));
+        } else {
+          eventCard.style.display = 'none';
+          emptyState.style.display = 'block';
+        }
+      }
+    } catch (e) {
+      console.error("Fetch failed", e);
+    }
+  }
+
+  function updateEventTable(data) {
+    const tbody = document.getElementById('event-table-body');
+    tbody.innerHTML = '';
+    data.events.forEach(e => {
+      const row = document.createElement('tr');
+      const time = luxon.DateTime.fromISO(e.time).toLocaleString(luxon.DateTime.DATETIME_SHORT);
+      
+      let dataHtml = '<ul class="event-data-list">';
+      for (const [key, value] of Object.entries(e.data)) {
+        dataHtml += `<li class="event-data-item"><span class="event-data-key">${key}:</span> ${value}</li>`;
+      }
+      dataHtml += '</ul>';
+
+      row.innerHTML = `
+        <td class="text-nowrap align-top">${time}</td>
+        <td class="text-nowrap align-top">${e.endpoint}</td>
+        <td class="align-top"><span class="badge bg-green-lt">${e.type}</span></td>
+        <td class="w-100 align-top">${dataHtml}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function updatePagination(data) {
+    const container = document.getElementById('pagination-controls');
+    const info = document.getElementById('pagination-info');
+    container.innerHTML = '';
+    
+    info.textContent = `Page ${data.number} of ${data.num_pages}`;
+
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${!data.has_previous ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${data.number - 1}); return false;">prev</a>`;
+    container.appendChild(prevLi);
+
+    // Show a few pages around current
+    for (let i = Math.max(1, data.number - 2); i <= Math.min(data.num_pages, data.number + 2); i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === data.number ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>`;
+        container.appendChild(li);
+    }
+
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${!data.has_next ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${data.number + 1}); return false;">next</a>`;
+    container.appendChild(nextLi);
+  }
+
+  function changePage(page) {
+    const input = document.querySelector('input[name="page"]');
+    input.value = page;
+    updateData();
+  }
+
+  function updateSortIcons(sort, dir) {
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'sort-icon';
+    });
+    const activeIcon = document.getElementById(`sort-${sort}`);
+    if (activeIcon) {
+        activeIcon.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  }
+
+  document.querySelectorAll('.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+        const sort = th.dataset.sort;
+        const sortInput = document.querySelector('input[name="sort"]');
+        const dirInput = document.querySelector('input[name="dir"]');
+        
+        if (sortInput.value === sort) {
+            dirInput.value = dirInput.value === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortInput.value = sort;
+            dirInput.value = 'asc';
+        }
+        document.querySelector('input[name="page"]').value = 1;
+        updateData();
+    });
+  });
+
+  document.getElementById('filter-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    document.querySelector('input[name="page"]').value = 1;
+    updateData();
+  });
+
+  // Auto-apply filters on change
+  document.getElementById('filter-form').querySelectorAll('select').forEach(select => {
+    select.addEventListener('change', () => {
+      // Don't trigger if it's the mode select (handled via inline onchange to ensure toggleResourceFilter runs first)
+      if (select.name !== 'mode') {
+        document.querySelector('input[name="page"]').value = 1;
+        updateData();
+      }
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initChart();
+    toggleResourceFilter();
+    updateData();
+    // Refresh every 10s
+    setInterval(updateData, 10000);
+  });
+</script>
+{% endblock %}

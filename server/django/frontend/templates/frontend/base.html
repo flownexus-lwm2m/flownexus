@@ -18,6 +18,9 @@
       body {
       	font-feature-settings: "cv03", "cv04", "cv11";
       }
+      html {
+        overflow-y: scroll;
+      }
     </style>
     {% block extra_css %}{% endblock %}
   </head>
@@ -68,14 +71,22 @@
                     </span>
                   </a>
                 </li>
-                <li class="nav-item {% if request.resolver_match.url_name == 'firmware_list' %}active{% endif %}">
-                  <a class="nav-link" href="{% url 'frontend:firmware_list' %}" >
-                    <span class="nav-link-title">
-                      Firmware
-                    </span>
-                  </a>
-                </li>
-              </ul>
+                 <li class="nav-item {% if request.resolver_match.url_name == 'firmware_list' %}active{% endif %}">
+                   <a class="nav-link" href="{% url 'frontend:firmware_list' %}" >
+                     <span class="nav-link-title">
+                       Firmware
+                     </span>
+                   </a>
+                 </li>
+                 <li class="nav-item {% if request.resolver_match.url_name == 'data_analysis' %}active{% endif %}">
+                   <a class="nav-link" href="{% url 'frontend:data_analysis' %}" >
+                     <span class="nav-link-title">
+                       Data
+                     </span>
+                   </a>
+                 </li>
+               </ul>
+
             </div>
           </div>
         </div>

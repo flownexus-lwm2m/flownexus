@@ -2,7 +2,7 @@
 
 {% block title %}Overview{% endblock %}
 
-{% block page_header %}{% endblock %}
+{% block page_title %}System Overview{% endblock %}
 
 {% block content %}
 <!-- Stats and Device List (HTMX Polled) -->
@@ -15,12 +15,12 @@
   <div class="col-lg-8">
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Added Values Over Time</h3>
+        <h3 class="card-title">Added Values over Time</h3>
         <div class="card-actions">
           <div class="btn-group">
-            <button onclick="updateViewMode('five_min')" id="btn-five_min" class="btn btn-outline-primary {% if view_mode == 'five_min' %}active{% endif %}">5 Min (4h)</button>
-            <button onclick="updateViewMode('hourly')" id="btn-hourly" class="btn btn-outline-primary {% if view_mode == 'hourly' %}active{% endif %}">Hourly (48h)</button>
-            <button onclick="updateViewMode('daily')" id="btn-daily" class="btn btn-outline-primary {% if view_mode == 'daily' %}active{% endif %}">Daily (10d)</button>
+            <button onclick="updateViewMode('five_min')" id="btn-five_min" class="btn btn-outline-primary {% if view_mode == 'five_min' %}active{% endif %}">5 Min</button>
+            <button onclick="updateViewMode('hourly')" id="btn-hourly" class="btn btn-outline-primary {% if view_mode == 'hourly' %}active{% endif %}">Hourly</button>
+            <button onclick="updateViewMode('daily')" id="btn-daily" class="btn btn-outline-primary {% if view_mode == 'daily' %}active{% endif %}">Daily</button>
           </div>
         </div>
       </div>
@@ -34,7 +34,7 @@
   <div class="col-lg-4">
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Active Device Firmware (30d)</h3>
+        <h3 class="card-title">Device FW Versions (last 30 days)</h3>
       </div>
       <div class="card-body">
         <div id="fw-chart-container" style="height: 300px;">
