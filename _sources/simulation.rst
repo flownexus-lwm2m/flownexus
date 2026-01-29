@@ -30,8 +30,8 @@ the internet via the host network, allowing testing of both a locally hosted
 instance of flownexus as well as a remote instance.
 
 To simulate endpoints easily, a script is provided that builds and runs the
-endpoints in a docker container. Setting up the network and running the
-simulation in a docker container ensures interoperability with different host
+endpoints in a container. Setting up the network and running the
+simulation in a container ensures interoperability with different host
 systems.
 
 .. note::
@@ -53,11 +53,23 @@ systems.
 Prerequisites
 .............
 
-The simulation requires a working Docker installation.
+The simulation requires a working Podman installation and the Python ``docker``
+library.
+
+.. note::
+   The simulation script uses the Python Docker SDK to interact with Podman.
+   Ensure that the Podman socket is active and the ``DOCKER_HOST`` environment
+   variable is set if necessary (e.g., ``export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock``).
+
+   Furthermore, the flownexus server stack should be running.
+   The script expects the network ``server_mynetwork`` to be available,
+   which is created when starting the server via ``podman-compose`` in the
+   ``server/`` directory.
 
 .. code-block:: console
 
-   host:~$ apt install docker-ce
+   host:~$ apt install podman podman-compose
+   host:~$ pip install docker
 
 
 Simulating a single Endpoint
@@ -139,11 +151,15 @@ Connecting to a locally hosted Leshan server
 
 Connecting to a locally hosted Leshan server is possible by setting the ``-l``
 flag. The script will connect the simulated Zephyr instances to the Leshan
-server running on the host machine. Internally, the script overwrites the
-``LWM2M_APP_SERVER`` configuration option in the Zephyr lwm2m_client sample
-with the IP address of the container with the running Leshan server.
+server running on the host machine. Internally, the script attaches the
+simulation container to the ``server_mynetwork`` network and identifies
+the IP address of the Leshan server by resolving the hostname ``leshan``
+(e.g., via ping).
 
-If the Leshan server is started on the host natively (without docker compose),
+The script then overwrites the ``LWM2M_APP_SERVER`` configuration option in the
+Zephyr lwm2m_client sample with this identified IP address.
+
+If the Leshan server is started on the host natively (without podman-compose),
 change the IP address in the Kconfig file (see next chapter) to
 ``coap://192.0.2.2:5683``.
 

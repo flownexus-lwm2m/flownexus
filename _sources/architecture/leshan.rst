@@ -4,7 +4,7 @@ Leshan
 Build and Run
 -------------
 
-The Leshan server can also run locally, without the need of a docker container.
+The Leshan server can also run locally, without the need of a container.
 
 .. code-block:: console
 
