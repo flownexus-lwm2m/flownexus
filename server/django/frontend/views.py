@@ -7,7 +7,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.db.models.functions import TruncDay, TruncHour, TruncMinute
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -78,8 +78,38 @@ def dashboard(request):
         data.append(val)
         current_step += delta
 
+    # Firmware Distribution (last 30 days active devices)
+    thirty_days_ago = now - timedelta(days=30)
+    active_eps = (
+        Resource.objects.filter(timestamp_created__gte=thirty_days_ago)
+        .values_list("endpoint", flat=True)
+        .distinct()
+    )
+
+    # Get the latest firmware version (Object 3, Resource 3) for each active device
+    latest_firmware_ids = (
+        Resource.objects.filter(
+            endpoint__in=active_eps, resource_type__object_id=3, resource_type__resource_id=3
+        )
+        .values("endpoint")
+        .annotate(max_id=Max("id"))
+        .values_list("max_id", flat=True)
+    )
+
+    firmware_distribution = (
+        Resource.objects.filter(id__in=latest_firmware_ids)
+        .values("str_value")
+        .annotate(count=Count("str_value"))
+        .order_by("-count")
+    )
+
+    fw_labels = [item["str_value"] for item in firmware_distribution]
+    fw_data = [item["count"] for item in firmware_distribution]
+
     if request.GET.get("format") == "json":
-        return JsonResponse({"labels": labels, "data": data})
+        return JsonResponse(
+            {"labels": labels, "data": data, "fw_labels": fw_labels, "fw_data": fw_data}
+        )
 
     context = {
         "total_devices": total_devices,
@@ -87,6 +117,8 @@ def dashboard(request):
         "offline_devices": offline_devices,
         "chart_labels": labels,
         "chart_data": data,
+        "fw_labels": fw_labels,
+        "fw_data": fw_data,
         "view_mode": view_mode,
     }
 

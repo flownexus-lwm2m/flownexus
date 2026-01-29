@@ -12,7 +12,7 @@
 
 <!-- Chart Section (JS Polled) -->
 <div class="row row-cards mb-3">
-  <div class="col-12">
+  <div class="col-lg-8">
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Added Values Over Time</h3>
@@ -31,6 +31,18 @@
       </div>
     </div>
   </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Active Device Firmware (30d)</h3>
+      </div>
+      <div class="card-body">
+        <div id="fw-chart-container" style="height: 300px;">
+          <canvas id="firmwareChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -39,6 +51,7 @@
 <script>
   let viewMode = "{{ view_mode }}";
   let chart;
+  let fwChart;
 
   function initChart() {
     const ctx = document.getElementById('addedValuesChart').getContext('2d');
@@ -70,6 +83,36 @@
         }
       }
     });
+
+    const fwCtx = document.getElementById('firmwareChart').getContext('2d');
+    fwChart = new Chart(fwCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ fw_labels|safe }},
+        datasets: [{
+          label: 'Devices',
+          data: {{ fw_data|safe }},
+          backgroundColor: 'rgba(47, 179, 68, 0.2)',
+          borderColor: 'rgba(47, 179, 68, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        animation: false,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
   }
 
   async function fetchChartData() {
@@ -80,6 +123,10 @@
       chart.data.labels = data.labels;
       chart.data.datasets[0].data = data.data;
       chart.update('none'); // Update without animation
+
+      fwChart.data.labels = data.fw_labels;
+      fwChart.data.datasets[0].data = data.fw_data;
+      fwChart.update('none');
     } catch (error) {
       console.error('Error fetching chart data:', error);
     }
