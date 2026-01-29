@@ -1,0 +1,673 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Simulation &#8212; flownexus v0.1.1-41-gae3f09c documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=64d943e2" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=00a0866e"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'simulation';</script>
+    <link rel="canonical" href="https://flownexus-lwm2m.github.io/flownexus/simulation.html" />
+    <link rel="icon" href="_static/flownexus_favicon.svg"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Documentation" href="documentation.html" />
+    <link rel="prev" title="Build and Deploy" href="deploy.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-41-gae3f09c documentation - Home"/>
+    <script>document.write(`<img src="_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-41-gae3f09c documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="architecture/index.html">Architecture</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="architecture/django.html">Django</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture/leshan.html">Leshan</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture/communication_interfaces.html">Communication, Interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture/ota.html">Over the Air Updates</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="application_guide/index.html">Application Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/endpoint_interactions.html">Endpoint Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/events.html">Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/queue_mode.html">Queue Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application_guide/fw_setup.html">Firmware Setup</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="deploy.html">Build and Deploy</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">APIs</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api_doc/api.html">Internal Django</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">News and Updates</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="news/weblog.html">Weblog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/flownexus-lwm2m/flownexus" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/flownexus-lwm2m/flownexus/edit/main/doc/source/simulation.rst" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/flownexus-lwm2m/flownexus/issues/new?title=Issue%20on%20page%20%2Fsimulation.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Simulation</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-backends">Simulation Backends</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-dispatcher-simulate-py">Simulation Dispatcher (simulate.py)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mock-simulation">Mock Simulation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#automated-environment-make-run-mock">Automated Environment (make run-mock)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-control">Manual Control</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zephyr-simulation">Zephyr Simulation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#running-the-zephyr-simulation">Running the Zephyr Simulation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Manual Control</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-yaml">Configuration (YAML)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration-testing">Integration Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#external-resources">External Resources</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="simulation">
+<h1>Simulation<a class="headerlink" href="#simulation" title="Link to this heading">#</a></h1>
+<p>flownexus provides a modular simulation platform located in the <code class="docutils literal notranslate"><span class="pre">simulation/</span></code>
+directory. This platform allows you to simulate IoT devices at different levels
+of fidelity, from lightweight API mocks to full-stack Zephyr firmware
+simulations.</p>
+<section id="simulation-backends">
+<h2>Simulation Backends<a class="headerlink" href="#simulation-backends" title="Link to this heading">#</a></h2>
+<p>The platform supports two primary backends:</p>
+<ol class="arabic simple">
+<li><p><strong>Mock Backend</strong>: A lightweight Python-based simulator that interacts
+directly with the Django Ingestion API. It is ideal for frontend development
+and load testing.</p></li>
+<li><p><strong>Zephyr Backend</strong>: A high-fidelity simulator that builds and runs actual
+Zephyr OS binaries (<code class="docutils literal notranslate"><span class="pre">native_sim</span></code>) inside a containerized network
+environment.</p></li>
+</ol>
+</section>
+<section id="simulation-dispatcher-simulate-py">
+<h2>Simulation Dispatcher (simulate.py)<a class="headerlink" href="#simulation-dispatcher-simulate-py" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">simulate.py</span></code> script is the central entry point for all simulations. It
+uses YAML configuration files to define the simulation behavior.</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Usage of simulate.py</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--help
+<span class="go">usage: simulate.py [-h] --config CONFIG [--build] [--run]</span>
+<span class="go">                   [--type {mock,zephyr}] [--count DEVICE_COUNT]</span>
+
+<span class="go">Flownexus Device Simulation Dispatcher</span>
+
+<span class="go">options:</span>
+<span class="go">  -h, --help            show this help message and exit</span>
+<span class="go">  --config CONFIG       Path to simulation YAML config file (Required)</span>
+<span class="go">  --build               Build binaries (Zephyr only)</span>
+<span class="go">  --run                 Run simulation</span>
+<span class="go">  --type {mock,zephyr}  Override simulation type</span>
+<span class="go">  --count DEVICE_COUNT  Override number of devices</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="mock-simulation">
+<h2>Mock Simulation<a class="headerlink" href="#mock-simulation" title="Link to this heading">#</a></h2>
+<p>The Mock backend is designed for rapid development of the flownexus frontend.
+It provides a high-level abstraction of IoT devices, allowing you to test
+dashboards, data ingestion, and firmware updates without a real device.</p>
+<section id="features">
+<h3>Features<a class="headerlink" href="#features" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Sine-wave Data</strong>: Generates smooth temperature and humidity curves,
+making it easy to verify frontend charts.</p></li>
+<li><p><strong>Integrated FOTA Support</strong>: Simulates the LwM2M firmware update lifecycle,
+including state transitions (Downloading, Downloaded, Updating) and
+actual binary download verification.</p></li>
+<li><p><strong>Mock Leshan API</strong>: Provides a built-in REST API on port 8081 that mimics
+the Leshan LwM2M server, allowing Django to send commands to mock devices.</p></li>
+<li><p><strong>Zero Dependencies</strong>: Does not require Docker, Podman (for the simulation itself),
+or Zephyr toolchains.</p></li>
+</ul>
+</section>
+<section id="automated-environment-make-run-mock">
+<h3>Automated Environment (make run-mock)<a class="headerlink" href="#automated-environment-make-run-mock" title="Link to this heading">#</a></h3>
+<p>The recommended way to develop for flownexus is using the integrated mock environment.
+Running a single command sets up the entire stack:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus$ </span>make<span class="w"> </span>run-mock
+</pre></div>
+</div>
+<p>This command orchestrates:
+1.  <strong>Redis</strong>: Starts the message broker (via Podman).
+2.  <strong>Django</strong>: Starts the development server at <a class="reference external" href="http://localhost:8000">http://localhost:8000</a>.
+3.  <strong>Celery</strong>: Starts a worker to process background tasks (like FOTA commands).
+4.  <strong>Mock Simulation</strong>: Starts the device simulator and the Mock Leshan API.</p>
+<p>The script ensures all processes are synchronized and provides a clean shutdown
+(via Ctrl+C) by killing all spawned process groups.</p>
+</section>
+<section id="manual-control">
+<h3>Manual Control<a class="headerlink" href="#manual-control" title="Link to this heading">#</a></h3>
+<p>If you prefer to run the simulation manually alongside an existing server:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--config<span class="w"> </span>sim_mock.yaml
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When running manually, ensure your Django server is configured to talk to
+the mock API by setting <code class="docutils literal notranslate"><span class="pre">LESHAN_URI=http://localhost:8081</span></code> in your environment.</p>
+</div>
+</section>
+</section>
+<section id="zephyr-simulation">
+<h2>Zephyr Simulation<a class="headerlink" href="#zephyr-simulation" title="Link to this heading">#</a></h2>
+<p>The Zephyr backend runs actual firmware binaries. This is used for
+end-to-end (E2E) testing and verifying LwM2M protocol compliance.</p>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">#</a></h3>
+<p>The Zephyr simulation requires a working Podman installation and the
+Python <code class="docutils literal notranslate"><span class="pre">docker</span></code> and <code class="docutils literal notranslate"><span class="pre">PyYAML</span></code> libraries.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~$ </span>apt<span class="w"> </span>install<span class="w"> </span>podman<span class="w"> </span>podman-compose
+<span class="gp">host:~$ </span>pip<span class="w"> </span>install<span class="w"> </span>docker<span class="w"> </span>PyYAML
+</pre></div>
+</div>
+<p>Furthermore, the flownexus server stack should be running. The script expects
+the network <code class="docutils literal notranslate"><span class="pre">server_mynetwork</span></code> to be available.</p>
+</section>
+<section id="running-the-zephyr-simulation">
+<h3>Running the Zephyr Simulation<a class="headerlink" href="#running-the-zephyr-simulation" title="Link to this heading">#</a></h3>
+<p>The easiest way to build and run the Zephyr simulation is via the project
+<code class="docutils literal notranslate"><span class="pre">Makefile</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Build<span class="w"> </span>the<span class="w"> </span>binaries<span class="w"> </span><span class="o">(</span>Required<span class="w"> </span>once<span class="w"> </span>or<span class="w"> </span>after<span class="w"> </span>code<span class="w"> </span>changes<span class="o">)</span>
+<span class="gp">host:~/flownexus$ </span>make<span class="w"> </span>build-sim
+
+<span class="gp"># </span>Run<span class="w"> </span>the<span class="w"> </span>E2E<span class="w"> </span><span class="nb">test</span><span class="w"> </span>suite
+<span class="gp">host:~/flownexus$ </span>make<span class="w"> </span>test-e2e
+</pre></div>
+</div>
+</section>
+<section id="id1">
+<h3>Manual Control<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<p>You can also use <code class="docutils literal notranslate"><span class="pre">simulate.py</span></code> directly with the Zephyr configuration:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Build<span class="w"> </span><span class="m">5</span><span class="w"> </span>devices
+<span class="gp">host:~/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--config<span class="w"> </span>sim_zephyr.yaml<span class="w"> </span>--build<span class="w"> </span>--count<span class="w"> </span><span class="m">5</span>
+
+<span class="gp"># </span>Run<span class="w"> </span>the<span class="w"> </span>simulation<span class="w"> </span>and<span class="w"> </span>connect<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span><span class="nb">local</span><span class="w"> </span>server
+<span class="gp">host:~/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--config<span class="w"> </span>sim_zephyr.yaml<span class="w"> </span>--run<span class="w"> </span>--local
+</pre></div>
+</div>
+</section>
+</section>
+<section id="configuration-yaml">
+<h2>Configuration (YAML)<a class="headerlink" href="#configuration-yaml" title="Link to this heading">#</a></h2>
+<p>Simulations are configured via YAML files. This allows you to check in specific
+test scenarios into version control.</p>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">Example sim_mock.yaml</span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mock</span>
+<span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://localhost:8000/flownexus/ingest&quot;</span>
+<span class="nt">device_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span><span class="w">  </span><span class="c1"># Seconds between updates</span>
+<span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">    </span><span class="c1"># 0 = Run forever</span>
+<span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">      </span><span class="c1"># Automatically start simulation</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Example sim_zephyr.yaml</span><a class="headerlink" href="#id4" title="Link to this code">#</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zephyr</span>
+<span class="nt">device_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="nt">local_leshan</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">  </span><span class="c1"># Connect to the Leshan container</span>
+<span class="nt">verbose</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="nt">delay</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">            </span><span class="c1"># Startup delay between instances (ms)</span>
+<span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="integration-testing">
+<h2>Integration Testing<a class="headerlink" href="#integration-testing" title="Link to this heading">#</a></h2>
+<p>The mock simulation is integrated into the Django test suite. You can run
+automated ingestion tests using:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus/server/django$ </span>python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span><span class="w"> </span>sensordata.tests.test_mock_simulation
+</pre></div>
+</div>
+<p>This test uses Django’s <code class="docutils literal notranslate"><span class="pre">LiveServerTestCase</span></code> to spin up a real HTTP server
+and verify that the simulation backend can successfully register devices and
+ingest data.</p>
+</section>
+<section id="external-resources">
+<h2>External Resources<a class="headerlink" href="#external-resources" title="Link to this heading">#</a></h2>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html">Zephyr LwM2M API</a></p></li>
+<li><p><a class="reference external" href="https://docs.zephyrproject.org/latest/samples/net/lwm2m_client/README.html">Zephyr LwM2M Client Sample</a></p></li>
+<li><p><a class="reference external" href="https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html">Zephyr Native Sim Board</a></p></li>
+<li><p><a class="reference external" href="https://docs.zephyrproject.org/latest/connectivity/networking/networking_with_multiple_instances.html">Zephyr Networking with Multiple Instances</a></p></li>
+</ul>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="deploy.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Build and Deploy</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="documentation.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Documentation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-backends">Simulation Backends</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-dispatcher-simulate-py">Simulation Dispatcher (simulate.py)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mock-simulation">Mock Simulation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#automated-environment-make-run-mock">Automated Environment (make run-mock)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-control">Manual Control</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zephyr-simulation">Zephyr Simulation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#running-the-zephyr-simulation">Running the Zephyr Simulation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Manual Control</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-yaml">Configuration (YAML)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration-testing">Integration Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#external-resources">External Resources</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2024, Individual contributors to flownexus.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
