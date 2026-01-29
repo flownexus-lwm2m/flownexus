@@ -36,6 +36,27 @@ class MockBackend:
             response = requests.post(url, json=payload, timeout=5)
             if response.status_code == 201:
                 logger.info(f"Registered device: {urn}")
+
+                # Send Object 3 (Device) resources
+                # Resources: 0=Manufacturer, 1=Model Number, 2=Serial Number, 3=Firmware Version
+                device_info = [
+                    (0, "STRING", "Acme Corp"),
+                    (1, "STRING", "Mock Device"),
+                    (2, "STRING", str(imei)),
+                    (3, "STRING", "v0.0.0"),
+                ]
+
+                for rid, rtype, rval in device_info:
+                    p = {
+                        "ep": urn,
+                        "obj_id": 3,
+                        "val": {"kind": "singleResource", "id": rid, "type": rtype, "value": rval},
+                    }
+                    try:
+                        requests.post(url, json=p, timeout=5)
+                    except Exception as e:
+                        logger.error(f"Error sending device info {rid} for {urn}: {e}")
+
                 return True
             else:
                 logger.error(f"Failed to register {urn}: {response.status_code} {response.text}")
