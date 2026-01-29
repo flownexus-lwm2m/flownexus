@@ -165,7 +165,11 @@ This test uses Django's ``LiveServerTestCase`` to spin up a real HTTP server
 and verify that the simulation backend can successfully register devices and
 ingest data.
 
-.. [1] https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html
-.. [2] https://docs.zephyrproject.org/latest/samples/net/lwm2m_client/README.html
-.. [3] https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html.
-.. [4] https://docs.zephyrproject.org/latest/connectivity/networking/networking_with_multiple_instances.html
+External Resources
+------------------
+
+.. seealso::
+   * `Zephyr LwM2M API <https://docs.zephyrproject.org/latest/connectivity/networking/api/lwm2m.html>`_
+   * `Zephyr LwM2M Client Sample <https://docs.zephyrproject.org/latest/samples/net/lwm2m_client/README.html>`_
+   * `Zephyr Native Sim Board <https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html>`_
+   * `Zephyr Networking with Multiple Instances <https://docs.zephyrproject.org/latest/connectivity/networking/networking_with_multiple_instances.html>`_
