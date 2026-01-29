@@ -61,10 +61,17 @@
           <div class="collapse navbar-collapse" id="navbar-menu">
             <div class="d-flex flex-column flex-md-row flex-fill align-items-stretch align-items-md-center">
               <ul class="navbar-nav">
-                <li class="nav-item active">
+                <li class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                   <a class="nav-link" href="{% url 'frontend:dashboard' %}" >
                     <span class="nav-link-title">
                       Overview
+                    </span>
+                  </a>
+                </li>
+                <li class="nav-item {% if request.resolver_match.url_name == 'firmware_list' %}active{% endif %}">
+                  <a class="nav-link" href="{% url 'frontend:firmware_list' %}" >
+                    <span class="nav-link-title">
+                      Firmware
                     </span>
                   </a>
                 </li>

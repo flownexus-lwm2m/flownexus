@@ -10,10 +10,10 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max
 from django.db.models.functions import TruncDay, TruncHour, TruncMinute
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from sensordata.models import Endpoint, Resource
+from sensordata.models import Endpoint, Firmware, Resource
 
 
 @login_required
@@ -126,3 +126,26 @@ def dashboard(request):
         return render(request, "frontend/dashboard_stats.html", context)
 
     return render(request, "frontend/dashboard.html", context)
+
+
+@login_required
+def firmware_list(request):
+    from .forms import FirmwareUploadForm
+
+    if request.method == "POST":
+        form = FirmwareUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect("frontend:firmware_list")
+    else:
+        form = FirmwareUploadForm()
+
+    firmwares = Firmware.objects.all().order_by("-created_at")
+    return render(
+        request,
+        "frontend/firmware.html",
+        {
+            "form": form,
+            "firmwares": firmwares,
+        },
+    )

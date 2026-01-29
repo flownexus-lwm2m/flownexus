@@ -1,0 +1,93 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Firmware Management{% endblock %}
+{% block page_title %}Firmware Management{% endblock %}
+
+{% block content %}
+<div class="row row-cards">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Upload FW to flownexus</h3>
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">{{ form.version.label }}</label>
+            {{ form.version }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.binary.label }}</label>
+            {{ form.binary }}
+            <small class="form-hint">Max file size: 1MB.</small>
+          </div>
+          <div class="form-footer">
+            <button type="submit" class="btn btn-primary w-100">Upload</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Firmware Binaries</h3>
+        <div class="ms-auto text-muted">
+          <div class="ms-2 d-inline-block">
+            <input type="text" id="fw-search" class="form-control form-control-sm" aria-label="Search firmware" placeholder="Search version...">
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive" style="max-height: 18rem; overflow-y: auto;">
+        <table class="table card-table table-vcenter text-nowrap datatable" id="fw-table">
+          <thead>
+            <tr>
+              <th>Version</th>
+              <th>Created At</th>
+              <th>File</th>
+              <th>Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fw in firmwares %}
+            <tr>
+              <td>{{ fw.version }}</td>
+              <td>{{ fw.created_at|date:"Y-m-d H:i" }}</td>
+              <td><a href="{{ fw.binary.url }}">{{ fw.binary.name }}</a></td>
+              <td>{{ fw.binary.size|filesizeformat }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted">No firmware binaries uploaded yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('fw-search');
+    const tableRows = document.querySelectorAll('#fw-table tbody tr');
+
+    searchInput.addEventListener('input', function () {
+      const query = this.value.toLowerCase();
+
+      tableRows.forEach(row => {
+        const versionText = row.querySelector('td:first-child')?.textContent.toLowerCase() || "";
+        if (versionText.includes(query)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

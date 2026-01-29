@@ -12,4 +12,5 @@ app_name = "frontend"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("firmware/", views.firmware_list, name="firmware_list"),
 ]
