@@ -8,7 +8,7 @@ test-django:
 
 # Start a mock simulation session for frontend development
 run-mock:
-	cd simulation && python3 simulate.py --config sim_mock.yaml
+	python3 scripts/run_mock_env.py
 
 # Build Zephyr simulation binaries
 build-sim:

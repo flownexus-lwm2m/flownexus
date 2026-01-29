@@ -1,25 +1,28 @@
 {% extends "frontend/base.html" %}
 
-{% block title %}Firmware Management{% endblock %}
-{% block page_title %}Firmware Management{% endblock %}
+{% block title %}Remote Firmware Management{% endblock %}
+{% block page_header %}{% endblock %}
 
 {% block content %}
-<div class="row row-cards">
+
+<h2 class="mb-3">Firmware Images</h2>
+<div class="row row-cards mb-4">
   <div class="col-md-4">
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Upload FW to flownexus</h3>
       </div>
-      <div class="card-body">
+      <div class="card-body form-card-body">
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
+          <input type="hidden" name="upload_fw" value="1">
           <div class="mb-3">
-            <label class="form-label">{{ form.version.label }}</label>
-            {{ form.version }}
+            <label class="form-label">{{ upload_form.version.label }}</label>
+            {{ upload_form.version }}
           </div>
           <div class="mb-3">
-            <label class="form-label">{{ form.binary.label }}</label>
-            {{ form.binary }}
+            <label class="form-label">{{ upload_form.binary.label }}</label>
+            {{ upload_form.binary }}
             <small class="form-hint">Max file size: 1MB.</small>
           </div>
           <div class="form-footer">
@@ -29,6 +32,7 @@
       </div>
     </div>
   </div>
+
   <div class="col-md-8">
     <div class="card">
       <div class="card-header">
@@ -39,14 +43,14 @@
           </div>
         </div>
       </div>
-      <div class="table-responsive" style="max-height: 18rem; overflow-y: auto;">
-        <table class="table card-table table-vcenter text-nowrap datatable" id="fw-table">
+      <div class="table-responsive table-container">
+        <table class="table card-table table-vcenter text-nowrap" id="fw-table">
           <thead>
             <tr>
-              <th>Version</th>
-              <th>Created At</th>
+              <th class="sortable" onclick="sortTable('fw-table', 0)">Version</th>
+              <th class="sortable" onclick="sortTable('fw-table', 1)">Created At</th>
               <th>File</th>
-              <th>Size</th>
+              <th class="sortable" onclick="sortTable('fw-table', 3)">Size</th>
             </tr>
           </thead>
           <tbody>
@@ -55,7 +59,7 @@
               <td>{{ fw.version }}</td>
               <td>{{ fw.created_at|date:"Y-m-d H:i" }}</td>
               <td><a href="{{ fw.binary.url }}">{{ fw.binary.name }}</a></td>
-              <td>{{ fw.binary.size|filesizeformat }}</td>
+              <td data-value="{{ fw.binary.size }}">{{ fw.binary.size|filesizeformat }}</td>
             </tr>
             {% empty %}
             <tr>
@@ -68,26 +72,168 @@
     </div>
   </div>
 </div>
+
+<h2 class="mb-3">Device Update</h2>
+<div class="row row-cards">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Start Update</h3>
+      </div>
+      <div class="card-body form-card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="start_update" value="1">
+          <div class="mb-3">
+            <label class="form-label">{{ update_form.endpoint.label }}</label>
+            {{ update_form.endpoint }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ update_form.firmware.label }}</label>
+            {{ update_form.firmware }}
+            <small class="form-hint">Select the target firmware version.</small>
+          </div>
+          <div class="form-footer">
+            <button type="submit" class="btn btn-success w-100">Start Update Process</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Update Status</h3>
+        <div class="ms-auto text-muted">
+          <div class="ms-2 d-inline-block">
+            <input type="text" id="update-search" class="form-control form-control-sm" aria-label="Search updates" placeholder="Search device...">
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive table-container" id="update-table-container"
+           hx-get="{% url 'frontend:firmware_list' %}" hx-trigger="every 10s"
+           hx-select="#update-table" hx-target="#update-table" hx-swap="outerHTML">
+        <table class="table card-table table-vcenter text-nowrap" id="update-table">
+          <thead>
+            <tr>
+              <th class="sortable" onclick="sortTable('update-table', 0)">Device</th>
+              <th class="sortable" onclick="sortTable('update-table', 1)">Version</th>
+              <th class="sortable" onclick="sortTable('update-table', 2)">State</th>
+              <th class="sortable" onclick="sortTable('update-table', 3)">Result</th>
+              <th class="sortable" onclick="sortTable('update-table', 4)">Last Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for up in updates %}
+            <tr>
+              <td>{{ up.endpoint }}</td>
+              <td>{{ up.firmware.version }}</td>
+              <td data-value="{{ up.state }}">
+                {% if up.state == 0 %}
+                <span class="status status-grey">IDLE</span>
+                {% elif up.state == 1 %}
+                <span class="status status-blue">DOWNLOADING</span>
+                {% elif up.state == 2 %}
+                <span class="status status-azure">DOWNLOADED</span>
+                {% elif up.state == 3 %}
+                <span class="status status-orange">UPDATING</span>
+                {% endif %}
+              </td>
+              <td data-value="{{ up.result }}">
+                {% if up.result == 0 %}
+                <span class="badge bg-secondary">PENDING</span>
+                {% elif up.result == 1 %}
+                <span class="badge bg-success">SUCCESS</span>
+                {% else %}
+                <span class="badge bg-danger" title="{{ up.get_result_display }}">FAILED</span>
+                {% endif %}
+              </td>
+              <td>{{ up.timestamp_updated|date:"H:i:s" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted">No updates recorded.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const searchInput = document.getElementById('fw-search');
-    const tableRows = document.querySelectorAll('#fw-table tbody tr');
+  let sortConfig = {
+    'fw-table': { col: 1, dir: 'desc' },
+    'update-table': { col: 4, dir: 'desc' }
+  };
 
-    searchInput.addEventListener('input', function () {
-      const query = this.value.toLowerCase();
+  function sortTable(tableId, colIdx) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
 
-      tableRows.forEach(row => {
-        const versionText = row.querySelector('td:first-child')?.textContent.toLowerCase() || "";
-        if (versionText.includes(query)) {
-          row.style.display = '';
-        } else {
-          row.style.display = 'none';
-        }
-      });
+    if (rows.length <= 1 && rows[0].classList.contains('text-center')) return;
+
+    let dir = 'asc';
+    if (sortConfig[tableId] && sortConfig[tableId].col === colIdx) {
+      dir = sortConfig[tableId].dir === 'asc' ? 'desc' : 'asc';
+    }
+    sortConfig[tableId] = { col: colIdx, dir: dir };
+
+    rows.sort((a, b) => {
+      let valA = a.cells[colIdx].getAttribute('data-value') || a.cells[colIdx].textContent.trim();
+      let valB = b.cells[colIdx].getAttribute('data-value') || b.cells[colIdx].textContent.trim();
+
+      if (!isNaN(valA) && !isNaN(valB) && valA !== "" && valB !== "") {
+        return dir === 'asc' ? valA - valB : valB - valA;
+      }
+      return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
     });
+
+    tbody.append(...rows);
+  }
+
+  function setupSearch(inputId, tableId) {
+    const searchInput = document.getElementById(inputId);
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        const query = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll(`#${tableId} tbody tr`);
+        tableRows.forEach(row => {
+          const text = row.querySelector('td:first-child')?.textContent.toLowerCase() || "";
+          if (text.includes(query)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    setupSearch('fw-search', 'fw-table');
+    setupSearch('update-search', 'update-table');
+
+    // Initial sorts
+    sortTable('fw-table', 1);
+    sortTable('update-table', 4);
+  });
+
+  // Re-apply sorting after HTMX updates
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === 'update-table') {
+      const cfg = sortConfig['update-table'];
+      // Temporarily toggle dir so sortTable sets it back to what it was
+      const originalDir = cfg.dir;
+      cfg.dir = originalDir === 'asc' ? 'desc' : 'asc';
+      sortTable('update-table', cfg.col);
+    }
   });
 </script>
 {% endblock %}

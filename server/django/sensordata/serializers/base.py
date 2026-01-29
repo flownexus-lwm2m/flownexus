@@ -149,8 +149,13 @@ class HandleResourceMixin:
             expected_version = fw_obj.firmware.version
             reported_version = value
             if expected_version == reported_version:
+                logger.info(f"FOTA Success: Version match for {ep}: {value}")
                 fw_obj.result = FirmwareUpdate.Result.RESULT_SUCCESS
             else:
+                logger.error(
+                    f"FOTA Failed: Version mismatch for {ep}. "
+                    f"Expected: '{expected_version}', Reported: '{reported_version}'"
+                )
                 fw_obj.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
             fw_obj.state = FirmwareUpdate.State.STATE_IDLE
             self.abort_pending_fota_comms(fw_obj)
