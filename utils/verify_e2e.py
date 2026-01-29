@@ -9,7 +9,7 @@ import time
 
 import requests
 
-BASE_URL = "http://localhost:8000/leshan_api"
+BASE_URL = "http://localhost:8000/flownexus/ingest"
 ENDPOINT_ID = "urn:imei:100000000000000"
 TIMEOUT = 60  # seconds
 

@@ -1,0 +1,9 @@
+#
+# Mock Simulation Configuration
+#
+type: mock
+url: "http://localhost:8000/flownexus/ingest"
+device_count: 5
+interval: 2.0
+duration: 0
+run: true
