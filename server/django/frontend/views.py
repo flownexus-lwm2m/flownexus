@@ -7,13 +7,14 @@
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Count, Max
 from django.db.models.functions import TruncDay, TruncHour, TruncMinute
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from sensordata.models import Endpoint, Firmware, Resource
+from sensordata.models import Endpoint, Event, Firmware, Resource, ResourceType
 
 
 @login_required
@@ -149,3 +150,122 @@ def firmware_list(request):
             "firmwares": firmwares,
         },
     )
+
+
+@login_required
+def data_analysis(request):
+    endpoints = Endpoint.objects.all()
+    resource_types = ResourceType.objects.all().order_by("name")
+
+    # Filters
+    endpoint_id = request.GET.get("endpoint")
+    resource_type_id = request.GET.get("resource_type")
+    time_range = request.GET.get("time_range", "24h")
+    mode = request.GET.get("mode", "values")  # 'values' or 'events'
+
+    now = timezone.now()
+    if time_range == "1h":
+        start_date = now - timedelta(hours=1)
+    elif time_range == "7d":
+        start_date = now - timedelta(days=7)
+    elif time_range == "30d":
+        start_date = now - timedelta(days=30)
+    elif time_range == "all":
+        start_date = None
+    else:  # default 24h
+        start_date = now - timedelta(hours=24)
+
+    if request.GET.get("format") == "json":
+        if mode == "values":
+            resources = Resource.objects.all().order_by("timestamp_created")
+            if start_date:
+                resources = resources.filter(timestamp_created__gte=start_date)
+            if endpoint_id:
+                resources = resources.filter(endpoint_id=endpoint_id)
+            if resource_type_id:
+                resources = resources.filter(resource_type_id=resource_type_id)
+
+            # Limit to 1000 points for performance
+            resources = resources[:1000]
+
+            data = []
+            resource_type_obj = None
+            if resource_type_id:
+                resource_type_obj = ResourceType.objects.get(id=resource_type_id)
+
+            for r in resources:
+                val = r.get_value()
+                data.append(
+                    {
+                        "t": r.timestamp_created.isoformat(),
+                        "y": val,
+                    }
+                )
+
+            return JsonResponse(
+                {
+                    "data": data,
+                    "is_numeric": resource_type_obj.data_type
+                    in ["INTEGER", "FLOAT", "TIME", "BOOLEAN"]
+                    if resource_type_obj
+                    else False,
+                }
+            )
+
+        elif mode == "events":
+            sort_col = request.GET.get("sort", "time")
+            sort_dir = request.GET.get("dir", "desc")
+            order_string = f"{'' if sort_dir == 'asc' else '-'}{sort_col}"
+
+            events = (
+                Event.objects.all()
+                .select_related("endpoint")
+                .prefetch_related("resources__resource__resource_type")
+                .order_by(order_string)
+            )
+            if start_date:
+                events = events.filter(time__gte=start_date)
+            if endpoint_id:
+                events = events.filter(endpoint_id=endpoint_id)
+
+            paginator = Paginator(events, 50)
+            page_number = request.GET.get("page", 1)
+            page_obj = paginator.get_page(page_number)
+
+            event_list = []
+            for e in page_obj:
+                res_data = {}
+                for er in e.resources.all():
+                    res = er.resource
+                    res_data[res.resource_type.name] = res.get_value()
+
+                event_list.append(
+                    {
+                        "id": e.id,
+                        "endpoint": e.endpoint.endpoint,
+                        "type": e.event_type,
+                        "time": e.time.isoformat(),
+                        "data": res_data,
+                    }
+                )
+
+            return JsonResponse(
+                {
+                    "events": event_list,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous(),
+                    "number": page_obj.number,
+                    "num_pages": paginator.num_pages,
+                }
+            )
+
+    context = {
+        "endpoints": endpoints,
+        "resource_types": resource_types,
+        "selected_endpoint": endpoint_id,
+        "selected_resource_type": resource_type_id,
+        "selected_time_range": time_range,
+        "selected_mode": mode,
+    }
+
+    return render(request, "frontend/data_analysis.html", context)

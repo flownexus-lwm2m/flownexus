@@ -26,40 +26,86 @@ class MockBackend:
 
     def _register_device(self, imei):
         urn = f"urn:imei:{imei}"
-        payload = {
+        url_composite = f"{self.target_url}/resource/composite"
+
+        # 1. Registration Event
+        reg_payload = {
             "ep": urn,
-            "obj_id": 10240,
-            "val": {"kind": "singleResource", "id": 0, "type": "INTEGER", "value": 1},
+            "val": {
+                "/10240": {
+                    "kind": "obj",
+                    "id": 10240,
+                    "instances": [
+                        {
+                            "id": 0,
+                            "kind": "instance",
+                            "resources": [
+                                {
+                                    "kind": "singleResource",
+                                    "id": 0,
+                                    "type": "INTEGER",
+                                    "value": 1,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            },
         }
+
         try:
-            url = f"{self.target_url}/resource/single"
-            response = requests.post(url, json=payload, timeout=5)
-            if response.status_code == 201:
-                logger.info(f"Registered device: {urn}")
-
-                # Send Object 3 (Device) resources
-                # Resources: 0=Manufacturer, 1=Model Number, 2=Serial Number, 3=Firmware Version
-                device_info = [
-                    (0, "STRING", "Acme Corp"),
-                    (1, "STRING", "Mock Device"),
-                    (2, "STRING", str(imei)),
-                    (3, "STRING", "v0.0.0"),
-                ]
-
-                for rid, rtype, rval in device_info:
-                    p = {
-                        "ep": urn,
-                        "obj_id": 3,
-                        "val": {"kind": "singleResource", "id": rid, "type": rtype, "value": rval},
-                    }
-                    try:
-                        requests.post(url, json=p, timeout=5)
-                    except Exception as e:
-                        logger.error(f"Error sending device info {rid} for {urn}: {e}")
-
-                return True
-            else:
+            response = requests.post(url_composite, json=reg_payload, timeout=5)
+            if response.status_code != 201:
                 logger.error(f"Failed to register {urn}: {response.status_code} {response.text}")
+                return False
+
+            logger.info(f"Registered device: {urn}")
+
+            # 2. Device Info Event (sent after registration accepted)
+            info_payload = {
+                "ep": urn,
+                "val": {
+                    "/3": {
+                        "kind": "obj",
+                        "id": 3,
+                        "instances": [
+                            {
+                                "id": 0,
+                                "kind": "instance",
+                                "resources": [
+                                    {
+                                        "kind": "singleResource",
+                                        "id": 0,
+                                        "type": "STRING",
+                                        "value": "Acme Corp",
+                                    },
+                                    {
+                                        "kind": "singleResource",
+                                        "id": 1,
+                                        "type": "STRING",
+                                        "value": "Mock Device",
+                                    },
+                                    {
+                                        "kind": "singleResource",
+                                        "id": 2,
+                                        "type": "STRING",
+                                        "value": str(imei),
+                                    },
+                                    {
+                                        "kind": "singleResource",
+                                        "id": 3,
+                                        "type": "STRING",
+                                        "value": "v0.0.1",
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                },
+            }
+            requests.post(url_composite, json=info_payload, timeout=5)
+            return True
+
         except Exception as e:
             logger.error(f"Error registering {urn}: {e}")
         return False
@@ -71,19 +117,34 @@ class MockBackend:
         # Random humidity (Object 3304, Resource 5700)
         hum = 40 + 20 * random.random()
 
-        telemetry = [(3303, "FLOAT", round(temp, 2)), (3304, "FLOAT", round(hum, 2))]
-
-        for obj_id, val_type, value in telemetry:
-            payload = {
-                "ep": urn,
-                "obj_id": obj_id,
-                "val": {"kind": "singleResource", "id": 5700, "type": val_type, "value": value},
-            }
-            try:
-                url = f"{self.target_url}/resource/single"
-                requests.post(url, json=payload, timeout=5)
-            except Exception as e:
-                logger.error(f"Error sending telemetry for {urn}: {e}")
+        payload = {
+            "ep": urn,
+            "val": [
+                {
+                    "null": {
+                        "nodes": {
+                            "/3303/0/5700": {
+                                "kind": "singleResource",
+                                "id": 5700,
+                                "type": "FLOAT",
+                                "value": round(temp, 2),
+                            },
+                            "/3304/0/5700": {
+                                "kind": "singleResource",
+                                "id": 5700,
+                                "type": "FLOAT",
+                                "value": round(hum, 2),
+                            },
+                        }
+                    }
+                }
+            ],
+        }
+        try:
+            url = f"{self.target_url}/resource/timestamped"
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            logger.error(f"Error sending telemetry for {urn}: {e}")
 
     def start(self):
         if not self.run:
@@ -94,7 +155,7 @@ class MockBackend:
 
         # Register devices
         for i in range(self.device_count):
-            imei = 100000000000000 + i
+            imei = i + 1
             if self._register_device(imei):
                 self.endpoints.append(imei)
 
