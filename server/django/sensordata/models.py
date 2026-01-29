@@ -62,7 +62,7 @@ class Resource(models.Model):
     int_value = models.IntegerField(null=True, blank=True)
     float_value = models.FloatField(null=True, blank=True)
     str_value = models.CharField(max_length=512, null=True, blank=True)
-    timestamp_created = models.DateTimeField(blank=True, null=True)
+    timestamp_created = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def save(self, *args, **kwargs):
         if not self.timestamp_created:
