@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Over the Air Updates &#8212; flownexus v0.1.1-31-g2ec636e documentation</title>
+    <title>Over the Air Updates &#8212; flownexus v0.1.1-40-g1405315 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=0b4f8ffb"></script>
+    <script src="../_static/documentation_options.js?v=ff10dd73"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -139,8 +139,8 @@
       
     
     
-    <img src="../_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-31-g2ec636e documentation - Home"/>
-    <script>document.write(`<img src="../_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-31-g2ec636e documentation - Home"/>`);</script>
+    <img src="../_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-40-g1405315 documentation - Home"/>
+    <script>document.write(`<img src="../_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-40-g1405315 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -353,6 +353,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#update-process-of-a-firmware">Update process of a Firmware</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#states-of-a-ota-update">States of a OTA Update</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#result-codes-for-an-ota-update">Result Codes for an OTA Update</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#testing-with-mock-simulation">Testing with Mock Simulation</a></li>
 </ul>
 </li>
 </ul>
@@ -493,6 +494,23 @@ each OTA update is stored in the database (FirmwareUpdate table).</p>
 </table>
 </div>
 </section>
+<section id="testing-with-mock-simulation">
+<h3>Testing with Mock Simulation<a class="headerlink" href="#testing-with-mock-simulation" title="Link to this heading">#</a></h3>
+<p>The OTA process can be tested without real hardware or a Leshan server using the
+integrated mock environment.</p>
+<ol class="arabic simple">
+<li><p>Start the mock environment with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">run-mock</span></code>.</p></li>
+<li><p>Upload a firmware file in the dashboard.</p></li>
+<li><p>Select a mock device (e.g., <code class="docutils literal notranslate"><span class="pre">urn:imei:1</span></code>) and initiate an update.</p></li>
+<li><p>The mock simulator will:
+*   Receive the update command via its built-in Mock Leshan API.
+*   Verify the download link by actually fetching the file from the server.
+*   Transition through states with an 11-second delay per step.
+*   Report the new firmware version back to Django.</p></li>
+</ol>
+<p>This allows for rapid verification of the state machine, Celery tasks, and UI
+updates in a controlled environment.</p>
+</section>
 </section>
 </section>
 
@@ -544,6 +562,7 @@ each OTA update is stored in the database (FirmwareUpdate table).</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#update-process-of-a-firmware">Update process of a Firmware</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#states-of-a-ota-update">States of a OTA Update</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#result-codes-for-an-ota-update">Result Codes for an OTA Update</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#testing-with-mock-simulation">Testing with Mock Simulation</a></li>
 </ul>
 </li>
 </ul>

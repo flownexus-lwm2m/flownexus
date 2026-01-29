@@ -45,37 +45,53 @@ Mock Simulation
 ---------------
 
 The Mock backend is designed for rapid development of the flownexus frontend.
-It bypasses the complexity of LwM2M and Zephyr, sending telemetry data directly
-to the server.
+It provides a high-level abstraction of IoT devices, allowing you to test
+dashboards, data ingestion, and firmware updates without a real device.
 
 Features
 ........
 
 *   **Sine-wave Data**: Generates smooth temperature and humidity curves,
     making it easy to verify frontend charts.
-*   **Zero Dependencies**: Does not require Docker, Podman, or Zephyr
-    toolchains.
-*   **Fast**: Instant startup and low resource overhead.
+*   **Integrated FOTA Support**: Simulates the LwM2M firmware update lifecycle,
+    including state transitions (Downloading, Downloaded, Updating) and
+    actual binary download verification.
+*   **Mock Leshan API**: Provides a built-in REST API on port 8081 that mimics
+    the Leshan LwM2M server, allowing Django to send commands to mock devices.
+*   **Zero Dependencies**: Does not require Docker, Podman (for the simulation itself),
+    or Zephyr toolchains.
 
-Running the Mock Simulation
-...........................
+Automated Environment (make run-mock)
+.....................................
 
-The easiest way to start a mock simulation is via the project ``Makefile``:
+The recommended way to develop for flownexus is using the integrated mock environment.
+Running a single command sets up the entire stack:
 
 .. code-block:: console
 
   host:~/flownexus$ make run-mock
 
-Alternatively, you can use the provided ``sim_mock.yaml`` configuration with the
-script directly:
+This command orchestrates:
+1.  **Redis**: Starts the message broker (via Podman).
+2.  **Django**: Starts the development server at http://localhost:8000.
+3.  **Celery**: Starts a worker to process background tasks (like FOTA commands).
+4.  **Mock Simulation**: Starts the device simulator and the Mock Leshan API.
+
+The script ensures all processes are synchronized and provides a clean shutdown
+(via Ctrl+C) by killing all spawned process groups.
+
+Manual Control
+..............
+
+If you prefer to run the simulation manually alongside an existing server:
 
 .. code-block:: console
 
   host:~/flownexus/simulation$ python3 simulate.py --config sim_mock.yaml
 
 .. note::
-   Ensure your Django server is running before starting the simulation. By
-   default, it targets ``http://localhost:8000/flownexus/ingest``.
+   When running manually, ensure your Django server is configured to talk to
+   the mock API by setting ``LESHAN_URI=http://localhost:8081`` in your environment.
 
 Zephyr Simulation
 -----------------

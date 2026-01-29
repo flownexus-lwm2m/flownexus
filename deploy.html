@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Build and Deploy &#8212; flownexus v0.1.1-31-g2ec636e documentation</title>
+    <title>Build and Deploy &#8212; flownexus v0.1.1-40-g1405315 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=0b4f8ffb"></script>
+    <script src="_static/documentation_options.js?v=ff10dd73"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -139,8 +139,8 @@
       
     
     
-    <img src="_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-31-g2ec636e documentation - Home"/>
-    <script>document.write(`<img src="_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-31-g2ec636e documentation - Home"/>`);</script>
+    <img src="_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-40-g1405315 documentation - Home"/>
+    <script>document.write(`<img src="_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-40-g1405315 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -448,9 +448,9 @@ package &quot;Container Environment&quot;  #DDDDDD {
 <p>Make sure to change the password to the admin console as well as other
 settings like SECRET_KEY, DEBUG flag in a production environment!</p>
 </div>
-<p>The container can be build and started with the following commands:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus/server$ </span>podman-compose<span class="w"> </span>build
-<span class="gp">host:~/workspace/flownexus/server$ </span>podman-compose<span class="w"> </span>up
+<p>The container can be built and started with the following commands:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/workspace/flownexus$ </span>make<span class="w"> </span>server-build
+<span class="gp">host:~/workspace/flownexus$ </span>podman-compose<span class="w"> </span>-f<span class="w"> </span>server/compose.yml<span class="w"> </span>up
 </pre></div>
 </div>
 </section>
@@ -622,7 +622,8 @@ in the <code class="docutils literal notranslate"><span class="pre">settings.py<
 <div class="code-block-caption"><span class="caption-text">Start flownexus with podman-compose</span><a class="headerlink" href="#id6" title="Link to this code">#</a></div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">vserver:~/ git clone https://github.com/flownexus-lwm2m/flownexus.git</span>
 <span class="gp"># </span>Change<span class="w"> </span>the<span class="w"> </span>DEPLOY_SECRET_KEY<span class="w"> </span>and<span class="w"> </span>DEBUG<span class="w"> </span>flag<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>settings.py<span class="w"> </span>file
-<span class="gp">vserver:~/flownexus/server$ </span>podman-compose<span class="w"> </span>up<span class="w"> </span>-d
+<span class="gp">vserver:~/flownexus$ </span>make<span class="w"> </span>server-build
+<span class="gp">vserver:~/flownexus$ </span>podman-compose<span class="w"> </span>-f<span class="w"> </span>server/compose.yml<span class="w"> </span>up<span class="w"> </span>-d
 </pre></div>
 </div>
 </div>

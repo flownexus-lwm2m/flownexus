@@ -112,4 +112,23 @@ each OTA update is stored in the database (FirmwareUpdate table).
    +-------------------------+------------------------+
 
 
+Testing with Mock Simulation
+............................
+
+The OTA process can be tested without real hardware or a Leshan server using the
+integrated mock environment.
+
+1.  Start the mock environment with ``make run-mock``.
+2.  Upload a firmware file in the dashboard.
+3.  Select a mock device (e.g., ``urn:imei:1``) and initiate an update.
+4.  The mock simulator will:
+    *   Receive the update command via its built-in Mock Leshan API.
+    *   Verify the download link by actually fetching the file from the server.
+    *   Transition through states with an 11-second delay per step.
+    *   Report the new firmware version back to Django.
+
+This allows for rapid verification of the state machine, Celery tasks, and UI
+updates in a controlled environment.
+
+
 .. _LwM2M core specification v1.1.1: https://www.openmobilealliance.org/release/LightweightM2M/V1_1_1-20190617-A/OMA-TS-LightweightM2M_Core-V1_1_1-20190617-A.pdf

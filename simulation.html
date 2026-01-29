@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Simulation &#8212; flownexus v0.1.1-31-g2ec636e documentation</title>
+    <title>Simulation &#8212; flownexus v0.1.1-40-g1405315 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=0b4f8ffb"></script>
+    <script src="_static/documentation_options.js?v=ff10dd73"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -139,8 +139,8 @@
       
     
     
-    <img src="_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-31-g2ec636e documentation - Home"/>
-    <script>document.write(`<img src="_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-31-g2ec636e documentation - Home"/>`);</script>
+    <img src="_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-40-g1405315 documentation - Home"/>
+    <script>document.write(`<img src="_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-40-g1405315 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -354,13 +354,14 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-dispatcher-simulate-py">Simulation Dispatcher (simulate.py)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mock-simulation">Mock Simulation</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#running-the-mock-simulation">Running the Mock Simulation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#automated-environment-make-run-mock">Automated Environment (make run-mock)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-control">Manual Control</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zephyr-simulation">Zephyr Simulation</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#running-the-zephyr-simulation">Running the Zephyr Simulation</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-control">Manual Control</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Manual Control</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-yaml">Configuration (YAML)</a></li>
@@ -399,8 +400,8 @@ environment.</p></li>
 <h2>Simulation Dispatcher (simulate.py)<a class="headerlink" href="#simulation-dispatcher-simulate-py" title="Link to this heading">#</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">simulate.py</span></code> script is the central entry point for all simulations. It
 uses YAML configuration files to define the simulation behavior.</p>
-<div class="literal-block-wrapper docutils container" id="id1">
-<div class="code-block-caption"><span class="caption-text">Usage of simulate.py</span><a class="headerlink" href="#id1" title="Link to this code">#</a></div>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Usage of simulate.py</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--help
 <span class="go">usage: simulate.py [-h] --config CONFIG [--build] [--run]</span>
 <span class="go">                   [--type {mock,zephyr}] [--count DEVICE_COUNT]</span>
@@ -421,33 +422,47 @@ uses YAML configuration files to define the simulation behavior.</p>
 <section id="mock-simulation">
 <h2>Mock Simulation<a class="headerlink" href="#mock-simulation" title="Link to this heading">#</a></h2>
 <p>The Mock backend is designed for rapid development of the flownexus frontend.
-It bypasses the complexity of LwM2M and Zephyr, sending telemetry data directly
-to the server.</p>
+It provides a high-level abstraction of IoT devices, allowing you to test
+dashboards, data ingestion, and firmware updates without a real device.</p>
 <section id="features">
 <h3>Features<a class="headerlink" href="#features" title="Link to this heading">#</a></h3>
 <ul class="simple">
 <li><p><strong>Sine-wave Data</strong>: Generates smooth temperature and humidity curves,
 making it easy to verify frontend charts.</p></li>
-<li><p><strong>Zero Dependencies</strong>: Does not require Docker, Podman, or Zephyr
-toolchains.</p></li>
-<li><p><strong>Fast</strong>: Instant startup and low resource overhead.</p></li>
+<li><p><strong>Integrated FOTA Support</strong>: Simulates the LwM2M firmware update lifecycle,
+including state transitions (Downloading, Downloaded, Updating) and
+actual binary download verification.</p></li>
+<li><p><strong>Mock Leshan API</strong>: Provides a built-in REST API on port 8081 that mimics
+the Leshan LwM2M server, allowing Django to send commands to mock devices.</p></li>
+<li><p><strong>Zero Dependencies</strong>: Does not require Docker, Podman (for the simulation itself),
+or Zephyr toolchains.</p></li>
 </ul>
 </section>
-<section id="running-the-mock-simulation">
-<h3>Running the Mock Simulation<a class="headerlink" href="#running-the-mock-simulation" title="Link to this heading">#</a></h3>
-<p>The easiest way to start a mock simulation is via the project <code class="docutils literal notranslate"><span class="pre">Makefile</span></code>:</p>
+<section id="automated-environment-make-run-mock">
+<h3>Automated Environment (make run-mock)<a class="headerlink" href="#automated-environment-make-run-mock" title="Link to this heading">#</a></h3>
+<p>The recommended way to develop for flownexus is using the integrated mock environment.
+Running a single command sets up the entire stack:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus$ </span>make<span class="w"> </span>run-mock
 </pre></div>
 </div>
-<p>Alternatively, you can use the provided <code class="docutils literal notranslate"><span class="pre">sim_mock.yaml</span></code> configuration with the
-script directly:</p>
+<p>This command orchestrates:
+1.  <strong>Redis</strong>: Starts the message broker (via Podman).
+2.  <strong>Django</strong>: Starts the development server at <a class="reference external" href="http://localhost:8000">http://localhost:8000</a>.
+3.  <strong>Celery</strong>: Starts a worker to process background tasks (like FOTA commands).
+4.  <strong>Mock Simulation</strong>: Starts the device simulator and the Mock Leshan API.</p>
+<p>The script ensures all processes are synchronized and provides a clean shutdown
+(via Ctrl+C) by killing all spawned process groups.</p>
+</section>
+<section id="manual-control">
+<h3>Manual Control<a class="headerlink" href="#manual-control" title="Link to this heading">#</a></h3>
+<p>If you prefer to run the simulation manually alongside an existing server:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">host:~/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--config<span class="w"> </span>sim_mock.yaml
 </pre></div>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Ensure your Django server is running before starting the simulation. By
-default, it targets <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/flownexus/ingest</span></code>.</p>
+<p>When running manually, ensure your Django server is configured to talk to
+the mock API by setting <code class="docutils literal notranslate"><span class="pre">LESHAN_URI=http://localhost:8081</span></code> in your environment.</p>
 </div>
 </section>
 </section>
@@ -478,8 +493,8 @@ the network <code class="docutils literal notranslate"><span class="pre">server_
 </pre></div>
 </div>
 </section>
-<section id="manual-control">
-<h3>Manual Control<a class="headerlink" href="#manual-control" title="Link to this heading">#</a></h3>
+<section id="id1">
+<h3>Manual Control<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
 <p>You can also use <code class="docutils literal notranslate"><span class="pre">simulate.py</span></code> directly with the Zephyr configuration:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Build<span class="w"> </span><span class="m">5</span><span class="w"> </span>devices
 <span class="gp">host:~/flownexus/simulation$ </span>python3<span class="w"> </span>simulate.py<span class="w"> </span>--config<span class="w"> </span>sim_zephyr.yaml<span class="w"> </span>--build<span class="w"> </span>--count<span class="w"> </span><span class="m">5</span>
@@ -494,8 +509,8 @@ the network <code class="docutils literal notranslate"><span class="pre">server_
 <h2>Configuration (YAML)<a class="headerlink" href="#configuration-yaml" title="Link to this heading">#</a></h2>
 <p>Simulations are configured via YAML files. This allows you to check in specific
 test scenarios into version control.</p>
-<div class="literal-block-wrapper docutils container" id="id2">
-<div class="code-block-caption"><span class="caption-text">Example sim_mock.yaml</span><a class="headerlink" href="#id2" title="Link to this code">#</a></div>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">Example sim_mock.yaml</span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mock</span>
 <span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://localhost:8000/flownexus/ingest&quot;</span>
 <span class="nt">device_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
@@ -505,8 +520,8 @@ test scenarios into version control.</p>
 </pre></div>
 </div>
 </div>
-<div class="literal-block-wrapper docutils container" id="id3">
-<div class="code-block-caption"><span class="caption-text">Example sim_zephyr.yaml</span><a class="headerlink" href="#id3" title="Link to this code">#</a></div>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Example sim_zephyr.yaml</span><a class="headerlink" href="#id4" title="Link to this code">#</a></div>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zephyr</span>
 <span class="nt">device_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="nt">local_leshan</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">  </span><span class="c1"># Connect to the Leshan container</span>
@@ -592,13 +607,14 @@ ingest data.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simulation-dispatcher-simulate-py">Simulation Dispatcher (simulate.py)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mock-simulation">Mock Simulation</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#features">Features</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#running-the-mock-simulation">Running the Mock Simulation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#automated-environment-make-run-mock">Automated Environment (make run-mock)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-control">Manual Control</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zephyr-simulation">Zephyr Simulation</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#running-the-zephyr-simulation">Running the Zephyr Simulation</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-control">Manual Control</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Manual Control</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-yaml">Configuration (YAML)</a></li>
