@@ -1,0 +1,10 @@
+#
+# Zephyr Simulation Configuration
+#
+type: zephyr
+device_count: 1
+local_leshan: false
+verbose: false
+delay: 0
+build: false
+run: false

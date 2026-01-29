@@ -1,21 +1,25 @@
 # Flownexus Makefile
 
-.PHONY: test-django test-all build-sim test-e2e compliance doc-html doc-pdf
+.PHONY: test-django test-all build-sim test-e2e run-mock compliance doc-html doc-pdf
 
 # Run Django tests in an isolated environment using Tox
 test-django:
 	cd server/django && tox -e unit-tests
 
+# Start a mock simulation session for frontend development
+run-mock:
+	cd simulation && python3 simulate.py --config sim_mock.yaml
+
 # Build Zephyr simulation binaries
 build-sim:
-	cd simulation && python3 simulate.py -b -n 1
+	cd simulation && python3 simulate.py --config sim_zephyr.yaml --build
 
 # Run End-to-End tests (Requires Podman)
 test-e2e: build-sim
 	@echo "Starting backend stack..."
 	podman-compose -f server/compose.yml up -d
 	@echo "Running simulation..."
-	cd simulation && python3 simulate.py -r -l -n 1 &
+	cd simulation && python3 simulate.py --config sim_zephyr.yaml --run --local &
 	@echo "Verifying data..."
 	python3 utils/verify_e2e.py
 	@echo "Shutting down..."

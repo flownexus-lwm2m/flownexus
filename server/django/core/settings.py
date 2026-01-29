@@ -106,9 +106,9 @@ REST_FRAMEWORK = {
 
 # Automatic ReST API documentation
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Leshan ReST API",
-    "DESCRIPTION": "The leshan_api is hosted by Django. The API allows the\
-                    Leshan server to add LwM2M resource data to Django. It is \
+    "TITLE": "Flownexus Ingest API",
+    "DESCRIPTION": "The flownexus ingest API is hosted by Django. The API allows the\
+                    LwM2M server to add LwM2M resource data to Django. It is \
                     an internal API and must not be exposed to the internet.",
     "VERSION": "1.0.0",
 }
