@@ -135,6 +135,7 @@ class Firmware(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     # Upload to MEDIA_ROOT
     binary = models.FileField()
+    is_deleted = models.BooleanField(default=False, help_text="Soft delete flag")
 
     # Limit the binary file size to 1 MB
     def clean(self):

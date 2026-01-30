@@ -123,7 +123,9 @@ class EndpointOperationAdmin(admin.ModelAdmin):
 
 @admin.register(Firmware)
 class FirmwareAdmin(admin.ModelAdmin):
-    list_display = ("version", "file_name", "file_link", "created_at")
+    list_display = ("version", "file_name", "file_link", "is_deleted", "created_at")
+    list_filter = ("is_deleted", "created_at")
+    search_fields = ("version",)
 
     def file_name(self, obj):
         return Path(obj.binary.name).name
@@ -153,13 +155,18 @@ class FirmwareAdmin(admin.ModelAdmin):
 class FirmwareUpdateAdmin(admin.ModelAdmin):
     list_display = (
         "endpoint",
-        "firmware",
+        "display_firmware",
         "state",
         "result",
         "timestamp_created",
         "timestamp_updated",
     )
-    search_fields = ("endpoint__endpoint", "firmware__version", "state", "result")
+    search_fields = (
+        "endpoint__endpoint",
+        "firmware__version",
+        "state",
+        "result",
+    )
     list_filter = ("state", "result", "timestamp_created", "timestamp_updated")
     readonly_fields = (
         "timestamp_created",
@@ -170,8 +177,18 @@ class FirmwareUpdateAdmin(admin.ModelAdmin):
         "execute_operation",
     )
 
+    def get_queryset(self, request):
+        # Ensure all entries are shown
+        return super().get_queryset(request).all()
+
+    def display_firmware(self, obj):
+        if obj.firmware.is_deleted:
+            return f"{obj.firmware.version} (deleted)"
+        return obj.firmware.version
+
+    display_firmware.short_description = "Firmware"
+
     def save_model(self, request, obj, form, change):
-        # Custom save logic if needed
         super().save_model(request, obj, form, change)
 
         # Trigger the async task to process the operation

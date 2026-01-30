@@ -126,6 +126,17 @@ def firmware_list(request):
                 fw_update = update_form.save()
                 process_pending_operations.delay(fw_update.endpoint.endpoint)
                 return redirect("frontend:firmware_list")
+        elif "delete_fw" in request.POST:
+            firmware_id = request.POST.get("firmware_id")
+            if firmware_id:
+                try:
+                    firmware = Firmware.objects.get(pk=firmware_id)
+                    # Soft delete: just mark as deleted
+                    firmware.is_deleted = True
+                    firmware.save()
+                except Firmware.DoesNotExist:
+                    pass
+            return redirect("frontend:firmware_list")
         else:
             # Handle cases where hidden fields are missing (e.g. legacy tests)
             # Try to guess which form it is
@@ -141,7 +152,16 @@ def firmware_list(request):
                     process_pending_operations.delay(fw_update.endpoint.endpoint)
                     return redirect("frontend:firmware_list")
 
-    firmwares = Firmware.objects.all().order_by("-created_at")
+    # Filter out soft-deleted firmwares for the frontend list
+    firmwares = Firmware.objects.filter(is_deleted=False).order_by("-created_at")
+    # Check file existence for each firmware
+    for fw in firmwares:
+        fw.file_exists = fw.binary.storage.exists(fw.binary.name) if fw.binary else False
+
+    # Filter update form to only show non-deleted firmwares with existing files
+    existing_firmware_ids = [fw.id for fw in firmwares if fw.file_exists]
+    update_form.fields["firmware"].queryset = Firmware.objects.filter(id__in=existing_firmware_ids)
+
     updates = (
         FirmwareUpdate.objects.all()
         .select_related("endpoint", "firmware")
