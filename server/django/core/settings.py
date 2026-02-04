@@ -15,6 +15,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
@@ -41,6 +42,11 @@ LOGGING = {
     },
     "handlers": {
         "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "console_debug": {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "simple",
@@ -48,7 +54,7 @@ LOGGING = {
     },
     "loggers": {
         "": {  # Root logger
-            "handlers": ["console"],
+            "handlers": ["console_debug"],
             "level": "DEBUG",
             "propagate": False,
         },
@@ -58,13 +64,23 @@ LOGGING = {
             "propagate": False,
         },
         "frontend": {
-            "handlers": ["console"],
+            "handlers": ["console_debug"],
             "level": "DEBUG",
             "propagate": False,
         },
         "celery": {
             "handlers": ["console"],
             "level": "INFO",
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "core.request_logging": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
@@ -89,6 +105,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "core.middleware.RequestLoggingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
