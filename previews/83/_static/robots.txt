@@ -1,3 +1,0 @@
-User-agent: *
-
-Sitemap: https://flownexus-lwm2m.github.io/flownexus/sitemap.xml
