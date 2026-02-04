@@ -75,7 +75,7 @@ class TestFrontendViews:
 
         assert response.status_code == 200
         assert len(response.context["firmwares"]) == 3
-        assert b"Remote Firmware Management" in response.content
+        assert b"Firmware Management" in response.content
         assert b"v1.0.0" in response.content
 
     def test_firmware_upload(self, client):
