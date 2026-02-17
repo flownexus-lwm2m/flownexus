@@ -8,7 +8,16 @@ import factory
 from django.contrib.auth.models import User
 from factory.django import DjangoModelFactory
 
-from .models import Endpoint, EndpointOperation, Event, Firmware, Resource, ResourceType
+from .models import (
+    Endpoint,
+    EndpointOperation,
+    Event,
+    Firmware,
+    Resource,
+    ResourceType,
+    Site,
+    SiteMembership,
+)
 
 
 class UserFactory(DjangoModelFactory):
@@ -80,3 +89,27 @@ class FirmwareFactory(DjangoModelFactory):
 
     version = factory.Sequence(lambda n: f"v1.0.{n}")
     binary = factory.django.FileField(filename="firmware.bin", data=b"binary content")
+
+
+class SiteFactory(DjangoModelFactory):
+    class Meta:
+        model = Site
+
+    name = factory.Sequence(lambda n: f"Site {n}")
+    description = factory.Faker("text", max_nb_chars=200)
+    is_active = True
+
+
+class SiteMembershipFactory(DjangoModelFactory):
+    class Meta:
+        model = SiteMembership
+
+    user = factory.SubFactory(UserFactory)
+    site = factory.SubFactory(SiteFactory)
+    role = SiteMembership.Role.USER
+    can_view_overview = True
+    can_view_firmware = True
+    can_view_data_analysis = True
+    can_manage_firmware = False
+    can_perform_operations = False
+    can_manage_devices = False

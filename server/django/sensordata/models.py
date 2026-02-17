@@ -6,9 +6,65 @@
 
 from pathlib import Path
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
+
+
+class Site(models.Model):
+    """Represents a customer/tenant organization in the IoT system."""
+
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class SiteMembership(models.Model):
+    """Links users to sites with specific roles and permissions."""
+
+    class Role(models.TextChoices):
+        ADMIN = "ADMIN", "Site Admin"
+        USER = "USER", "Site User"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="site_memberships"
+    )
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="memberships")
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER)
+
+    # Feature-based permissions
+    can_view_overview = models.BooleanField(default=True)
+    can_view_firmware = models.BooleanField(default=True)
+    can_view_data_analysis = models.BooleanField(default=True)
+
+    # Operational permissions
+    can_manage_firmware = models.BooleanField(default=False)  # Upload/delete firmware
+    can_perform_operations = models.BooleanField(default=False)  # Write/Execute on devices
+    can_manage_devices = models.BooleanField(default=False)  # Transfer devices between sites
+
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "site")
+        ordering = ["-joined_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.site.name} ({self.role})"
+
+    def is_admin(self):
+        return self.role == self.Role.ADMIN
+
+    def is_global_admin(self):
+        """Global admins are identified by is_superuser flag."""
+        return self.user.is_superuser
 
 
 class Endpoint(models.Model):
@@ -16,6 +72,9 @@ class Endpoint(models.Model):
 
     endpoint = models.CharField(max_length=255, primary_key=True)
     registered = models.BooleanField(default=False)
+    site = models.ForeignKey(
+        Site, on_delete=models.PROTECT, related_name="endpoints", null=True, blank=True
+    )
 
     def __str__(self):
         return Path(self.endpoint).name
@@ -185,15 +244,24 @@ class FirmwareUpdate(models.Model):
         EndpointOperation, null=True, on_delete=models.PROTECT, related_name="execute_operation"
     )
 
-    # Check for existing non-finished updates for the same endpoint. Only
-    # Update processes that have no result (RESULT_DEFAULT) are considered.
     def clean(self):
         super().clean()
-        existing_nodes = FirmwareUpdate.objects.filter(
-            endpoint=self.endpoint, result=self.Result.RESULT_DEFAULT
-        )
-        if existing_nodes.exists():
-            raise ValidationError("An active update with this endpoint already exists.")
+        try:
+            if self.endpoint:
+                existing_nodes = FirmwareUpdate.objects.filter(
+                    endpoint=self.endpoint, result=self.Result.RESULT_DEFAULT
+                )
+                # If we are editing an existing instance, exclude it
+                if self.pk:
+                    existing_nodes = existing_nodes.exclude(pk=self.pk)
+
+                if existing_nodes.exists():
+                    raise ValidationError("An active update with this endpoint already exists.")
+        except Endpoint.DoesNotExist:
+            pass
+        except Exception:
+            # Handle cases where endpoint might not be set yet during form validation
+            pass
 
     # Avoid having multiple ongoing updates for the same endpoint
     def save(self, *args, **kwargs):

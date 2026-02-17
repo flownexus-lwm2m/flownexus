@@ -19,6 +19,8 @@ from .models import (
     FirmwareUpdate,
     Resource,
     ResourceType,
+    Site,
+    SiteMembership,
 )
 from .tasks import process_pending_operations
 
@@ -193,3 +195,68 @@ class FirmwareUpdateAdmin(admin.ModelAdmin):
 
         # Trigger the async task to process the operation
         process_pending_operations.delay(obj.endpoint.endpoint)
+
+
+class SiteMembershipInline(admin.TabularInline):
+    model = SiteMembership
+    extra = 0
+    autocomplete_fields = ["user"]
+    readonly_fields = ("joined_at",)
+
+
+@admin.register(Site)
+class SiteAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active", "member_count", "endpoint_count", "created_at")
+    search_fields = ("name", "description")
+    list_filter = ("is_active", "created_at")
+    inlines = [SiteMembershipInline]
+    readonly_fields = ("created_at",)
+
+    def member_count(self, obj):
+        return obj.memberships.count()
+
+    member_count.short_description = "Members"
+
+    def endpoint_count(self, obj):
+        return obj.endpoints.count()
+
+    endpoint_count.short_description = "Endpoints"
+
+
+@admin.register(SiteMembership)
+class SiteMembershipAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "site",
+        "role",
+        "can_view_overview",
+        "can_view_firmware",
+        "can_view_data_analysis",
+        "can_manage_firmware",
+        "can_perform_operations",
+        "joined_at",
+    )
+    search_fields = ("user__username", "user__email", "site__name")
+    list_filter = (
+        "role",
+        "site",
+        "can_view_overview",
+        "can_view_firmware",
+        "can_view_data_analysis",
+        "can_manage_firmware",
+        "can_perform_operations",
+    )
+    autocomplete_fields = ["user", "site"]
+    readonly_fields = ("joined_at",)
+    fieldsets = (
+        (None, {"fields": ("user", "site", "role")}),
+        (
+            "Feature Permissions",
+            {"fields": ("can_view_overview", "can_view_firmware", "can_view_data_analysis")},
+        ),
+        (
+            "Operational Permissions",
+            {"fields": ("can_manage_firmware", "can_perform_operations", "can_manage_devices")},
+        ),
+        ("Metadata", {"fields": ("joined_at",)}),
+    )
