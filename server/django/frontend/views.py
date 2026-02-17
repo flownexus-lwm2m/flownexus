@@ -9,18 +9,74 @@ from datetime import timedelta
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Max
-from django.http import JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from sensordata.models import Endpoint, Event, Firmware, Resource, ResourceType
 
 
+def _get_site_filtered_endpoints(request):
+    """Get endpoints filtered by the user's current site context."""
+    site = getattr(request, "site", None)
+    if site:
+        return Endpoint.objects.filter(site=site)
+    return Endpoint.objects.none()
+
+
+def _check_site_permission(request, permission_name):
+    """Check if user has specific permission for the current site."""
+    if request.user.is_superuser:
+        return True
+    membership = getattr(request, "site_membership", None)
+    if not membership:
+        return False
+    return getattr(membership, permission_name, False)
+
+
+@login_required
+def switch_site(request, site_id):
+    """Switch the current site context for the user."""
+    if not request.user.is_authenticated:
+        return redirect("login")
+
+    # Verify user has access to this site
+    if request.user.is_superuser:
+        # Global admin can switch to any site
+        try:
+            from sensordata.models import Site
+
+            site = Site.objects.get(id=site_id, is_active=True)
+            request.session["current_site_id"] = site.id
+        except Exception:
+            pass
+    else:
+        # Check if user has membership to this site
+        from sensordata.models import SiteMembership
+
+        try:
+            membership = SiteMembership.objects.get(
+                user=request.user, site_id=site_id, site__is_active=True
+            )
+            request.session["current_site_id"] = membership.site.id
+        except SiteMembership.DoesNotExist:
+            pass
+
+    # Redirect back to referring page or dashboard
+    next_url = request.META.get("HTTP_REFERER", "/")
+    return redirect(next_url)
+
+
 @login_required
 def dashboard(request):
-    # Device Statistics
-    total_devices = Endpoint.objects.count()
-    registered_devices = Endpoint.objects.filter(registered=True).count()
+    # Check permission
+    if not _check_site_permission(request, "can_view_overview"):
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
+    # Device Statistics - filtered by site
+    endpoints_qs = _get_site_filtered_endpoints(request)
+    total_devices = endpoints_qs.count()
+    registered_devices = endpoints_qs.filter(registered=True).count()
     offline_devices = total_devices - registered_devices
 
     # Graph Data: Added values over time
@@ -63,10 +119,15 @@ def dashboard(request):
         data.append(val)
         current_step += delta
 
-    # Firmware Distribution (latest version for all devices)
+    # Firmware Distribution (latest version for devices in current site)
     # Get the latest firmware version (Object 3, Resource 3) for each device
+    site_endpoints = _get_site_filtered_endpoints(request)
     latest_firmware_ids = (
-        Resource.objects.filter(resource_type__object_id=3, resource_type__resource_id=3)
+        Resource.objects.filter(
+            resource_type__object_id=3,
+            resource_type__resource_id=3,
+            endpoint__in=site_endpoints,
+        )
         .values("endpoint")
         .annotate(max_id=Max("id"))
         .values_list("max_id", flat=True)
@@ -106,10 +167,16 @@ def dashboard(request):
 
 @login_required
 def firmware_list(request):
+    # Check permission
+    if not _check_site_permission(request, "can_view_firmware"):
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
     from sensordata.models import FirmwareUpdate
     from sensordata.tasks import process_pending_operations
 
     from .forms import FirmwareUpdateForm, FirmwareUploadForm
+
+    can_manage_firmware = _check_site_permission(request, "can_manage_firmware")
 
     upload_form = FirmwareUploadForm()
     update_form = FirmwareUpdateForm()
@@ -122,6 +189,10 @@ def firmware_list(request):
                 return redirect("frontend:firmware_list")
         elif "start_update" in request.POST:
             update_form = FirmwareUpdateForm(request.POST)
+            # Ensure the endpoint belongs to the user's site
+            site_endpoints = _get_site_filtered_endpoints(request)
+            update_form.fields["endpoint"].queryset = site_endpoints
+
             if update_form.is_valid():
                 fw_update = update_form.save()
                 process_pending_operations.delay(fw_update.endpoint.endpoint)
@@ -147,6 +218,10 @@ def firmware_list(request):
                     return redirect("frontend:firmware_list")
             elif "endpoint" in request.POST:
                 update_form = FirmwareUpdateForm(request.POST)
+                # Ensure the endpoint belongs to the user's site
+                site_endpoints = _get_site_filtered_endpoints(request)
+                update_form.fields["endpoint"].queryset = site_endpoints
+
                 if update_form.is_valid():
                     fw_update = update_form.save()
                     process_pending_operations.delay(fw_update.endpoint.endpoint)
@@ -162,8 +237,13 @@ def firmware_list(request):
     existing_firmware_ids = [fw.id for fw in firmwares if fw.file_exists]
     update_form.fields["firmware"].queryset = Firmware.objects.filter(id__in=existing_firmware_ids)
 
+    # Filter endpoints by current site
+    site_endpoints = _get_site_filtered_endpoints(request)
+    update_form.fields["endpoint"].queryset = site_endpoints
+
+    # Filter updates by site (via endpoint)
     updates = (
-        FirmwareUpdate.objects.all()
+        FirmwareUpdate.objects.filter(endpoint__in=site_endpoints)
         .select_related("endpoint", "firmware")
         .order_by("-timestamp_created")
     )
@@ -176,13 +256,19 @@ def firmware_list(request):
             "update_form": update_form,
             "firmwares": firmwares,
             "updates": updates,
+            "can_manage_firmware": can_manage_firmware,
         },
     )
 
 
 @login_required
 def data_analysis(request):
-    endpoints = Endpoint.objects.all()
+    # Check permission
+    if not _check_site_permission(request, "can_view_data_analysis"):
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
+    # Filter endpoints by current site
+    endpoints = _get_site_filtered_endpoints(request)
     resource_types = ResourceType.objects.all().order_by("name")
 
     # Filters
@@ -205,7 +291,11 @@ def data_analysis(request):
 
     if request.GET.get("format") == "json":
         if mode == "values":
-            resources = Resource.objects.all().order_by("timestamp_created")
+            # Filter resources by site through endpoints
+            site_endpoints = _get_site_filtered_endpoints(request)
+            resources = Resource.objects.filter(endpoint__in=site_endpoints).order_by(
+                "timestamp_created"
+            )
             if start_date:
                 resources = resources.filter(timestamp_created__gte=start_date)
             if endpoint_id:
@@ -245,8 +335,10 @@ def data_analysis(request):
             sort_dir = request.GET.get("dir", "desc")
             order_string = f"{'' if sort_dir == 'asc' else '-'}{sort_col}"
 
+            # Filter events by site through endpoints
+            site_endpoints = _get_site_filtered_endpoints(request)
             events = (
-                Event.objects.all()
+                Event.objects.filter(endpoint__in=site_endpoints)
                 .select_related("endpoint")
                 .prefetch_related("resources__resource__resource_type")
                 .order_by(order_string)
