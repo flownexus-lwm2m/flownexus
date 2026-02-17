@@ -21,6 +21,7 @@
 {% block content %}
 
 <div class="row row-cards mb-4">
+  {% if can_manage_firmware %}
   <div class="col-md-4">
     <div class="card">
       <div class="card-header">
@@ -46,8 +47,9 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
-  <div class="col-md-8">
+  <div class="{% if can_manage_firmware %}col-md-8{% else %}col-md-12{% endif %}">
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Firmware Binaries</h3>
@@ -63,8 +65,8 @@
             <tr>
               <th class="sortable" onclick="sortTable('fw-table', 0)">Version</th>
               <th>File</th>
-              <th>Actions</th>
-              <th class="sortable" onclick="sortTable('fw-table', 3)">Created At</th>
+              {% if can_manage_firmware %}<th>Actions</th>{% endif %}
+              <th class="sortable" onclick="sortTable('fw-table', {% if can_manage_firmware %}3{% else %}2{% endif %})">Created At</th>
             </tr>
           </thead>
           <tbody>
@@ -78,6 +80,7 @@
                   <span class="text-decoration-line-through">{{ fw.binary.name }}</span>
                 {% endif %}
               </td>
+              {% if can_manage_firmware %}
               <td>
                 <form method="post" class="d-inline">
                   {% csrf_token %}
@@ -95,11 +98,12 @@
                   </button>
                 </form>
               </td>
+              {% endif %}
               <td>{{ fw.created_at|date:"d.m.Y H:i" }}</td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="4" class="text-center text-muted">No firmware binaries uploaded yet.</td>
+              <td colspan="{% if can_manage_firmware %}4{% else %}3{% endif %}" class="text-center text-muted">No firmware binaries uploaded yet.</td>
             </tr>
             {% endfor %}
           </tbody>

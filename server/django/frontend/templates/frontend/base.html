@@ -80,6 +80,34 @@
             </a>
           </h1>
           <div class="navbar-nav flex-row order-md-last">
+            {% if available_sites|length > 1 %}
+            <!-- Site Switcher -->
+            <div class="nav-item dropdown me-3">
+              <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Switch site">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" /><path d="M9 4v13" /><path d="M15 7v13" /></svg>
+                <div class="d-none d-xl-block">
+                  <div class="fw-bold">{{ current_site.name|default:"Select Site" }}</div>
+                  <div class="text-secondary small">{% if is_global_admin %}Global Admin{% elif site_role == 'ADMIN' %}Site Admin{% else %}Site User{% endif %}</div>
+                </div>
+              </a>
+              <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <div class="dropdown-header">Switch Site</div>
+                {% for site in available_sites %}
+                <a class="dropdown-item {% if current_site.id == site.id %}active{% endif %}" href="{% url 'frontend:switch_site' site.id %}">
+                  {{ site.name }}
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+            {% elif current_site %}
+            <!-- Single site indicator -->
+            <div class="nav-item d-none d-md-flex me-3">
+              <span class="nav-link text-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" /><path d="M9 4v13" /><path d="M15 7v13" /></svg>
+                {{ current_site.name }}
+              </span>
+            </div>
+            {% endif %}
             <div class="nav-item d-none d-md-flex me-3">
               <div class="btn-list">
                 <a href="{% url 'admin:index' %}" class="btn" target="_blank" rel="noreferrer">
@@ -106,27 +134,33 @@
           <div class="collapse navbar-collapse" id="navbar-menu">
             <div class="d-flex flex-column flex-md-row flex-fill align-items-stretch align-items-md-center">
               <ul class="navbar-nav">
+                {% if can_view_overview %}
                 <li class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                  <a class="nav-link" href="{% url 'frontend:dashboard' %}" >
+                  <a class="nav-link" href="{% url 'frontend:dashboard' %}">
                     <span class="nav-link-title">
                       Overview
                     </span>
                   </a>
                 </li>
+                {% endif %}
+                {% if can_view_firmware %}
                  <li class="nav-item {% if request.resolver_match.url_name == 'firmware_list' %}active{% endif %}">
-                   <a class="nav-link" href="{% url 'frontend:firmware_list' %}" >
+                   <a class="nav-link" href="{% url 'frontend:firmware_list' %}">
                      <span class="nav-link-title">
                        Firmware
                      </span>
                    </a>
                  </li>
+                {% endif %}
+                {% if can_view_data_analysis %}
                  <li class="nav-item {% if request.resolver_match.url_name == 'data_analysis' %}active{% endif %}">
-                   <a class="nav-link" href="{% url 'frontend:data_analysis' %}" >
+                   <a class="nav-link" href="{% url 'frontend:data_analysis' %}">
                      <span class="nav-link-title">
                        Data
                      </span>
                    </a>
                  </li>
+                {% endif %}
                </ul>
 
             </div>
