@@ -9,7 +9,14 @@ from unittest.mock import patch
 import pytest
 from django.urls import reverse
 
-from sensordata.factories import EndpointFactory, FirmwareFactory, ResourceTypeFactory
+from sensordata.factories import (
+    EndpointFactory,
+    FirmwareFactory,
+    ResourceTypeFactory,
+    SiteFactory,
+    SiteMembershipFactory,
+    UserFactory,
+)
 from sensordata.models import EndpointOperation, FirmwareUpdate, ResourceType
 
 
@@ -39,8 +46,19 @@ class TestFirmwareUpdateFlow:
         # Ensure Celery tasks run immediately
         settings.CELERY_TASK_ALWAYS_EAGER = True
 
-        # 1. Setup: Device and Firmware
-        endpoint = EndpointFactory(endpoint="test-device")
+        # 1. Setup: Site, User, Device and Firmware
+        site = SiteFactory(name="Update Site")
+        user = UserFactory(username="update_user")
+        from sensordata.models import SiteMembership
+
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.ADMIN,
+            can_manage_firmware=True,
+            can_view_firmware=True,
+        )
+        endpoint = EndpointFactory(endpoint="test-device", site=site)
         firmware = FirmwareFactory(version="v2.0.0")
 
         # Mock Leshan API responses
@@ -49,14 +67,20 @@ class TestFirmwareUpdateFlow:
         mock_requests.post.return_value.status_code = 200
         mock_requests.post.return_value.json.return_value = {"status": "success"}
 
-        # 2. Start Update (User Action)
-        # We manually create the FirmwareUpdate object as the view logic would do
-        firmware_update = FirmwareUpdate.objects.create(endpoint=endpoint, firmware=firmware)
+        # 2. Start Update (User Action via View)
+        client.force_login(user)
+        url = reverse("frontend:firmware_list")
+        data = {
+            "start_update": "1",
+            "endpoint": endpoint.endpoint,
+            "firmware": firmware.id,
+        }
+        response = client.post(url, data)
+        assert response.status_code == 302
 
-        # Manually trigger task as the view would/should do
-        from sensordata.tasks import process_pending_operations
+        # Verify FirmwareUpdate object created
 
-        process_pending_operations(endpoint.endpoint)
+        firmware_update = FirmwareUpdate.objects.get(endpoint=endpoint, firmware=firmware)
 
         # Verify initial state
         assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE
