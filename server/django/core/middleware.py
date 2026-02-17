@@ -8,6 +8,8 @@ import logging
 import re
 import time
 
+from sensordata.models import Site, SiteMembership
+
 logger = logging.getLogger("core.request_logging")
 
 
@@ -61,3 +63,74 @@ class RequestLoggingMiddleware:
             )
 
         return response
+
+
+class SiteContextMiddleware:
+    """Middleware to manage site context for multi-tenant access control."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Only process for authenticated users
+        if request.user.is_authenticated:
+            # Set site context
+            site_id = request.session.get("current_site_id")
+
+            # Global admins can access all sites
+            if request.user.is_superuser:
+                request.is_global_admin = True
+                request.available_sites = list(Site.objects.filter(is_active=True))
+            else:
+                request.is_global_admin = False
+                # Get sites this user has access to
+                memberships = SiteMembership.objects.filter(
+                    user=request.user,
+                    site__is_active=True,
+                ).select_related("site")
+                request.available_sites = [m.site for m in memberships]
+
+            # Set current site
+            if site_id:
+                # Verify user has access to this site
+                if request.is_global_admin:
+                    try:
+                        request.site = Site.objects.get(id=site_id, is_active=True)
+                    except Site.DoesNotExist:
+                        request.site = self._get_default_site(request)
+                else:
+                    try:
+                        membership = SiteMembership.objects.get(
+                            user=request.user, site_id=site_id, site__is_active=True
+                        )
+                        request.site = membership.site
+                        request.site_membership = membership
+                    except SiteMembership.DoesNotExist:
+                        request.site = self._get_default_site(request)
+            else:
+                # No site selected, use default
+                request.site = self._get_default_site(request)
+
+        response = self.get_response(request)
+        return response
+
+    def _get_default_site(self, request):
+        """Get the first available site for the user."""
+        if request.is_global_admin:
+            # Global admin can use any active site
+            site = Site.objects.filter(is_active=True).first()
+            if site:
+                request.session["current_site_id"] = site.id
+            return site
+
+        # Regular user - get first site they have access to
+        membership = (
+            SiteMembership.objects.filter(user=request.user, site__is_active=True)
+            .select_related("site")
+            .first()
+        )
+        if membership:
+            request.site_membership = membership
+            request.session["current_site_id"] = membership.site.id
+            return membership.site
+        return None
