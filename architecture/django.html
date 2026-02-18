@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Django &#8212; flownexus v0.1.1-44-g9013eb6 documentation</title>
+    <title>Django &#8212; flownexus v0.1.1-50-gacabf65 documentation</title>
   
   
   
@@ -37,7 +37,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=35f71ce1"></script>
+    <script src="../_static/documentation_options.js?v=a7a8e51c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
@@ -139,8 +139,8 @@
       
     
     
-    <img src="../_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-44-g9013eb6 documentation - Home"/>
-    <script>document.write(`<img src="../_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-44-g9013eb6 documentation - Home"/>`);</script>
+    <img src="../_static/flownexus_logo_dark.svg" class="logo__image only-light" alt="flownexus v0.1.1-50-gacabf65 documentation - Home"/>
+    <script>document.write(`<img src="../_static/flownexus_logo_light.svg" class="logo__image only-dark" alt="flownexus v0.1.1-50-gacabf65 documentation - Home"/>`);</script>
   
   
 </a></div>
@@ -355,6 +355,14 @@ document.write(`
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#multi-site-access-control">Multi-Site Access Control</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#site-organization">Site Organization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#role-based-access-control">Role-Based Access Control</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-permissions">Feature Permissions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#site-context-switching">Site Context Switching</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#administrative-interface">Administrative Interface</a></li>
+</ul>
+</li>
 </ul>
             </nav>
         </div>
@@ -462,13 +470,86 @@ download and install. Each record includes a version identifier, the name
 of the file, a URL from where the device can retrieve the firmware, and
 timestamps for tracking when each firmware record was created and last
 updated.</p>
-</dd>
-<dt id="term-FirmwareUpdate">FirmwareUpdate<a class="headerlink" href="#term-FirmwareUpdate" title="Link to this term">#</a></dt><dd><p>keeps track of the execution of firmware updates for each endpoint. It adds
+<dl class="simple">
+<dt>irmwareUpdate</dt><dd><p>keeps track of the execution of firmware updates for each endpoint. It adds
 references to the two required resources from server to endpoint (Send URI,
 execute Update). Furthermore it adds a field for the State and the Result
 of an update.</p>
 </dd>
+<dt>ite</dt><dd><p>Represents a customer or tenant organization in a multi-site deployment.
+Devices (Endpoints) belong to exactly one Site, and users can be assigned
+to one or multiple Sites with specific roles and permissions.</p>
+</dd>
+<dt>iteMembership</dt><dd><p>Links users to Sites with role-based access control. Defines permissions
+for viewing data, managing firmware, performing device operations, and
+administrative functions within a Site context.</p>
+</dd>
 </dl>
+</dd>
+</dl>
+</section>
+<section id="multi-site-access-control">
+<h2>Multi-Site Access Control<a class="headerlink" href="#multi-site-access-control" title="Link to this heading">#</a></h2>
+<p>The system supports multi-tenant deployments where multiple customers (Sites) can
+share a single FlowNexus instance while maintaining complete data isolation.</p>
+<section id="site-organization">
+<h3>Site Organization<a class="headerlink" href="#site-organization" title="Link to this heading">#</a></h3>
+<p>Each <strong>Site</strong> represents a customer or tenant organization:</p>
+<ul class="simple">
+<li><p>Devices (Endpoints) belong to exactly one Site</p></li>
+<li><p>Users can be members of multiple Sites</p></li>
+<li><p>Data is strictly isolated between Sites (no cross-site visibility)</p></li>
+<li><p>Firmware binaries can be shared across Sites (usable for multiple customers)</p></li>
+<li><p>Firmware updates are tracked per Site</p></li>
+</ul>
+</section>
+<section id="role-based-access-control">
+<h3>Role-Based Access Control<a class="headerlink" href="#role-based-access-control" title="Link to this heading">#</a></h3>
+<p>Users are assigned to Sites through <strong>SiteMembership</strong> with specific roles:</p>
+<dl class="simple">
+<dt><strong>Site User</strong></dt><dd><p>Read-only access to dashboards and telemetry data within their assigned Sites.
+Can view device status and historical data but cannot perform operations.</p>
+</dd>
+<dt><strong>Site Admin</strong></dt><dd><p>Full access within their Sites including:
+* Upload and manage firmware binaries
+* Initiate firmware updates on devices
+* Perform device operations (Write/Execute)
+* Transfer devices between Sites</p>
+</dd>
+<dt><strong>Global Admin</strong></dt><dd><p>Superuser with access to all Sites and administrative functions:
+* Create new Sites
+* Assign users to Sites
+* Manage site memberships and permissions
+* Transfer devices between any Sites</p>
+</dd>
+</dl>
+</section>
+<section id="feature-permissions">
+<h3>Feature Permissions<a class="headerlink" href="#feature-permissions" title="Link to this heading">#</a></h3>
+<p>Per-site permissions control access to functional areas:</p>
+<ul class="simple">
+<li><p><strong>Overview</strong>: View device status and metrics dashboard</p></li>
+<li><p><strong>Firmware</strong>: Access firmware management and FOTA updates</p></li>
+<li><p><strong>Data Analysis</strong>: Use advanced telemetry filtering and visualization tools</p></li>
+</ul>
+</section>
+<section id="site-context-switching">
+<h3>Site Context Switching<a class="headerlink" href="#site-context-switching" title="Link to this heading">#</a></h3>
+<p>Users belonging to multiple Sites see a site switcher in the top navigation
+bar. The current Site context filters all data and operations. Navigation menus
+adapt dynamically based on the user’s permissions for the active Site.</p>
+</section>
+<section id="administrative-interface">
+<h3>Administrative Interface<a class="headerlink" href="#administrative-interface" title="Link to this heading">#</a></h3>
+<p>Site and SiteMembership management is available through the Django admin
+interface at <code class="docutils literal notranslate"><span class="pre">/admin/sensordata/</span></code>:</p>
+<ul class="simple">
+<li><p>Create Sites with descriptions and active/inactive status</p></li>
+<li><p>Assign users to Sites with specific roles</p></li>
+<li><p>Configure granular permissions per membership</p></li>
+<li><p>View member counts and device counts per Site</p></li>
+</ul>
+</section>
 </section>
 </section>
 
@@ -522,6 +603,14 @@ of an update.</p>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#database-model">Database Model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#multi-site-access-control">Multi-Site Access Control</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#site-organization">Site Organization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#role-based-access-control">Role-Based Access Control</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-permissions">Feature Permissions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#site-context-switching">Site Context Switching</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#administrative-interface">Administrative Interface</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 

@@ -117,8 +117,86 @@ the Django app that contains the application logic.
     timestamps for tracking when each firmware record was created and last
     updated.
 
-  FirmwareUpdate
-    keeps track of the execution of firmware updates for each endpoint. It adds
-    references to the two required resources from server to endpoint (Send URI,
-    execute Update). Furthermore it adds a field for the State and the Result
-    of an update.
+   FirmwareUpdate
+     keeps track of the execution of firmware updates for each endpoint. It adds
+     references to the two required resources from server to endpoint (Send URI,
+     execute Update). Furthermore it adds a field for the State and the Result
+     of an update.
+
+   Site
+     Represents a customer or tenant organization in a multi-site deployment.
+     Devices (Endpoints) belong to exactly one Site, and users can be assigned
+     to one or multiple Sites with specific roles and permissions.
+
+   SiteMembership
+     Links users to Sites with role-based access control. Defines permissions
+     for viewing data, managing firmware, performing device operations, and
+     administrative functions within a Site context.
+
+
+Multi-Site Access Control
+-------------------------
+
+The system supports multi-tenant deployments where multiple customers (Sites) can
+share a single FlowNexus instance while maintaining complete data isolation.
+
+Site Organization
+..................
+
+Each **Site** represents a customer or tenant organization:
+
+* Devices (Endpoints) belong to exactly one Site
+* Users can be members of multiple Sites
+* Data is strictly isolated between Sites (no cross-site visibility)
+* Firmware binaries can be shared across Sites (usable for multiple customers)
+* Firmware updates are tracked per Site
+
+Role-Based Access Control
+.........................
+
+Users are assigned to Sites through **SiteMembership** with specific roles:
+
+**Site User**
+  Read-only access to dashboards and telemetry data within their assigned Sites.
+  Can view device status and historical data but cannot perform operations.
+
+**Site Admin**
+  Full access within their Sites including:
+  * Upload and manage firmware binaries
+  * Initiate firmware updates on devices
+  * Perform device operations (Write/Execute)
+  * Transfer devices between Sites
+
+**Global Admin**
+  Superuser with access to all Sites and administrative functions:
+  * Create new Sites
+  * Assign users to Sites
+  * Manage site memberships and permissions
+  * Transfer devices between any Sites
+
+Feature Permissions
+...................
+
+Per-site permissions control access to functional areas:
+
+* **Overview**: View device status and metrics dashboard
+* **Firmware**: Access firmware management and FOTA updates
+* **Data Analysis**: Use advanced telemetry filtering and visualization tools
+
+Site Context Switching
+......................
+
+Users belonging to multiple Sites see a site switcher in the top navigation
+bar. The current Site context filters all data and operations. Navigation menus
+adapt dynamically based on the user's permissions for the active Site.
+
+Administrative Interface
+........................
+
+Site and SiteMembership management is available through the Django admin
+interface at ``/admin/sensordata/``:
+
+* Create Sites with descriptions and active/inactive status
+* Assign users to Sites with specific roles
+* Configure granular permissions per membership
+* View member counts and device counts per Site
