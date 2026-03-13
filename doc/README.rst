@@ -31,3 +31,14 @@ The generated documentation will be available in ``build/html/index.html``.
 Build PDF documentation (requires LaTeX)::
 
     tox -e pdf
+
+Live Documentation Server
+#########################
+
+For development, you can serve the documentation with live reload::
+
+    make doc
+
+This will start a web server at http://localhost:8000 that automatically
+rebuilds and refreshes when you make changes to the documentation source
+files.
