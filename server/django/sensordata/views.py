@@ -7,7 +7,8 @@ import logging
 import traceback
 
 from django.shortcuts import get_object_or_404
-from rest_framework import status
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -80,56 +81,110 @@ class PostTimestampedResourceView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class EndpointView(APIView):
-    """API View for retrieving endpoint data."""
+class EndpointListView(APIView):
+    """API View for listing all endpoints."""
 
-    def get(self, request, endpoint_id=None):
-        if endpoint_id:
-            endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
-            serializer = EndpointSerializer(endpoint)
-        else:
-            endpoints = Endpoint.objects.all()
-            serializer = EndpointSerializer(endpoints, many=True)
+    serializer_class = EndpointSerializer
+
+    @extend_schema(
+        operation_id="endpoints_list",
+        responses={200: EndpointSerializer(many=True)},
+    )
+    def get(self, request):
+        endpoints = Endpoint.objects.all()
+        serializer = EndpointSerializer(endpoints, many=True)
         return Response(serializer.data)
 
 
-class EndpointResourceView(APIView):
-    """API View for retrieving resources associated with an endpoint."""
+class EndpointDetailView(APIView):
+    """API View for retrieving a single endpoint."""
 
-    def get(self, request, endpoint_id, resource_id=None):
+    serializer_class = EndpointSerializer
+
+    @extend_schema(
+        operation_id="endpoints_retrieve",
+        responses={200: EndpointSerializer},
+    )
+    def get(self, request, endpoint_id):
         endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
-        if resource_id:
-            resource = get_object_or_404(Resource, endpoint=endpoint, id=resource_id)
-            data = {
-                "resource_id": resource.id,
-                "resource_type": str(resource.resource_type),
-                "value": resource.get_value(),
-                "timestamp_created": resource.timestamp_created,
+        serializer = EndpointSerializer(endpoint)
+        return Response(serializer.data)
+
+
+class EndpointResourceSerializer(serializers.Serializer):
+    """Serializer for endpoint resource data."""
+
+    resource_id = serializers.IntegerField()
+    resource_type = serializers.CharField()
+    value = serializers.CharField()
+    timestamp_created = serializers.DateTimeField()
+
+
+class EndpointResourceListView(APIView):
+    """API View for listing resources associated with an endpoint."""
+
+    serializer_class = EndpointResourceSerializer
+
+    @extend_schema(
+        operation_id="endpoints_resources_list",
+        responses={200: EndpointResourceSerializer(many=True)},
+    )
+    def get(self, request, endpoint_id):
+        endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+        resources = Resource.objects.filter(endpoint=endpoint)
+        data = [
+            {
+                "resource_id": r.id,
+                "resource_type": str(r.resource_type),
+                "value": r.get_value(),
+                "timestamp_created": r.timestamp_created,
             }
-            return Response(data)
-        else:
-            resources = Resource.objects.filter(endpoint=endpoint)
-            data = [
-                {
-                    "resource_id": r.id,
-                    "resource_type": str(r.resource_type),
-                    "value": r.get_value(),
-                    "timestamp_created": r.timestamp_created,
-                }
-                for r in resources
-            ]
-            return Response(data)
+            for r in resources
+        ]
+        return Response(data)
+
+
+class EndpointResourceDetailView(APIView):
+    """API View for retrieving a single resource associated with an endpoint."""
+
+    serializer_class = EndpointResourceSerializer
+
+    @extend_schema(
+        operation_id="endpoints_resources_retrieve",
+        responses={200: EndpointResourceSerializer},
+    )
+    def get(self, request, endpoint_id, resource_id):
+        endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
+        resource = get_object_or_404(Resource, endpoint=endpoint, id=resource_id)
+        data = {
+            "resource_id": resource.id,
+            "resource_type": str(resource.resource_type),
+            "value": resource.get_value(),
+            "timestamp_created": resource.timestamp_created,
+        }
+        return Response(data)
 
 
 class EndpointFirmwareView(APIView):
     """API View for retrieving and posting firmware updates for an endpoint."""
 
+    serializer_class = FirmwareUpdateSerializer
+
+    @extend_schema(
+        operation_id="endpoints_firmware_list",
+        responses={200: FirmwareUpdateSerializer(many=True)},
+    )
     def get(self, request, endpoint_id):
         endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
         firmware_updates = FirmwareUpdate.objects.filter(endpoint=endpoint)
         serializer = FirmwareUpdateSerializer(firmware_updates, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        operation_id="endpoints_firmware_create",
+        request=FirmwareSerializer,
+        responses={201: FirmwareUpdateSerializer},
+    )
     def post(self, request, endpoint_id):
         endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
         firmware_serializer = FirmwareSerializer(data=request.data)
@@ -144,12 +199,23 @@ class EndpointFirmwareView(APIView):
 class EndpointOperationView(APIView):
     """API View for retrieving and posting operations to be performed on an endpoint."""
 
+    serializer_class = EndpointOperationSerializer
+
+    @extend_schema(
+        operation_id="endpoints_operations_list",
+        responses={200: EndpointOperationSerializer(many=True)},
+    )
     def get(self, request, endpoint_id):
         endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
         operations = EndpointOperation.objects.filter(resource__endpoint=endpoint)
         serializer = EndpointOperationSerializer(operations, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        operation_id="endpoints_operations_create",
+        request=EndpointOperationSerializer,
+        responses={201: EndpointOperationSerializer},
+    )
     def post(self, request, endpoint_id):
         endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
         serializer = EndpointOperationSerializer(data=request.data)

@@ -7,5 +7,5 @@ sphinxcontrib-redoc==1.6.0
 sphinx-autobuild==2025.8.25
 codespell==2.4.1
 tox==4.34.1
-setuptools==80.10.2
+setuptools==79.0.0
 sphinx-sitemap==2.9.0

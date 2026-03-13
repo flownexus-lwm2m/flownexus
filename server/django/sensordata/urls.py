@@ -15,16 +15,18 @@ from .views import (
 )
 
 urlpatterns = [
-    path("endpoints/", views.EndpointView.as_view(), name="endpoint-list"),
-    path("endpoints/<str:endpoint_id>/", views.EndpointView.as_view(), name="endpoint-detail"),
+    path("endpoints/", views.EndpointListView.as_view(), name="endpoint-list"),
+    path(
+        "endpoints/<str:endpoint_id>/", views.EndpointDetailView.as_view(), name="endpoint-detail"
+    ),
     path(
         "endpoints/<str:endpoint_id>/resources/",
-        views.EndpointResourceView.as_view(),
+        views.EndpointResourceListView.as_view(),
         name="endpoint-resource-list",
     ),
     path(
         "endpoints/<str:endpoint_id>/resources/<int:resource_id>/",
-        views.EndpointResourceView.as_view(),
+        views.EndpointResourceDetailView.as_view(),
         name="endpoint-resource-detail",
     ),
     path(
