@@ -1,6 +1,14 @@
 # Flownexus Makefile
 
-.PHONY: test-django test-all build-sim test-e2e run-mock compliance doc-html doc-pdf
+.PHONY: test-django \
+	test-all \
+	build-sim \
+	test-e2e \
+	run-mock \
+	compliance \
+	doc-html \
+	doc-pdf \
+	doc
 
 # Run Django tests in an isolated environment using Tox
 test-django:
@@ -37,6 +45,10 @@ doc-html:
 
 doc-pdf:
 	cd doc && tox -e pdf
+
+# Serve documentation with live reload
+doc:
+	cd doc && tox -e doc
 
 # Placeholder for all tests
 test-all: test-django test-e2e compliance
