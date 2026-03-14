@@ -136,7 +136,9 @@ class Command(BaseCommand):
                     defaults={
                         "role": role,
                         "can_view_overview": permissions.get("can_view_overview", True),
-                        "can_view_firmware": permissions.get("can_view_firmware", True),
+                        "can_view_firmware": permissions.get(
+                            "can_view_firmware", role == SiteMembership.Role.ADMIN
+                        ),
                         "can_view_data_analysis": permissions.get("can_view_data_analysis", True),
                         "can_manage_firmware": permissions.get(
                             "can_manage_firmware", role == SiteMembership.Role.ADMIN
@@ -144,9 +146,7 @@ class Command(BaseCommand):
                         "can_perform_operations": permissions.get(
                             "can_perform_operations", role == SiteMembership.Role.ADMIN
                         ),
-                        "can_manage_devices": permissions.get(
-                            "can_manage_devices", role == SiteMembership.Role.ADMIN
-                        ),
+                        "can_manage_devices": permissions.get("can_manage_devices", False),
                     },
                 )
                 self.stdout.write(f"    Loaded membership: {username} -> {site_name} ({role})")

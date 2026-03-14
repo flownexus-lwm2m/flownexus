@@ -108,8 +108,8 @@ class SiteMembershipFactory(DjangoModelFactory):
     site = factory.SubFactory(SiteFactory)
     role = SiteMembership.Role.USER
     can_view_overview = True
-    can_view_firmware = True
+    can_view_firmware = factory.LazyAttribute(lambda o: o.role == SiteMembership.Role.ADMIN)
     can_view_data_analysis = True
-    can_manage_firmware = False
-    can_perform_operations = False
+    can_manage_firmware = factory.LazyAttribute(lambda o: o.role == SiteMembership.Role.ADMIN)
+    can_perform_operations = factory.LazyAttribute(lambda o: o.role == SiteMembership.Role.ADMIN)
     can_manage_devices = False
