@@ -12,6 +12,7 @@ app_name = "frontend"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("devices/", views.devices, name="devices"),
     path("firmware/", views.firmware_list, name="firmware_list"),
     path("data/", views.data_analysis, name="data_analysis"),
     path("switch-site/<str:site_id>/", views.switch_site, name="switch_site"),

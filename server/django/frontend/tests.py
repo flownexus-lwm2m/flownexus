@@ -17,7 +17,7 @@ from sensordata.factories import (
     SiteMembershipFactory,
     UserFactory,
 )
-from sensordata.models import Firmware, FirmwareUpdate, SiteMembership
+from sensordata.models import Firmware, FirmwareUpdate, ResourceType, SiteMembership
 
 
 @pytest.mark.django_db
@@ -25,6 +25,11 @@ class TestFrontendViews:
     def test_dashboard_requires_login(self, client):
         url = reverse("frontend:dashboard")
         response = client.get(url)
+        assert response.status_code == 302
+
+    def test_devices_requires_login(self, client):
+        response = client.get(reverse("frontend:devices"))
+
         assert response.status_code == 302
 
     def test_dashboard_with_data(self, client):
@@ -136,6 +141,137 @@ class TestFrontendViews:
         assert response.url == reverse("frontend:firmware_list")
         assert Firmware.objects.filter(version="v2.0.0").exists()
 
+    def test_devices_view_shows_site_filtered_inventory(self, client):
+        user = UserFactory()
+        site = SiteFactory(name="Visible Site")
+        hidden_site = SiteFactory(name="Hidden Site")
+        visible_endpoint = EndpointFactory(site=site, endpoint="urn:imei:visible-device")
+        EndpointFactory(site=hidden_site, endpoint="urn:imei:hidden-device")
+        ResourceFactory.create_batch(2, endpoint=visible_endpoint)
+        ResourceFactory(
+            endpoint=visible_endpoint,
+            resource_type=ResourceTypeFactory(
+                object_id=3,
+                resource_id=0,
+                name="manufacturer",
+                data_type=ResourceType.STRING,
+            ),
+            str_value="Acme Devices",
+        )
+        ResourceFactory(
+            endpoint=visible_endpoint,
+            resource_type=ResourceTypeFactory(
+                object_id=3,
+                resource_id=9,
+                name="battery_level",
+                data_type=ResourceType.INTEGER,
+            ),
+            int_value=87,
+        )
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_overview=True,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:devices"))
+
+        assert response.status_code == 200
+        assert list(response.context["endpoints"]) == [visible_endpoint]
+        assert response.context["selected_endpoint"].manufacturer == "Acme Devices"
+        assert response.context["selected_endpoint"].battery_level == 87
+        assert b"Device Inventory" in response.content
+        assert b"Device Details" in response.content
+        assert b"detail-manufacturer" in response.content
+        assert b"detail-battery-level" in response.content
+        assert b"visible-device" in response.content
+        assert b"hidden-device" not in response.content
+
+    def test_devices_view_respects_selected_query_parameter(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        first_endpoint = EndpointFactory(site=site, endpoint="urn:imei:first-device")
+        second_endpoint = EndpointFactory(site=site, endpoint="urn:imei:selected-device")
+        ResourceFactory(
+            endpoint=first_endpoint,
+            resource_type=ResourceTypeFactory(
+                object_id=3,
+                resource_id=0,
+                name="manufacturer",
+                data_type=ResourceType.STRING,
+            ),
+            str_value="First Manufacturer",
+        )
+        ResourceFactory(
+            endpoint=second_endpoint,
+            resource_type=ResourceTypeFactory(
+                object_id=3,
+                resource_id=0,
+                name="manufacturer",
+                data_type=ResourceType.STRING,
+            ),
+            str_value="Selected Manufacturer",
+        )
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_overview=True,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:devices"), {"selected": second_endpoint.endpoint})
+
+        assert response.status_code == 200
+        assert response.context["selected_endpoint"].endpoint == second_endpoint.endpoint
+        assert response.context["selected_endpoint_id"] == second_endpoint.endpoint
+        assert response.context["selected_endpoint"].manufacturer == "Selected Manufacturer"
+
+    def test_site_user_navigation_hides_firmware_tab(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_overview=True,
+            can_view_firmware=False,
+            can_view_data_analysis=True,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert reverse("frontend:dashboard").encode() in response.content
+        assert reverse("frontend:devices").encode() in response.content
+        assert reverse("frontend:data_analysis").encode() in response.content
+        assert reverse("frontend:firmware_list").encode() not in response.content
+
+    def test_site_admin_navigation_shows_overview_devices_firmware_and_data(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.ADMIN,
+            can_view_overview=True,
+            can_view_firmware=True,
+            can_view_data_analysis=True,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert reverse("frontend:dashboard").encode() in response.content
+        assert reverse("frontend:devices").encode() in response.content
+        assert reverse("frontend:firmware_list").encode() in response.content
+        assert reverse("frontend:data_analysis").encode() in response.content
+        assert b"Django Admin" not in response.content
+
     def test_non_global_admin_does_not_see_django_admin_link(self, client):
         user = UserFactory()
         site = SiteFactory()
@@ -242,6 +378,21 @@ class TestMultiSiteAccessControl:
         # Global admin should see sites
         assert len(response.context["available_sites"]) == 2
 
+    def test_devices_view_requires_overview_permission(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_overview=False,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:devices"))
+
+        assert response.status_code == 403
+
     def test_switch_site_view(self, client):
         """Test switching site context."""
         user = UserFactory()
@@ -331,6 +482,36 @@ class TestMultiSiteAccessControl:
         assert response.context["total_devices"] == 2
         assert response.context["can_view_overview"] is True
 
+    def test_all_mode_filters_devices_page_to_sites_with_overview_permission(self, client):
+        user = UserFactory()
+        allowed_site = SiteFactory(name="Allowed Site")
+        blocked_site = SiteFactory(name="Blocked Site")
+        allowed_endpoint = EndpointFactory(site=allowed_site, endpoint="urn:imei:allowed-device")
+        EndpointFactory(site=blocked_site, endpoint="urn:imei:blocked-device")
+        SiteMembershipFactory(
+            user=user,
+            site=allowed_site,
+            role=SiteMembership.Role.USER,
+            can_view_overview=True,
+        )
+        SiteMembershipFactory(
+            user=user,
+            site=blocked_site,
+            role=SiteMembership.Role.USER,
+            can_view_overview=False,
+        )
+
+        client.force_login(user)
+        client.get(reverse("frontend:dashboard"))
+        client.get(reverse("frontend:switch_site", kwargs={"site_id": "all"}))
+
+        response = client.get(reverse("frontend:devices"))
+
+        assert response.status_code == 200
+        assert list(response.context["endpoints"]) == [allowed_endpoint]
+        assert b"allowed-device" in response.content
+        assert b"blocked-device" not in response.content
+
     def test_all_mode_filters_firmware_page_to_sites_with_firmware_permission(self, client):
         user = UserFactory()
         allowed_site = SiteFactory(name="Allowed Site")
@@ -381,6 +562,25 @@ class TestMultiSiteAccessControl:
         assert response.status_code == 200
         assert response.context["show_all_devices"] is False
         assert b"All Devices" not in response.content
+
+    def test_global_admin_can_view_unassigned_devices_page(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        assigned_site = SiteFactory(name="Assigned Site")
+        EndpointFactory(site=None, endpoint="urn:imei:unassigned-device")
+        EndpointFactory(site=assigned_site, endpoint="urn:imei:assigned-device")
+
+        client.force_login(user)
+        client.get(reverse("frontend:switch_site", kwargs={"site_id": "unassigned"}))
+
+        response = client.get(reverse("frontend:devices"))
+
+        assert response.status_code == 200
+        assert response.context["current_site_key"] == "unassigned"
+        endpoints = list(response.context["endpoints"])
+        assert len(endpoints) == 1
+        assert endpoints[0].site is None
+        assert b"unassigned-device" in response.content
+        assert b"urn:imei:assigned-device" not in response.content
 
     def test_permission_check_blocks_access(self, client):
         """Users without specific permissions should be blocked."""

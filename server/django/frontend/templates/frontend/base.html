@@ -211,6 +211,15 @@
                   </a>
                 </li>
                 {% endif %}
+                {% if can_view_devices %}
+                <li class="nav-item {% if request.resolver_match.url_name == 'devices' %}active{% endif %}">
+                  <a class="nav-link" href="{% url 'frontend:devices' %}">
+                    <span class="nav-link-title">
+                      Devices
+                    </span>
+                  </a>
+                </li>
+                {% endif %}
                 {% if can_view_firmware %}
                  <li class="nav-item {% if request.resolver_match.url_name == 'firmware_list' %}active{% endif %}">
                    <a class="nav-link" href="{% url 'frontend:firmware_list' %}">

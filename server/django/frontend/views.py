@@ -5,6 +5,7 @@
 #
 
 from datetime import timedelta
+from typing import Any
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -18,6 +19,16 @@ from core.permissions import get_site_filtered_endpoints, has_site_permission
 from sensordata.models import Event, Firmware, Resource, ResourceType
 
 
+DEVICE_DETAIL_RESOURCES: dict[tuple[int, int], str] = {
+    (3, 0): "manufacturer",
+    (3, 1): "model_number",
+    (3, 2): "serial_number",
+    (3, 3): "firmware_version",
+    (3, 7): "power_source_v",
+    (3, 9): "battery_level",
+}
+
+
 def _get_site_filtered_endpoints(request):
     """Get endpoints filtered by the user's current site context."""
     return get_site_filtered_endpoints(request)
@@ -26,6 +37,52 @@ def _get_site_filtered_endpoints(request):
 def _check_site_permission(request, permission_name):
     """Check if user has specific permission for the current site."""
     return has_site_permission(request.user, request, permission_name)
+
+
+def _resource_display_value(resource: Resource) -> Any:
+    value_field = resource.resource_type.get_value_field()
+    if not value_field:
+        return None
+
+    value = getattr(resource, value_field)
+    if value in (None, ""):
+        return None
+
+    return value
+
+
+def _enrich_endpoints_with_details(endpoints: list[Any]) -> list[Any]:
+    endpoint_ids = [endpoint.pk for endpoint in endpoints]
+    if not endpoint_ids:
+        return endpoints
+
+    resources = (
+        Resource.objects.filter(
+            endpoint_id__in=endpoint_ids,
+            resource_type__object_id__in={object_id for object_id, _ in DEVICE_DETAIL_RESOURCES},
+            resource_type__resource_id__in={
+                resource_id for _, resource_id in DEVICE_DETAIL_RESOURCES
+            },
+        )
+        .select_related("resource_type")
+        .order_by("endpoint_id", "resource_type__object_id", "resource_type__resource_id", "-id")
+    )
+
+    latest_values: dict[tuple[str, int, int], Any] = {}
+    for resource in resources:
+        key = (
+            resource.endpoint_id,
+            resource.resource_type.object_id,
+            resource.resource_type.resource_id,
+        )
+        if key not in latest_values:
+            latest_values[key] = _resource_display_value(resource)
+
+    for endpoint in endpoints:
+        for resource_key, attribute_name in DEVICE_DETAIL_RESOURCES.items():
+            setattr(endpoint, attribute_name, latest_values.get((endpoint.pk, *resource_key)))
+
+    return endpoints
 
 
 @login_required
@@ -167,6 +224,37 @@ def dashboard(request):
         return render(request, "frontend/dashboard_stats.html", context)
 
     return render(request, "frontend/dashboard.html", context)
+
+
+@login_required
+def devices(request):
+    if not _check_site_permission(request, "can_view_overview"):
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
+    selected_endpoint_id = request.GET.get("selected")
+
+    endpoints = list(
+        get_site_filtered_endpoints(request, "can_view_overview")
+        .select_related("site")
+        .annotate(last_seen=Max("resource__timestamp_created"), telemetry_count=Count("resource"))
+        .order_by("endpoint")
+    )
+
+    endpoints = _enrich_endpoints_with_details(endpoints)
+    selected_endpoint = next(
+        (endpoint for endpoint in endpoints if endpoint.endpoint == selected_endpoint_id),
+        endpoints[0] if endpoints else None,
+    )
+
+    return render(
+        request,
+        "frontend/devices.html",
+        {
+            "endpoints": endpoints,
+            "selected_endpoint": selected_endpoint,
+            "selected_endpoint_id": selected_endpoint.endpoint if selected_endpoint else None,
+        },
+    )
 
 
 @login_required
