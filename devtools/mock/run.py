@@ -4,12 +4,10 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import argparse
-import os
 import signal
 import sys
 
 import yaml
-
 from device_simulator import MockBackend
 
 

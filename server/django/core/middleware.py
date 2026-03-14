@@ -83,24 +83,35 @@ class SiteContextMiddleware:
             if request.user.is_superuser:
                 request.is_global_admin = True
                 request.available_sites = list(Site.objects.filter(is_active=True))
+                request.available_site_memberships = []
             else:
                 request.is_global_admin = False
                 # Get sites this user has access to
-                memberships = SiteMembership.objects.filter(
-                    user=request.user,
-                    site__is_active=True,
-                ).select_related("site")
+                memberships = list(
+                    SiteMembership.objects.filter(
+                        user=request.user,
+                        site__is_active=True,
+                    ).select_related("site")
+                )
+                request.available_site_memberships = memberships
                 request.available_sites = [m.site for m in memberships]
 
             # Set current site
             if site_id:
-                # Verify user has access to this site
-                if request.is_global_admin and site_id == UNASSIGNED_SITE_KEY:
+                # Handle "all" site selection (show all devices user has access to)
+                if site_id == "all":
                     request.site = None
+                    request.site_membership = None
+                    request.current_site_key = "all"
+                # Verify user has access to this site
+                elif request.is_global_admin and site_id == UNASSIGNED_SITE_KEY:
+                    request.site = None
+                    request.site_membership = None
                     request.current_site_key = UNASSIGNED_SITE_KEY
                 elif request.is_global_admin:
                     try:
                         request.site = Site.objects.get(id=site_id, is_active=True)
+                        request.site_membership = None
                         request.current_site_key = str(request.site.id)
                     except Site.DoesNotExist:
                         request.site = self._get_default_site(request)
