@@ -99,7 +99,43 @@ class TestSiteMembershipModel:
         membership = SiteMembershipFactory()
 
         assert membership.can_view_overview is True
+        assert membership.can_view_firmware is False
+        assert membership.can_view_data_analysis is True
+        assert membership.can_manage_firmware is False
+        assert membership.can_perform_operations is False
+        assert membership.can_manage_devices is False
+
+    def test_apply_role_defaults_for_admin(self):
+        membership = SiteMembership(
+            user=UserFactory(),
+            site=SiteFactory(),
+            role=SiteMembership.Role.ADMIN,
+        )
+
+        membership.apply_role_defaults()
+
+        assert membership.can_view_overview is True
         assert membership.can_view_firmware is True
+        assert membership.can_view_data_analysis is True
+        assert membership.can_manage_firmware is True
+        assert membership.can_perform_operations is True
+        assert membership.can_manage_devices is False
+
+    def test_apply_role_defaults_for_user(self):
+        membership = SiteMembership(
+            user=UserFactory(),
+            site=SiteFactory(),
+            role=SiteMembership.Role.USER,
+            can_view_firmware=True,
+            can_manage_firmware=True,
+            can_perform_operations=True,
+            can_manage_devices=True,
+        )
+
+        membership.apply_role_defaults()
+
+        assert membership.can_view_overview is True
+        assert membership.can_view_firmware is False
         assert membership.can_view_data_analysis is True
         assert membership.can_manage_firmware is False
         assert membership.can_perform_operations is False

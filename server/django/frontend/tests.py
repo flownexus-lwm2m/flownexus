@@ -5,17 +5,19 @@
 #
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from sensordata.factories import (
     EndpointFactory,
     FirmwareFactory,
     ResourceFactory,
+    ResourceTypeFactory,
     SiteFactory,
     SiteMembershipFactory,
     UserFactory,
 )
-from sensordata.models import SiteMembership
+from sensordata.models import Firmware, FirmwareUpdate, SiteMembership
 
 
 @pytest.mark.django_db
@@ -121,8 +123,6 @@ class TestFrontendViews:
         )
         client.force_login(user)
 
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         firmware_file = SimpleUploadedFile("new_firmware.bin", b"new content")
 
         url = reverse("frontend:firmware_list")
@@ -134,10 +134,27 @@ class TestFrontendViews:
 
         assert response.status_code == 302
         assert response.url == reverse("frontend:firmware_list")
-
-        from sensordata.models import Firmware
-
         assert Firmware.objects.filter(version="v2.0.0").exists()
+
+    def test_non_global_admin_does_not_see_django_admin_link(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(user=user, site=site, role=SiteMembership.Role.USER)
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert b"Django Admin" not in response.content
+
+    def test_global_admin_sees_django_admin_link(self, client):
+        admin_user = UserFactory(is_superuser=True, is_staff=True)
+        client.force_login(admin_user)
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert b"Django Admin" in response.content
 
 
 @pytest.mark.django_db
@@ -311,8 +328,42 @@ class TestMultiSiteAccessControl:
         assert response.status_code == 200
         assert response.context["current_site_key"] == "all"
         assert response.context["current_site_label"] == "All Devices"
-        assert response.context["total_devices"] == 5
+        assert response.context["total_devices"] == 2
         assert response.context["can_view_overview"] is True
+
+    def test_all_mode_filters_firmware_page_to_sites_with_firmware_permission(self, client):
+        user = UserFactory()
+        allowed_site = SiteFactory(name="Allowed Site")
+        blocked_site = SiteFactory(name="Blocked Site")
+        SiteMembershipFactory(
+            user=user,
+            site=allowed_site,
+            role=SiteMembership.Role.ADMIN,
+        )
+        SiteMembershipFactory(
+            user=user,
+            site=blocked_site,
+            role=SiteMembership.Role.USER,
+            can_view_firmware=False,
+            can_view_overview=True,
+        )
+        allowed_endpoint = EndpointFactory(site=allowed_site)
+        blocked_endpoint = EndpointFactory(site=blocked_site)
+        firmware = FirmwareFactory(version="v9.9.9")
+        ResourceTypeFactory(object_id=5, resource_id=1, name="Package URI")
+        FirmwareUpdate.objects.create(endpoint=allowed_endpoint, firmware=firmware)
+        FirmwareUpdate.objects.create(endpoint=blocked_endpoint, firmware=firmware)
+
+        client.force_login(user)
+        client.get(reverse("frontend:dashboard"))
+        client.get(reverse("frontend:switch_site", kwargs={"site_id": "all"}))
+
+        response = client.get(reverse("frontend:firmware_list"))
+
+        assert response.status_code == 200
+        updates = list(response.context["updates"])
+        assert len(updates) == 1
+        assert updates[0].endpoint == allowed_endpoint
 
     def test_single_site_user_does_not_get_all_devices_option(self, client):
         user = UserFactory()
@@ -440,6 +491,120 @@ class TestMultiSiteAccessControl:
 
         # Should NOT redirect (form should be invalid or 403)
         # In our implementation it redirects back with errors or just doesn't create the update
-        from sensordata.models import FirmwareUpdate
-
         assert not FirmwareUpdate.objects.filter(endpoint=device_b).exists()
+
+    def test_firmware_upload_requires_manage_permission(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_firmware=True,
+            can_manage_firmware=False,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:firmware_list"),
+            {
+                "upload_fw": "1",
+                "version": "v3.0.0",
+                "binary": SimpleUploadedFile("blocked.bin", b"blocked content"),
+            },
+        )
+
+        assert response.status_code == 403
+        assert not Firmware.objects.filter(version="v3.0.0").exists()
+
+    def test_firmware_delete_requires_manage_permission(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        firmware = FirmwareFactory(version="v4.0.0")
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_firmware=True,
+            can_manage_firmware=False,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:firmware_list"),
+            {"delete_fw": "1", "firmware_id": firmware.id},
+        )
+
+        firmware.refresh_from_db()
+        assert response.status_code == 403
+        assert firmware.is_deleted is False
+
+    def test_firmware_update_requires_operations_permission(self, client):
+        site = SiteFactory()
+        user = UserFactory()
+        endpoint = EndpointFactory(site=site)
+        firmware = FirmwareFactory(version="v5.0.0")
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.ADMIN,
+            can_view_firmware=True,
+            can_manage_firmware=True,
+            can_perform_operations=False,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:firmware_list"),
+            {
+                "start_update": "1",
+                "endpoint": endpoint.endpoint,
+                "firmware": firmware.id,
+            },
+        )
+
+        assert response.status_code == 403
+        assert not FirmwareUpdate.objects.filter(endpoint=endpoint).exists()
+
+    def test_legacy_upload_post_guess_requires_manage_permission(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_firmware=True,
+            can_manage_firmware=False,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:firmware_list"),
+            {
+                "version": "v6.0.0",
+                "binary": SimpleUploadedFile("legacy.bin", b"legacy content"),
+            },
+        )
+
+        assert response.status_code == 403
+        assert not Firmware.objects.filter(version="v6.0.0").exists()
+
+    def test_role_defaults_match_documented_permissions(self):
+        admin = SiteMembership(
+            user=UserFactory(), site=SiteFactory(), role=SiteMembership.Role.ADMIN
+        )
+        admin.apply_role_defaults()
+
+        member = SiteMembership(
+            user=UserFactory(), site=SiteFactory(), role=SiteMembership.Role.USER
+        )
+        member.apply_role_defaults()
+
+        assert admin.can_view_firmware is True
+        assert admin.can_manage_firmware is True
+        assert admin.can_perform_operations is True
+        assert admin.can_manage_devices is False
+        assert member.can_view_firmware is False
+        assert member.can_manage_firmware is False
+        assert member.can_perform_operations is False
+        assert member.can_manage_devices is False

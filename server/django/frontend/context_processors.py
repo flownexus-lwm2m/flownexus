@@ -5,6 +5,8 @@
 #
 import os
 
+from core.permissions import memberships_with_permission
+
 PERMISSION_FIELDS = (
     "can_view_overview",
     "can_view_firmware",
@@ -53,22 +55,20 @@ def site_context(request):
 
         # User's permissions for current site
         site_membership = getattr(request, "site_membership", None)
-        if context["current_site_key"] == "all":
-            memberships = getattr(request, "available_site_memberships", [])
+        if context["is_global_admin"]:
+            context["site_role"] = "GLOBAL_ADMIN"
+            for permission_field in PERMISSION_FIELDS:
+                context[permission_field] = True
+        elif context["current_site_key"] == "all":
             context["site_role"] = "MULTI_SITE"
             for permission_field in PERMISSION_FIELDS:
-                context[permission_field] = any(
-                    getattr(membership, permission_field, False) for membership in memberships
-                )
+                context[permission_field] = memberships_with_permission(
+                    request.user, permission_field
+                ).exists()
         elif site_membership:
             context["site_role"] = site_membership.role
             for permission_field in PERMISSION_FIELDS:
                 context[permission_field] = getattr(site_membership, permission_field)
-        elif context["is_global_admin"]:
-            # Global admins have all permissions
-            context["site_role"] = "GLOBAL_ADMIN"
-            for permission_field in PERMISSION_FIELDS:
-                context[permission_field] = True
         else:
             # No site membership - no permissions
             context["site_role"] = None

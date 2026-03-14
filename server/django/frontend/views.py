@@ -14,36 +14,18 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from core.middleware import UNASSIGNED_SITE_KEY
-from sensordata.models import Endpoint, Event, Firmware, Resource, ResourceType
+from core.permissions import get_site_filtered_endpoints, has_site_permission
+from sensordata.models import Event, Firmware, Resource, ResourceType
 
 
 def _get_site_filtered_endpoints(request):
     """Get endpoints filtered by the user's current site context."""
-    current_site_key = getattr(request, "current_site_key", None)
-    if current_site_key == UNASSIGNED_SITE_KEY:
-        return Endpoint.objects.filter(site__isnull=True)
-    if current_site_key == "all":
-        # Return all endpoints the user has access to across all sites
-        available_sites = getattr(request, "available_sites", [])
-        return Endpoint.objects.filter(site__in=available_sites)
-
-    site = getattr(request, "site", None)
-    if site:
-        return Endpoint.objects.filter(site=site)
-    return Endpoint.objects.none()
+    return get_site_filtered_endpoints(request)
 
 
 def _check_site_permission(request, permission_name):
     """Check if user has specific permission for the current site."""
-    if request.user.is_superuser:
-        return True
-    if getattr(request, "current_site_key", None) == "all":
-        memberships = getattr(request, "available_site_memberships", [])
-        return any(getattr(membership, permission_name, False) for membership in memberships)
-    membership = getattr(request, "site_membership", None)
-    if not membership:
-        return False
-    return getattr(membership, permission_name, False)
+    return has_site_permission(request.user, request, permission_name)
 
 
 @login_required
@@ -93,7 +75,7 @@ def dashboard(request):
         return HttpResponseForbidden("You don't have permission to view this page.")
 
     # Device Statistics - filtered by site
-    endpoints_qs = _get_site_filtered_endpoints(request)
+    endpoints_qs = get_site_filtered_endpoints(request, "can_view_overview")
     total_devices = endpoints_qs.count()
     registered_devices = endpoints_qs.filter(registered=True).count()
     offline_devices = total_devices - registered_devices
@@ -127,7 +109,7 @@ def dashboard(request):
 
     # Fill all steps from start_date to end_date
     current_step = start_date
-    site_endpoints = _get_site_filtered_endpoints(request)
+    site_endpoints = get_site_filtered_endpoints(request, "can_view_overview")
     for _ in range(num_steps):
         next_step = current_step + delta
         # Optimized: Iterative range count is significantly faster than Trunc/GroupBy on SQLite
@@ -143,7 +125,7 @@ def dashboard(request):
 
     # Firmware Distribution (latest version for devices in current site)
     # Get the latest firmware version (Object 3, Resource 3) for each device
-    site_endpoints = _get_site_filtered_endpoints(request)
+    site_endpoints = get_site_filtered_endpoints(request, "can_view_overview")
     latest_firmware_ids = (
         Resource.objects.filter(
             resource_type__object_id=3,
@@ -199,20 +181,25 @@ def firmware_list(request):
     from .forms import FirmwareUpdateForm, FirmwareUploadForm
 
     can_manage_firmware = _check_site_permission(request, "can_manage_firmware")
+    can_perform_operations = _check_site_permission(request, "can_perform_operations")
 
     upload_form = FirmwareUploadForm()
     update_form = FirmwareUpdateForm()
 
     if request.method == "POST":
         if "upload_fw" in request.POST:
+            if not can_manage_firmware:
+                return HttpResponseForbidden("You don't have permission to manage firmware.")
             upload_form = FirmwareUploadForm(request.POST, request.FILES)
             if upload_form.is_valid():
                 upload_form.save()
                 return redirect("frontend:firmware_list")
         elif "start_update" in request.POST:
+            if not can_perform_operations:
+                return HttpResponseForbidden("You don't have permission to perform operations.")
             update_form = FirmwareUpdateForm(request.POST)
             # Ensure the endpoint belongs to the user's site
-            site_endpoints = _get_site_filtered_endpoints(request)
+            site_endpoints = get_site_filtered_endpoints(request, "can_perform_operations")
             update_form.fields["endpoint"].queryset = site_endpoints
 
             if update_form.is_valid():
@@ -220,6 +207,8 @@ def firmware_list(request):
                 process_pending_operations.delay(fw_update.endpoint.endpoint)
                 return redirect("frontend:firmware_list")
         elif "delete_fw" in request.POST:
+            if not can_manage_firmware:
+                return HttpResponseForbidden("You don't have permission to manage firmware.")
             firmware_id = request.POST.get("firmware_id")
             if firmware_id:
                 try:
@@ -234,14 +223,18 @@ def firmware_list(request):
             # Handle cases where hidden fields are missing (e.g. legacy tests)
             # Try to guess which form it is
             if "version" in request.POST:
+                if not can_manage_firmware:
+                    return HttpResponseForbidden("You don't have permission to manage firmware.")
                 upload_form = FirmwareUploadForm(request.POST, request.FILES)
                 if upload_form.is_valid():
                     upload_form.save()
                     return redirect("frontend:firmware_list")
             elif "endpoint" in request.POST:
+                if not can_perform_operations:
+                    return HttpResponseForbidden("You don't have permission to perform operations.")
                 update_form = FirmwareUpdateForm(request.POST)
                 # Ensure the endpoint belongs to the user's site
-                site_endpoints = _get_site_filtered_endpoints(request)
+                site_endpoints = get_site_filtered_endpoints(request, "can_perform_operations")
                 update_form.fields["endpoint"].queryset = site_endpoints
 
                 if update_form.is_valid():
@@ -260,12 +253,14 @@ def firmware_list(request):
     update_form.fields["firmware"].queryset = Firmware.objects.filter(id__in=existing_firmware_ids)
 
     # Filter endpoints by current site
-    site_endpoints = _get_site_filtered_endpoints(request)
+    site_endpoints = get_site_filtered_endpoints(request, "can_perform_operations")
     update_form.fields["endpoint"].queryset = site_endpoints
 
     # Filter updates by site (via endpoint)
     updates = (
-        FirmwareUpdate.objects.filter(endpoint__in=site_endpoints)
+        FirmwareUpdate.objects.filter(
+            endpoint__in=get_site_filtered_endpoints(request, "can_view_firmware")
+        )
         .select_related("endpoint", "firmware")
         .order_by("-timestamp_created")
     )
@@ -290,7 +285,7 @@ def data_analysis(request):
         return HttpResponseForbidden("You don't have permission to view this page.")
 
     # Filter endpoints by current site
-    endpoints = _get_site_filtered_endpoints(request)
+    endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
     resource_types = ResourceType.objects.all().order_by("name")
 
     # Filters
@@ -314,7 +309,7 @@ def data_analysis(request):
     if request.GET.get("format") == "json":
         if mode == "values":
             # Filter resources by site through endpoints
-            site_endpoints = _get_site_filtered_endpoints(request)
+            site_endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
             resources = Resource.objects.filter(endpoint__in=site_endpoints).order_by(
                 "timestamp_created"
             )
@@ -358,7 +353,7 @@ def data_analysis(request):
             order_string = f"{'' if sort_dir == 'asc' else '-'}{sort_col}"
 
             # Filter events by site through endpoints
-            site_endpoints = _get_site_filtered_endpoints(request)
+            site_endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
             events = (
                 Event.objects.filter(endpoint__in=site_endpoints)
                 .select_related("endpoint")

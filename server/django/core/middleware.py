@@ -67,7 +67,7 @@ class RequestLoggingMiddleware:
 
 
 class SiteContextMiddleware:
-    """Middleware to manage site context for multi-tenant access control."""
+    """Middleware to manage request-scoped site context within one deployment."""
 
     def __init__(self, get_response):
         self.get_response = get_response

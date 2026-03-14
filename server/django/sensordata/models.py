@@ -5,6 +5,7 @@
 #
 
 from pathlib import Path
+from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -13,7 +14,7 @@ from django.utils import timezone
 
 
 class Site(models.Model):
-    """Represents a customer/tenant organization in the IoT system."""
+    """Represents an internal organizational grouping within one deployment."""
 
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True)
@@ -30,6 +31,15 @@ class Site(models.Model):
 class SiteMembership(models.Model):
     """Links users to sites with specific roles and permissions."""
 
+    PERMISSION_FIELDS = (
+        "can_view_overview",
+        "can_view_firmware",
+        "can_view_data_analysis",
+        "can_manage_firmware",
+        "can_perform_operations",
+        "can_manage_devices",
+    )
+
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Site Admin"
         USER = "USER", "Site User"
@@ -42,7 +52,7 @@ class SiteMembership(models.Model):
 
     # Feature-based permissions
     can_view_overview = models.BooleanField(default=True)
-    can_view_firmware = models.BooleanField(default=True)
+    can_view_firmware = models.BooleanField(default=False)
     can_view_data_analysis = models.BooleanField(default=True)
 
     # Operational permissions
@@ -59,12 +69,54 @@ class SiteMembership(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.site.name} ({self.role})"
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self._explicit_permission_fields = {
+            field_name for field_name in self.PERMISSION_FIELDS if field_name in kwargs
+        }
+        super().__init__(*args, **kwargs)
+
     def is_admin(self):
         return self.role == self.Role.ADMIN
 
     def is_global_admin(self):
         """Global admins are identified by is_superuser flag."""
         return self.user.is_superuser
+
+    def apply_role_defaults(self, preserve_explicit: bool = False) -> None:
+        """Apply the default permission set for the current role."""
+        permission_defaults = {
+            "can_view_overview": True,
+            "can_view_data_analysis": True,
+        }
+
+        if self.role == self.Role.ADMIN:
+            permission_defaults.update(
+                {
+                    "can_view_firmware": True,
+                    "can_manage_firmware": True,
+                    "can_perform_operations": True,
+                    "can_manage_devices": False,
+                }
+            )
+        else:
+            permission_defaults.update(
+                {
+                    "can_view_firmware": False,
+                    "can_manage_firmware": False,
+                    "can_perform_operations": False,
+                    "can_manage_devices": False,
+                }
+            )
+
+        for field_name, default_value in permission_defaults.items():
+            if preserve_explicit and field_name in self._explicit_permission_fields:
+                continue
+            setattr(self, field_name, default_value)
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if self._state.adding and kwargs.get("update_fields") is None:
+            self.apply_role_defaults(preserve_explicit=True)
+        super().save(*args, **kwargs)
 
 
 class Endpoint(models.Model):
