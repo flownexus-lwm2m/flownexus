@@ -12,7 +12,7 @@ The project provides several Makefile targets for testing. These commands can
 be run from the repository root and ensure consistent test environments.
 
 Compliance Checks
-................
+.................
 
 Run static analysis and formatting checks:
 
@@ -29,7 +29,7 @@ This performs:
 All checks must pass before submitting changes.
 
 Unit Tests
-.........
+..........
 
 Run Django unit tests in an isolated Tox environment:
 
@@ -53,7 +53,7 @@ development:
   host:~/flownexus/server/django$ python manage.py test sensordata
 
 Integration Testing
-..................
+...................
 
 The ``make test-django`` command also runs integration tests, including the
 mock simulation integration test:
@@ -67,7 +67,7 @@ and verify that the simulation backend can successfully register devices and
 ingest data.
 
 End-to-End Tests
-...............
+................
 
 Run the full E2E test suite including Zephyr simulation:
 
@@ -79,7 +79,7 @@ This builds Zephyr binaries, starts the server stack, runs the simulation,
 and verifies data ingestion. Requires Podman and Zephyr toolchain.
 
 Run All Tests
-............
+..............
 
 Execute the complete test suite:
 
@@ -96,7 +96,7 @@ For iterative development and debugging, flownexus provides simulation tools
 that emulate IoT devices at different fidelity levels.
 
 Mock Simulation
-..............
+................
 
 The Mock backend is a lightweight Python-based simulator that interacts
 directly with the Django Ingestion API. It generates synthetic device data
@@ -150,7 +150,7 @@ sites, and users for reproducible test environments.
   run: true      # Automatically start simulation
 
 Zephyr Simulation
-................
+..................
 
 The Zephyr backend runs actual Zephyr OS firmware binaries in a containerized
 network environment. This provides high-fidelity simulation for end-to-end
