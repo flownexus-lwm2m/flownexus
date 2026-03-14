@@ -5,6 +5,15 @@
 #
 import os
 
+PERMISSION_FIELDS = (
+    "can_view_overview",
+    "can_view_firmware",
+    "can_view_data_analysis",
+    "can_manage_firmware",
+    "can_perform_operations",
+    "can_manage_devices",
+)
+
 
 def version(request):
     """
@@ -30,7 +39,12 @@ def site_context(request):
         context["is_global_admin"] = getattr(request, "is_global_admin", False)
         context["current_site_key"] = getattr(request, "current_site_key", None)
         context["show_unassigned_site"] = context["is_global_admin"]
-        if context["current_site_key"] == "unassigned":
+        # Show "All Devices" option if user has access to more than one site
+        context["show_all_devices"] = len(context["available_sites"]) > 1
+
+        if context["current_site_key"] == "all":
+            context["current_site_label"] = "All Devices"
+        elif context["current_site_key"] == "unassigned":
             context["current_site_label"] = "Unassigned Devices"
         elif context["current_site"]:
             context["current_site_label"] = context["current_site"].name
@@ -39,31 +53,26 @@ def site_context(request):
 
         # User's permissions for current site
         site_membership = getattr(request, "site_membership", None)
-        if site_membership:
+        if context["current_site_key"] == "all":
+            memberships = getattr(request, "available_site_memberships", [])
+            context["site_role"] = "MULTI_SITE"
+            for permission_field in PERMISSION_FIELDS:
+                context[permission_field] = any(
+                    getattr(membership, permission_field, False) for membership in memberships
+                )
+        elif site_membership:
             context["site_role"] = site_membership.role
-            context["can_view_overview"] = site_membership.can_view_overview
-            context["can_view_firmware"] = site_membership.can_view_firmware
-            context["can_view_data_analysis"] = site_membership.can_view_data_analysis
-            context["can_manage_firmware"] = site_membership.can_manage_firmware
-            context["can_perform_operations"] = site_membership.can_perform_operations
-            context["can_manage_devices"] = site_membership.can_manage_devices
+            for permission_field in PERMISSION_FIELDS:
+                context[permission_field] = getattr(site_membership, permission_field)
         elif context["is_global_admin"]:
             # Global admins have all permissions
             context["site_role"] = "GLOBAL_ADMIN"
-            context["can_view_overview"] = True
-            context["can_view_firmware"] = True
-            context["can_view_data_analysis"] = True
-            context["can_manage_firmware"] = True
-            context["can_perform_operations"] = True
-            context["can_manage_devices"] = True
+            for permission_field in PERMISSION_FIELDS:
+                context[permission_field] = True
         else:
             # No site membership - no permissions
             context["site_role"] = None
-            context["can_view_overview"] = False
-            context["can_view_firmware"] = False
-            context["can_view_data_analysis"] = False
-            context["can_manage_firmware"] = False
-            context["can_perform_operations"] = False
-            context["can_manage_devices"] = False
+            for permission_field in PERMISSION_FIELDS:
+                context[permission_field] = False
 
     return context

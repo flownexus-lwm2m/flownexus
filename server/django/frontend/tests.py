@@ -280,6 +280,57 @@ class TestMultiSiteAccessControl:
         assert response.status_code == 302
         assert client.session.get("current_site_id") == site.id
 
+    def test_multi_site_user_can_switch_to_all_devices_view(self, client):
+        user = UserFactory()
+        site1 = SiteFactory(name="Site 1")
+        site2 = SiteFactory(name="Site 2")
+        SiteMembershipFactory(
+            user=user,
+            site=site1,
+            role=SiteMembership.Role.USER,
+            can_view_overview=True,
+        )
+        SiteMembershipFactory(
+            user=user,
+            site=site2,
+            role=SiteMembership.Role.USER,
+            can_view_overview=False,
+        )
+        EndpointFactory.create_batch(2, site=site1, registered=True)
+        EndpointFactory.create_batch(3, site=site2, registered=True)
+
+        client.force_login(user)
+        client.get(reverse("frontend:dashboard"))
+
+        switch_response = client.get(reverse("frontend:switch_site", kwargs={"site_id": "all"}))
+        assert switch_response.status_code == 302
+        assert client.session.get("current_site_id") == "all"
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert response.context["current_site_key"] == "all"
+        assert response.context["current_site_label"] == "All Devices"
+        assert response.context["total_devices"] == 5
+        assert response.context["can_view_overview"] is True
+
+    def test_single_site_user_does_not_get_all_devices_option(self, client):
+        user = UserFactory()
+        site = SiteFactory(name="Only Site")
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_overview=True,
+        )
+
+        client.force_login(user)
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert response.context["show_all_devices"] is False
+        assert b"All Devices" not in response.content
+
     def test_permission_check_blocks_access(self, client):
         """Users without specific permissions should be blocked."""
         user = UserFactory()

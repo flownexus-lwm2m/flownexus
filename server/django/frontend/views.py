@@ -19,8 +19,13 @@ from sensordata.models import Endpoint, Event, Firmware, Resource, ResourceType
 
 def _get_site_filtered_endpoints(request):
     """Get endpoints filtered by the user's current site context."""
-    if getattr(request, "current_site_key", None) == UNASSIGNED_SITE_KEY:
+    current_site_key = getattr(request, "current_site_key", None)
+    if current_site_key == UNASSIGNED_SITE_KEY:
         return Endpoint.objects.filter(site__isnull=True)
+    if current_site_key == "all":
+        # Return all endpoints the user has access to across all sites
+        available_sites = getattr(request, "available_sites", [])
+        return Endpoint.objects.filter(site__in=available_sites)
 
     site = getattr(request, "site", None)
     if site:
@@ -32,6 +37,9 @@ def _check_site_permission(request, permission_name):
     """Check if user has specific permission for the current site."""
     if request.user.is_superuser:
         return True
+    if getattr(request, "current_site_key", None) == "all":
+        memberships = getattr(request, "available_site_memberships", [])
+        return any(getattr(membership, permission_name, False) for membership in memberships)
     membership = getattr(request, "site_membership", None)
     if not membership:
         return False
@@ -44,8 +52,13 @@ def switch_site(request, site_id):
     if not request.user.is_authenticated:
         return redirect("login")
 
+    # Handle "all" devices option (available if user has access to >1 site)
+    if site_id == "all":
+        available_sites = getattr(request, "available_sites", [])
+        if len(available_sites) > 1:
+            request.session["current_site_id"] = "all"
     # Verify user has access to this site
-    if request.user.is_superuser and site_id == UNASSIGNED_SITE_KEY:
+    elif request.user.is_superuser and site_id == UNASSIGNED_SITE_KEY:
         request.session["current_site_id"] = UNASSIGNED_SITE_KEY
     elif request.user.is_superuser:
         # Global admin can switch to any site
@@ -114,11 +127,14 @@ def dashboard(request):
 
     # Fill all steps from start_date to end_date
     current_step = start_date
+    site_endpoints = _get_site_filtered_endpoints(request)
     for _ in range(num_steps):
         next_step = current_step + delta
         # Optimized: Iterative range count is significantly faster than Trunc/GroupBy on SQLite
         val = Resource.objects.filter(
-            timestamp_created__gte=current_step, timestamp_created__lt=next_step
+            timestamp_created__gte=current_step,
+            timestamp_created__lt=next_step,
+            endpoint__in=site_endpoints,
         ).count()
 
         labels.append(current_step.strftime(date_format))

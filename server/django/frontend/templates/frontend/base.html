@@ -63,6 +63,61 @@
         --tblr-status-color: #d63939;
         --tblr-status-color-rgb: 214, 57, 57;
       }
+      /* Hover effect for topbar dropdown toggles and items */
+      .topbar-menu-toggle {
+        padding: 0.5rem 0.75rem !important;
+        transition: color 0.15s ease-in-out;
+      }
+      .site-switcher-toggle {
+        justify-content: flex-start;
+      }
+      .site-switcher-label {
+        min-width: 0;
+        flex: 1;
+      }
+      .site-switcher-label > div {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .user-menu-icon {
+        color: #6c7a91;
+      }
+      @media (min-width: 1200px) {
+        .site-switcher-toggle {
+          width: 15rem;
+        }
+      }
+      .topbar-menu-toggle:hover,
+      .topbar-menu-toggle:focus {
+        background-color: transparent !important;
+        color: #626976 !important;
+      }
+      .navbar-nav .nav-link {
+        transition: color 0.15s ease-in-out;
+      }
+      .navbar-nav .nav-link:hover,
+      .navbar-nav .nav-link:focus {
+        background-color: transparent !important;
+        color: #626976 !important;
+      }
+      .navbar-nav .nav-item.active .nav-link,
+      .navbar-nav .nav-item.active .nav-link:hover {
+        background-color: transparent !important;
+      }
+      .dropdown-menu .dropdown-item:hover,
+      .dropdown-menu .dropdown-item:focus {
+        background-color: rgba(98, 105, 118, 0.04) !important;
+      }
+      .dropdown-menu .dropdown-item.active,
+      .dropdown-menu .dropdown-item.active:hover {
+        background-color: #206bc4 !important;
+        color: #ffffff !important;
+      }
+      /* Reduce dropdown divider spacing */
+      .dropdown-divider {
+        margin: 0.25rem 0;
+      }
     </style>
     {% block extra_css %}{% endblock %}
   </head>
@@ -83,21 +138,28 @@
             {% if available_sites|length > 1 or show_unassigned_site %}
             <!-- Site Switcher -->
             <div class="nav-item dropdown me-3">
-              <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Switch site">
+              <a href="#" class="nav-link topbar-menu-toggle site-switcher-toggle d-flex lh-1 text-reset" data-bs-toggle="dropdown" aria-label="Switch site">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" /><path d="M9 4v13" /><path d="M15 7v13" /></svg>
-                <div class="d-none d-xl-block">
+                <div class="d-none d-xl-block site-switcher-label">
                   <div class="fw-bold">{{ current_site_label }}</div>
                   <div class="text-secondary small">{% if is_global_admin %}Global Admin{% elif site_role == 'ADMIN' %}Site Admin{% else %}Site User{% endif %}</div>
                 </div>
               </a>
               <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
                 <div class="dropdown-header">Switch Site</div>
+                {% if show_all_devices %}
+                <a class="dropdown-item {% if current_site_key == 'all' %}active{% endif %}" href="{% url 'frontend:switch_site' 'all' %}">
+                  All Devices
+                </a>
+                <div class="dropdown-divider"></div>
+                {% endif %}
                 {% for site in available_sites %}
                 <a class="dropdown-item {% if current_site_key == site.id|stringformat:'s' %}active{% endif %}" href="{% url 'frontend:switch_site' site.id %}">
                   {{ site.name }}
                 </a>
                 {% endfor %}
                 {% if show_unassigned_site %}
+                <div class="dropdown-divider"></div>
                 <a class="dropdown-item {% if current_site_key == 'unassigned' %}active{% endif %}" href="{% url 'frontend:switch_site' 'unassigned' %}">
                   Unassigned Devices
                 </a>
@@ -113,22 +175,21 @@
               </span>
             </div>
             {% endif %}
-            <div class="nav-item d-none d-md-flex me-3">
-              <div class="btn-list">
-                <a href="{% url 'admin:index' %}" class="btn" target="_blank" rel="noreferrer">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M13.45 11.55l2.05 -2.05" /><path d="M6.4 20a9 9 0 1 1 11.2 0z" /></svg>
-                  Admin
-                </a>
-              </div>
-            </div>
             <div class="nav-item dropdown">
-              <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">
-                <span class="avatar avatar-sm">{{ user.username|slice:":1"|upper }}</span>
+              <a href="#" class="nav-link topbar-menu-toggle d-flex lh-1 text-reset" data-bs-toggle="dropdown" aria-label="Open user menu">
+                <span class="user-menu-icon me-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg>
+                </span>
                 <div class="d-none d-xl-block ps-2">
                   <div>{{ user.username }}</div>
                 </div>
               </a>
               <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a class="dropdown-item" href="{% url 'admin:index' %}" target="_blank" rel="noreferrer">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M13.45 11.55l2.05 -2.05" /><path d="M6.4 20a9 9 0 1 1 11.2 0z" /></svg>
+                  Django Admin
+                </a>
+                <div class="dropdown-divider"></div>
                 <form action="{% url 'logout' %}" method="post">
                   {% csrf_token %}
                   <button type="submit" class="dropdown-item">Logout</button>
