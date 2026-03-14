@@ -15,5 +15,6 @@ urlpatterns = [
     path("devices/", views.devices, name="devices"),
     path("firmware/", views.firmware_list, name="firmware_list"),
     path("data/", views.data_analysis, name="data_analysis"),
+    path("permissions/", views.permissions, name="permissions"),
     path("switch-site/<str:site_id>/", views.switch_site, name="switch_site"),
 ]

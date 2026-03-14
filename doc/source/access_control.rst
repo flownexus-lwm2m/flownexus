@@ -56,7 +56,7 @@ The following table shows the access levels for each role:
 +-------------------------+-----------+------------+--------------+
 | Perform Operations      | ✗         | ✓          | ✓            |
 +-------------------------+-----------+------------+--------------+
-| Manage Devices          | ✗         | ✓          | ✓            |
+| Manage Devices          | ✗         | ✗          | ✓            |
 +-------------------------+-----------+------------+--------------+
 | Assign Devices to Sites | ✗         | ✗          | ✓            |
 +-------------------------+-----------+------------+--------------+
@@ -72,8 +72,9 @@ Users are assigned to Sites through **SiteMembership** with specific roles:
   permissions, and accessing Django admin. Can manage all Sites.
 
 **Site Admin**
-  Full access within their assigned Sites including firmware management,
-  device operations, and device transfers. Cannot create users.
+  Full access within their assigned Sites including firmware management
+  and device operations. Cannot create users or reassign devices between
+  Sites from the Permissions tab.
 
 **Site User**
   Read-only access to dashboards and telemetry within their assigned Sites.
@@ -123,7 +124,7 @@ Per-site permissions control access to functional areas:
 
   * **Manage Firmware**: Upload and delete firmware binaries
   * **Perform Operations**: Write resources and execute commands on devices
-  * **Manage Devices**: Transfer devices between Sites
+  * **Manage Devices**: Global Admin only for assigning and transferring devices between Sites
 
 Devices Tab (Read-Only View)
 -------------------------------
@@ -168,6 +169,10 @@ routing within Sites.
 
 This unified approach ensures Global Admins can efficiently manage access
 control from a single interface without navigating between separate views.
+
+The current implementation keeps device routing and unassigned-device handling
+in the Global Admin Permissions tab only. Site Admins can work within their
+assigned Sites, but cannot move devices between Sites through the web UI.
 
 Unassigned Device Handling
 ..........................

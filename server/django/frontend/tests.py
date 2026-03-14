@@ -292,6 +292,26 @@ class TestFrontendViews:
         assert response.status_code == 200
         assert b"Django Admin" in response.content
 
+    def test_global_admin_sees_permissions_tab(self, client):
+        admin_user = UserFactory(is_superuser=True, is_staff=True)
+        client.force_login(admin_user)
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert reverse("frontend:permissions").encode() in response.content
+
+    def test_non_global_admin_does_not_see_permissions_tab(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(user=user, site=site, role=SiteMembership.Role.ADMIN)
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert reverse("frontend:permissions").encode() not in response.content
+
 
 @pytest.mark.django_db
 class TestMultiSiteAccessControl:
@@ -661,6 +681,214 @@ class TestMultiSiteAccessControl:
 
         assert response.status_code == 200
         assert response.context["can_manage_firmware"] is False
+
+    def test_permissions_page_requires_global_admin(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(user=user, site=site, role=SiteMembership.Role.ADMIN)
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:permissions"))
+
+        assert response.status_code == 403
+
+    def test_global_admin_can_view_permissions_page(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:permissions"))
+
+        assert response.status_code == 200
+        assert b"User Roles" in response.content
+        assert b"Device Assignments" in response.content
+
+    def test_global_admin_can_create_user_from_permissions_page(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {
+                "create_user": "1",
+                "create-user-username": "new-operator",
+                "create-user-email": "operator@example.com",
+                "create-user-password1": "strong-password-123",
+                "create-user-password2": "strong-password-123",
+            },
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("frontend:permissions")
+        assert UserFactory._meta.model.objects.filter(username="new-operator").exists()
+
+    def test_global_admin_can_create_membership_from_permissions_page(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        managed_user = UserFactory()
+        site = SiteFactory(name="Ops Site")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {
+                "create_membership": "1",
+                "create-membership-user": managed_user.id,
+                "create-membership-site": site.id,
+                "create-membership-role": SiteMembership.Role.ADMIN,
+                "create-membership-can_view_overview": "on",
+                "create-membership-can_view_firmware": "on",
+                "create-membership-can_view_data_analysis": "on",
+                "create-membership-can_manage_firmware": "on",
+                "create-membership-can_perform_operations": "on",
+            },
+        )
+
+        assert response.status_code == 302
+        membership = SiteMembership.objects.get(user=managed_user, site=site)
+        assert membership.role == SiteMembership.Role.ADMIN
+        assert membership.can_manage_firmware is True
+
+    def test_global_admin_can_update_membership_from_permissions_page(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        managed_user = UserFactory()
+        site = SiteFactory()
+        membership = SiteMembershipFactory(
+            user=managed_user,
+            site=site,
+            role=SiteMembership.Role.USER,
+            can_view_firmware=False,
+            can_manage_firmware=False,
+            can_perform_operations=False,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {
+                "update_membership": "1",
+                "membership_id": membership.id,
+                f"membership-{membership.id}-role": SiteMembership.Role.ADMIN,
+                f"membership-{membership.id}-can_view_overview": "on",
+                f"membership-{membership.id}-can_view_firmware": "on",
+                f"membership-{membership.id}-can_view_data_analysis": "on",
+                f"membership-{membership.id}-can_manage_firmware": "on",
+                f"membership-{membership.id}-can_perform_operations": "on",
+            },
+        )
+
+        assert response.status_code == 302
+        membership.refresh_from_db()
+        assert membership.role == SiteMembership.Role.ADMIN
+        assert membership.can_view_firmware is True
+        assert membership.can_manage_firmware is True
+
+    def test_global_admin_can_revoke_membership_from_permissions_page(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        membership = SiteMembershipFactory()
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {"revoke_membership": "1", "membership_id": membership.id},
+        )
+
+        assert response.status_code == 302
+        assert not SiteMembership.objects.filter(pk=membership.pk).exists()
+
+    def test_global_admin_can_assign_unassigned_device(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        site = SiteFactory(name="Assigned Site")
+        endpoint = EndpointFactory(site=None, endpoint="urn:imei:assign-me")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {
+                "assign_device": "1",
+                "assign-device-endpoint": endpoint.endpoint,
+                "assign-device-site": site.id,
+            },
+        )
+
+        assert response.status_code == 302
+        endpoint.refresh_from_db()
+        assert endpoint.site == site
+
+    def test_global_admin_can_transfer_device(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        source_site = SiteFactory(name="Source Site")
+        target_site = SiteFactory(name="Target Site")
+        endpoint = EndpointFactory(site=source_site, endpoint="urn:imei:transfer-me")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {
+                "transfer_device": "1",
+                "endpoint_id": endpoint.endpoint,
+                f"transfer-{endpoint.endpoint}-site": target_site.id,
+            },
+        )
+
+        assert response.status_code == 302
+        endpoint.refresh_from_db()
+        assert endpoint.site == target_site
+
+    def test_global_admin_can_bulk_assign_devices(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        site = SiteFactory(name="Bulk Site")
+        endpoint_a = EndpointFactory(site=None, endpoint="urn:imei:bulk-a")
+        endpoint_b = EndpointFactory(site=None, endpoint="urn:imei:bulk-b")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {
+                "bulk_assign": "1",
+                "bulk-assign-endpoints": [endpoint_a.endpoint, endpoint_b.endpoint],
+                "bulk-assign-site": site.id,
+            },
+        )
+
+        assert response.status_code == 302
+        endpoint_a.refresh_from_db()
+        endpoint_b.refresh_from_db()
+        assert endpoint_a.site == site
+        assert endpoint_b.site == site
+
+    def test_permissions_post_is_forbidden_for_non_global_admin(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        managed_user = UserFactory()
+        SiteMembershipFactory(user=user, site=site, role=SiteMembership.Role.ADMIN)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("frontend:permissions"),
+            {
+                "create_membership": "1",
+                "create-membership-user": managed_user.id,
+                "create-membership-site": site.id,
+                "create-membership-role": SiteMembership.Role.USER,
+                "create-membership-can_view_overview": "on",
+                "create-membership-can_view_data_analysis": "on",
+            },
+        )
+
+        assert response.status_code == 403
+        assert not SiteMembership.objects.filter(user=managed_user, site=site).exists()
+
+    def test_permissions_page_lists_only_global_admin_unassigned_devices(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        assigned_site = SiteFactory(name="Assigned Site")
+        EndpointFactory(site=None, endpoint="urn:imei:unassigned-visible")
+        EndpointFactory(site=assigned_site, endpoint="urn:imei:assigned-hidden")
+        client.force_login(user)
+
+        response = client.get(reverse("frontend:permissions"))
+
+        assert response.status_code == 200
+        assert b"unassigned-visible" in response.content
+        assert b"assigned-hidden" in response.content
 
     def test_cross_site_update_prevention(self, client):
         """Security: User A cannot initiate update for Device B (Site B)."""
