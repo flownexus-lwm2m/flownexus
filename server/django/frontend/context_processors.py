@@ -75,4 +75,6 @@ def site_context(request):
             for permission_field in PERMISSION_FIELDS:
                 context[permission_field] = False
 
+        context["can_view_devices"] = context["can_view_overview"]
+
     return context

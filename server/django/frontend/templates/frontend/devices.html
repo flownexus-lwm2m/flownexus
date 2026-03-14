@@ -1,0 +1,355 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Devices{% endblock %}
+{% block page_title %}Devices{% endblock %}
+
+{% block extra_css %}
+<style>
+  .device-table code {
+    font-size: 0.8rem;
+  }
+  .device-table-scroll {
+    max-height: 18rem;
+    overflow-y: auto;
+  }
+  .device-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--tblr-bg-surface);
+  }
+  .device-empty-state {
+    min-height: 16rem;
+  }
+  .device-filter-row th {
+    background: var(--tblr-bg-surface);
+    padding-top: 0.5rem;
+    padding-bottom: 0.75rem;
+  }
+  .device-row {
+    cursor: pointer;
+  }
+  .device-row.is-selected {
+    background: rgba(32, 107, 196, 0.08);
+  }
+  .device-detail-table td:first-child {
+    width: 35%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title mb-1">Device Inventory</h3>
+      <div class="text-secondary">Read-only view of devices in the current site scope.</div>
+    </div>
+  </div>
+  <div class="table-responsive device-table-scroll">
+    <table class="table card-table table-vcenter device-table" id="devices-table">
+      <thead>
+        <tr>
+          <th>Device</th>
+          <th>Status</th>
+          <th>Last Seen</th>
+          <th>Telemetry</th>
+          <th>Site</th>
+        </tr>
+        <tr class="device-filter-row">
+          <th>
+            <input
+              type="text"
+              class="form-control form-control-sm device-filter"
+              data-column="device"
+              placeholder="Search device"
+              aria-label="Search device"
+            >
+          </th>
+          <th>
+            <input
+              type="text"
+              class="form-control form-control-sm device-filter"
+              data-column="status"
+              placeholder="Search status"
+              aria-label="Search status"
+            >
+          </th>
+          <th>
+            <input
+              type="text"
+              class="form-control form-control-sm device-filter"
+              data-column="last-telemetry"
+              placeholder="Search telemetry time"
+              aria-label="Search last telemetry"
+            >
+          </th>
+          <th>
+            <input
+              type="text"
+              class="form-control form-control-sm device-filter"
+              data-column="telemetry-summary"
+              placeholder="Search telemetry summary"
+              aria-label="Search telemetry summary"
+            >
+          </th>
+          <th>
+            <input
+              type="text"
+              class="form-control form-control-sm device-filter"
+              data-column="site"
+              placeholder="Search site"
+              aria-label="Search site"
+            >
+          </th>
+        </tr>
+      </thead>
+      <tbody
+        id="devices-table-body"
+        hx-get="{% url 'frontend:devices' %}"
+        hx-trigger="every 10s"
+        hx-select="#devices-table-body"
+        hx-target="#devices-table-body"
+        hx-swap="outerHTML"
+      >
+        {% for endpoint in endpoints %}
+        <tr
+          class="device-row{% if selected_endpoint_id == endpoint.endpoint %} is-selected{% endif %}"
+          data-endpoint-id="{{ endpoint.endpoint }}"
+          data-device="{{ endpoint.endpoint|lower }}"
+          data-status="{% if endpoint.registered %}registered{% else %}offline{% endif %}"
+          data-last-telemetry="{% if endpoint.last_seen %}{{ endpoint.last_seen|date:'d.m.Y H:i:s'|lower }}{% else %}no telemetry{% endif %}"
+          data-telemetry-summary="{% if endpoint.telemetry_count %}{{ endpoint.telemetry_count }} values recorded{% else %}no telemetry yet{% endif %}"
+          data-site="{% if endpoint.site %}{{ endpoint.site.name|lower }}{% else %}unassigned{% endif %}"
+          data-manufacturer="{{ endpoint.manufacturer|default:'Unknown' }}"
+          data-model-number="{{ endpoint.model_number|default:'Unknown' }}"
+          data-serial-number="{{ endpoint.serial_number|default:'Unknown' }}"
+          data-firmware-version="{{ endpoint.firmware_version|default:'Unknown' }}"
+          data-battery-level="{% if endpoint.battery_level != None %}{{ endpoint.battery_level }}%{% else %}Unavailable{% endif %}"
+          data-power-source-v="{% if endpoint.power_source_v != None %}{{ endpoint.power_source_v }} mV{% else %}Unavailable{% endif %}"
+        >
+          <td>
+            <code>{{ endpoint.endpoint }}</code>
+          </td>
+          <td>
+            {% if endpoint.registered %}
+            <span class="status status-green">Registered</span>
+            {% else %}
+            <span class="status status-secondary">Offline</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if endpoint.last_seen %}
+            {{ endpoint.last_seen|date:"d.m.Y H:i:s" }}
+            {% else %}
+            <span class="text-secondary">No telemetry</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if endpoint.telemetry_count %}
+            {{ endpoint.telemetry_count }} values
+            {% else %}
+            <span class="text-secondary">No telemetry yet</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if endpoint.site %}
+            {{ endpoint.site.name }}
+            {% else %}
+            <span class="badge bg-azure-lt">Unassigned</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-secondary py-5 device-empty-state">
+            No devices are available in this site context.
+          </td>
+        </tr>
+        {% endfor %}
+        <tr id="devices-no-results" class="d-none">
+          <td colspan="5" class="text-center text-secondary py-5 device-empty-state">
+            No devices match the current filters.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title mb-1">Device Details</h3>
+      <div class="text-secondary">Select a device row to inspect a minimal characteristic set.</div>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table card-table table-vcenter device-detail-table mb-0">
+      <tbody id="device-detail-body">
+        <tr>
+          <td class="text-secondary">Device</td>
+          <td id="detail-device">{% if selected_endpoint %}{{ selected_endpoint.endpoint }}{% else %}No device selected{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="text-secondary">Manufacturer</td>
+          <td id="detail-manufacturer">{% if selected_endpoint %}{{ selected_endpoint.manufacturer|default:"Unknown" }}{% else %}-{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="text-secondary">Model</td>
+          <td id="detail-model-number">{% if selected_endpoint %}{{ selected_endpoint.model_number|default:"Unknown" }}{% else %}-{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="text-secondary">Serial Number</td>
+          <td id="detail-serial-number">{% if selected_endpoint %}{{ selected_endpoint.serial_number|default:"Unknown" }}{% else %}-{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="text-secondary">Firmware Version</td>
+          <td id="detail-firmware-version">{% if selected_endpoint %}{{ selected_endpoint.firmware_version|default:"Unknown" }}{% else %}-{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="text-secondary">Battery Level</td>
+          <td id="detail-battery-level">{% if selected_endpoint and selected_endpoint.battery_level != None %}{{ selected_endpoint.battery_level }}%{% elif selected_endpoint %}Unavailable{% else %}-{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="text-secondary">Power Source Voltage</td>
+          <td id="detail-power-source-v">{% if selected_endpoint and selected_endpoint.power_source_v != None %}{{ selected_endpoint.power_source_v }} mV{% elif selected_endpoint %}Unavailable{% else %}-{% endif %}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const DEVICE_DETAIL_FIELDS = [
+    'device',
+    'manufacturer',
+    'model-number',
+    'serial-number',
+    'firmware-version',
+    'battery-level',
+    'power-source-v'
+  ];
+  let selectedDeviceId = {% if selected_endpoint_id %}'{{ selected_endpoint_id|escapejs }}'{% else %}null{% endif %};
+
+  function updateSelectedDeviceQuery(endpointId) {
+    const url = new URL(window.location);
+
+    if (endpointId) {
+      url.searchParams.set('selected', endpointId);
+    } else {
+      url.searchParams.delete('selected');
+    }
+
+    window.history.replaceState({}, '', url);
+  }
+
+  function selectDeviceRow(row) {
+    selectedDeviceId = row.getAttribute('data-endpoint-id');
+    updateSelectedDeviceQuery(selectedDeviceId);
+
+    const rows = Array.from(document.querySelectorAll('#devices-table .device-row'));
+    rows.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === row));
+
+    DEVICE_DETAIL_FIELDS.forEach((field) => {
+      const target = document.getElementById(`detail-${field}`);
+      if (target) {
+        target.textContent = row.getAttribute(`data-${field}`) || '-';
+      }
+    });
+  }
+
+  function initializeDeviceSelection() {
+    const rows = Array.from(document.querySelectorAll('#devices-table .device-row'));
+    const visibleRow = rows.find(
+      (row) => !row.classList.contains('d-none') && row.getAttribute('data-endpoint-id') === selectedDeviceId
+    ) || rows.find((row) => !row.classList.contains('d-none'));
+
+    if (visibleRow) {
+      selectDeviceRow(visibleRow);
+      return;
+    }
+
+    document.querySelectorAll('#devices-table .device-row').forEach((row) => {
+      row.classList.remove('is-selected');
+    });
+    document.getElementById('detail-device').textContent = 'No device selected';
+    selectedDeviceId = null;
+    updateSelectedDeviceQuery(null);
+    DEVICE_DETAIL_FIELDS.filter((field) => field !== 'device').forEach((field) => {
+      const target = document.getElementById(`detail-${field}`);
+      if (target) {
+        target.textContent = '-';
+      }
+    });
+  }
+
+  function bindDeviceRowSelection() {
+    document.querySelectorAll('#devices-table .device-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        if (!row.classList.contains('d-none')) {
+          selectDeviceRow(row);
+        }
+      });
+    });
+  }
+
+  function filterDevicesTable() {
+    const rows = Array.from(document.querySelectorAll('#devices-table .device-row'));
+    const filters = Array.from(document.querySelectorAll('#devices-table .device-filter')).reduce(
+      (acc, input) => {
+        acc[input.dataset.column] = input.value.trim().toLowerCase();
+        return acc;
+      },
+      {}
+    );
+    const noResultsRow = document.getElementById('devices-no-results');
+
+    let visibleRows = 0;
+
+    rows.forEach((row) => {
+      const matches = Object.entries(filters).every(([column, value]) => {
+        if (!value) {
+          return true;
+        }
+        return (row.getAttribute(`data-${column}`) || '').includes(value);
+      });
+
+      row.classList.toggle('d-none', !matches);
+      if (matches) {
+        visibleRows += 1;
+      }
+    });
+
+    if (noResultsRow) {
+      noResultsRow.classList.toggle('d-none', visibleRows > 0 || rows.length === 0);
+    }
+
+    initializeDeviceSelection();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#devices-table .device-filter').forEach((input) => {
+      input.addEventListener('input', filterDevicesTable);
+    });
+
+    bindDeviceRowSelection();
+    filterDevicesTable();
+  });
+
+  document.body.addEventListener('htmx:afterSwap', (event) => {
+    if (event.detail.target.id === 'devices-table-body') {
+      bindDeviceRowSelection();
+      filterDevicesTable();
+    }
+  });
+
+  document.body.addEventListener('htmx:configRequest', (event) => {
+    if (event.detail.target.id === 'devices-table-body' && selectedDeviceId) {
+      event.detail.parameters.selected = selectedDeviceId;
+    }
+  });
+</script>
+{% endblock %}
