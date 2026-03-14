@@ -17,27 +17,27 @@ test-django:
 
 # Start a mock simulation session for frontend development (default scenario)
 run-mock:
-	python3 scripts/run_mock_env.py --fresh
+	python3 devtools/mock/run_full_stack.py --fresh
 
 # Start mock environment with multi-site scenario for RBAC testing
 run-mock-multi-site:
-	python3 scripts/run_mock_env.py --scenario multi-site --fresh
+	python3 devtools/mock/run_full_stack.py --scenario multi-site --fresh
 
 # Build Zephyr simulation binaries
 build-sim:
-	cd simulation && python3 simulate.py --config sim_zephyr.yaml --build
+	cd devtools/zephyr && python3 run.py --config config.yaml --build
 
 # Run End-to-End tests (Requires Podman)
 test-e2e: build-sim
 	@echo "Starting backend stack..."
 	podman-compose -f server/compose.yml up -d
 	@echo "Running simulation..."
-	cd simulation && python3 simulate.py --config sim_zephyr.yaml --run --local &
+	cd devtools/zephyr && python3 run.py --config config.yaml --run --local &
 	@echo "Verifying data..."
-	python3 utils/verify_e2e.py
+	python3 devtools/zephyr/verify_e2e.py
 	@echo "Shutting down..."
 	podman-compose -f server/compose.yml down
-	pkill -f "simulate.py" || true
+	pkill -f "run.py" || true
 	pkill -f "ep_.*exe" || true
 
 # Run compliance checks (linting, formatting, git history)

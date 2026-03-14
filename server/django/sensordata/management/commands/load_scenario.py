@@ -18,7 +18,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Load a mock scenario configuration into the database"
+    help = "Load a scenario configuration into the database"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -31,7 +31,7 @@ class Command(BaseCommand):
             "--config-dir",
             type=str,
             default=None,
-            help="Directory containing scenario configs (default: simulation/configs)",
+            help="Directory containing scenario configs (default: devtools/mock/scenarios)",
         )
 
     def handle(self, *args, **options):
@@ -53,7 +53,7 @@ class Command(BaseCommand):
 
     def _load_config(self, config_name, config_dir):
         if config_dir is None:
-            config_dir = Path(__file__).resolve().parents[5] / "simulation" / "configs"
+            config_dir = Path(__file__).resolve().parents[5] / "devtools" / "mock" / "scenarios"
         else:
             config_dir = Path(config_dir)
 

@@ -16,13 +16,13 @@ from pathlib import Path
 
 import yaml
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 VENV_BIN = ROOT_DIR / "server/django/.venv/bin"
 PYTHON_EXEC = VENV_BIN / "python"
 CELERY_EXEC = VENV_BIN / "celery"
 COMPOSE_FILE = ROOT_DIR / "server/compose.yml"
-SCENARIO_DIR = ROOT_DIR / "simulation/configs"
-SIM_CONFIG = ROOT_DIR / "simulation/sim_mock.yaml"
+SCENARIO_DIR = ROOT_DIR / "devtools/mock/scenarios"
+SIM_CONFIG = ROOT_DIR / "devtools/mock/config.yaml"
 
 processes = []
 redis_started = False
@@ -48,6 +48,26 @@ def load_scenario(scenario_name):
 
     with scenario_path.open(encoding="utf-8") as handle:
         return yaml.safe_load(handle) or {}
+
+
+def create_sim_config(scenario, temp_dir):
+    """Create a temporary simulation config based on scenario settings."""
+    devices = scenario.get("devices", {})
+    config = {
+        "type": "mock",
+        "url": "http://localhost:8000/flownexus/ingest",
+        "device_count": devices.get("count", 5),
+        "interval": devices.get("interval", 2.0),
+        "duration": 0,
+        "run": True,
+        "enable_leshan_api": True,
+    }
+
+    config_path = temp_dir / "mock_sim_config.yaml"
+    with open(config_path, "w") as f:
+        yaml.dump(config, f)
+
+    return config_path
 
 
 def run_command(command, env, description, cwd=ROOT_DIR, quiet=False):
@@ -125,7 +145,7 @@ def setup_database(env, scenario_name, quiet):
         [
             str(PYTHON_EXEC),
             str(ROOT_DIR / "server/django/manage.py"),
-            "load_mock_scenario",
+            "load_scenario",
             "--config",
             scenario_name,
         ],
@@ -185,11 +205,9 @@ def main():
     ensure_binary(CELERY_EXEC)
 
     scenario = load_scenario(args.scenario)
-    devices = scenario.get("devices", {})
-    device_count = int(devices.get("count", 5))
-    interval = float(devices.get("interval", 2.0))
 
     temp_dir = Path(tempfile.gettempdir())
+    sim_config = create_sim_config(scenario, temp_dir)
     db_path = temp_dir / f"flownexus_mock_{args.scenario}.sqlite3"
     if args.fresh and db_path.exists():
         print(f"Removing existing database: {db_path}")
@@ -244,13 +262,9 @@ def main():
     start_process(
         [
             str(PYTHON_EXEC),
-            str(ROOT_DIR / "simulation/simulate.py"),
+            str(ROOT_DIR / "devtools/mock/run.py"),
             "--config",
-            str(SIM_CONFIG),
-            "--count",
-            str(device_count),
-            "--interval",
-            str(interval),
+            str(sim_config),
         ],
         env,
         "Simulation",
