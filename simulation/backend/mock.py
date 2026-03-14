@@ -4,8 +4,10 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import http.server
+import json
 import logging
 import math
+import os
 import random
 import threading
 import time
@@ -22,7 +24,6 @@ class MockLeshanHandler(http.server.BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         content_length = int(self.headers.get("Content-Length", 0))
         post_data = self.rfile.read(content_length).decode("utf-8")
-        import json
 
         print(f"Mock Leshan received PUT: {path}")
 
@@ -48,8 +49,13 @@ class MockLeshanHandler(http.server.BaseHTTPRequestHandler):
                         self.end_headers()
                         self.wfile.write(json.dumps({"status": "SUCCESS"}).encode())
                         # Start FOTA thread
+                        mock_backend = getattr(self.server, "mock_backend", None)
+                        if mock_backend is None:
+                            self.send_response(500)
+                            self.end_headers()
+                            return
                         threading.Thread(
-                            target=self.server.mock_backend.process_fota, args=(endpoint, uri)
+                            target=mock_backend.process_fota, args=(endpoint, uri)
                         ).start()
                         return
         except Exception as e:
@@ -78,13 +84,14 @@ class MockLeshanHandler(http.server.BaseHTTPRequestHandler):
                     if obj_id == "5" and res_id == "2":
                         self.send_response(200)
                         self.end_headers()
-                        import json
-
                         self.wfile.write(json.dumps({"status": "SUCCESS"}).encode())
                         # Trigger Update execution
-                        threading.Thread(
-                            target=self.server.mock_backend.execute_fota, args=(endpoint,)
-                        ).start()
+                        mock_backend = getattr(self.server, "mock_backend", None)
+                        if mock_backend is None:
+                            self.send_response(500)
+                            self.end_headers()
+                            return
+                        threading.Thread(target=mock_backend.execute_fota, args=(endpoint,)).start()
                         return
         except Exception as e:
             print(f"Error in MockLeshanHandler POST: {e}")
@@ -100,8 +107,8 @@ class MockLeshanHandler(http.server.BaseHTTPRequestHandler):
 class MockBackend:
     def __init__(self, config):
         self.config = config
-        self.device_count = config.get("device_count", 5)
-        self.interval = config.get("interval", 5.0)
+        self.device_count = int(config.get("device_count", 5))
+        self.interval = float(config.get("interval", 5.0))
         self.target_url = config.get("url", "http://localhost:8000/flownexus/ingest")
         self.duration = config.get("duration", 0)  # 0 means infinite
         self.run = config.get("run", True)
@@ -143,9 +150,11 @@ class MockBackend:
         try:
             response = requests.post(url_composite, json=reg_payload, timeout=5)
             if response.status_code != 201:
+                print(f"Failed to register {urn}: {response.status_code}")
                 logger.error(f"Failed to register {urn}: {response.status_code} {response.text}")
                 return False
 
+            print(f"Registered device: {urn}")
             logger.info(f"Registered device: {urn}")
 
             # 2. Device Info Event (sent after registration accepted)
@@ -270,8 +279,6 @@ class MockBackend:
             if resp.status_code == 200:
                 print(f"Download successful, size: {len(resp.content)} bytes")
                 # Extract version from filename
-                import os
-
                 filename = os.path.basename(uri)
                 # If the filename contains 'v' and numbers, it's likely the version
                 # Otherwise, it might be an arbitrary name.
@@ -339,9 +346,12 @@ class MockBackend:
                     f"Warning: Could not start Mock Leshan API on port {self.leshan_api_port}: {e}"
                 )
 
-        print(f"Starting Mock Simulation: {self.device_count} devices at {self.target_url}")
+        print(f"\nStarting Mock Simulation: {self.device_count} devices")
+        print(f"   Target: {self.target_url}")
+        print(f"   Interval: {self.interval}s\n")
 
         # Register devices
+        print("Registering devices...")
         for i in range(self.device_count):
             imei = i + 1
             if self._register_device(imei):
@@ -351,21 +361,39 @@ class MockBackend:
             print("No devices registered. Exiting.")
             return
 
-        print(f"Simulation running. Interval: {self.interval}s")
+        print(f"\n{len(self.endpoints)}/{self.device_count} devices registered successfully")
+        print(f"Sending telemetry every {self.interval}s (Press Ctrl+C to stop)\n")
+
         tick = 0
+        last_status_time = time.time()
+        telemetry_count = 0
+
         try:
             while True:
                 if self.duration > 0 and (time.time() - self.start_time) > self.duration:
-                    print("Duration reached. Stopping simulation.")
+                    print("\nDuration reached. Stopping simulation.")
                     break
 
                 for imei in self.endpoints:
                     self._send_telemetry(imei, tick)
+                    telemetry_count += 1
 
                 tick += 1
+
+                # Print status update every 30 seconds
+                if time.time() - last_status_time >= 30:
+                    print(
+                        f"Status: {len(self.endpoints)} devices active | "
+                        f"{telemetry_count} telemetry samples sent | "
+                        f"Running for {int(time.time() - self.start_time)}s"
+                    )
+                    telemetry_count = 0
+                    last_status_time = time.time()
+
                 time.sleep(self.interval)
         except KeyboardInterrupt:
-            print("\nSimulation stopped by user.")
+            print("\n\nSimulation stopped by user.")
+            print(f"   Runtime: {int(time.time() - self.start_time)}s")
 
     def stop(self):
         pass

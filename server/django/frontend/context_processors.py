@@ -28,6 +28,14 @@ def site_context(request):
         context["current_site"] = getattr(request, "site", None)
         context["available_sites"] = getattr(request, "available_sites", [])
         context["is_global_admin"] = getattr(request, "is_global_admin", False)
+        context["current_site_key"] = getattr(request, "current_site_key", None)
+        context["show_unassigned_site"] = context["is_global_admin"]
+        if context["current_site_key"] == "unassigned":
+            context["current_site_label"] = "Unassigned Devices"
+        elif context["current_site"]:
+            context["current_site_label"] = context["current_site"].name
+        else:
+            context["current_site_label"] = "Select Site"
 
         # User's permissions for current site
         site_membership = getattr(request, "site_membership", None)

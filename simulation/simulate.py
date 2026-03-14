@@ -18,7 +18,6 @@ from backend.zephyr import ZephyrBackend
 
 
 def signal_handler(sig, frame, backend):
-    print("\nShutting down simulation...")
     if backend:
         backend.stop()
     sys.exit(0)
