@@ -6,14 +6,14 @@
 import os
 import sys
 
-# Add project root to sys.path to find simulation package
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
+# Add project root to sys.path to find devtools package
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../")))
 
 
 from django.test import LiveServerTestCase, override_settings
 
+from devtools.mock.device_simulator import MockBackend
 from sensordata.models import Endpoint, Resource
-from simulation.backend.mock import MockBackend
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)

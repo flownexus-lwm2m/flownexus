@@ -19,7 +19,7 @@ certificate for the https server. For details, check chapter
 
 More information about a possible firmware implementation can be found in the
 ``lwm2m_client`` firmware sample at
-``flownexus/simulation/lwm2m_client/src/firmware_update.c``.
+``flownexus/devtools/zephyr/client/src/firmware_update.c``.
 
 .. note::
 

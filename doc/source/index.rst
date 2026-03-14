@@ -36,7 +36,7 @@ sizes.
    architecture/index
    application_guide/index
    deploy
-   simulation
+   devtools
    documentation
    glossary
 

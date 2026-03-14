@@ -35,23 +35,10 @@ The Django server should now be up and running under the following URL:
 ``http://localhost:8000/admin``. The admin login is ``admin`` and the password
 
 
-Run Unit Tests
-..............
+Testing
+.......
 
-There are unit tests, that test the deserializer, which parses the Json payload
-from the ReST API. You can run the unit tests with the following command:
-
-.. code-block:: console
-
-  host:~/workspace/flownexus/server/django$ python manage.py test sensordata
-  Found 2 test(s).
-  Creating test database for alias 'default'...
-  ----------------------------------------------------------------------
-  Ran 2 tests in 0.008s
-
-  OK
-  Destroying test database for alias 'default'...
-
+For testing documentation, see :doc:`/devtools`.
 
 Database Model
 --------------

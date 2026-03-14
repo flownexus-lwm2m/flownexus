@@ -26,8 +26,8 @@ class TestMockSetupCommands:
         assert ResourceType.objects.count() == first_count
         assert ResourceType.objects.get(object_id=10240, resource_id=0).name == "ep_registered"
 
-    def test_load_mock_scenario_updates_existing_records(self):
-        call_command("load_mock_scenario", config="multi-site")
+    def test_load_scenario_updates_existing_records(self):
+        call_command("load_scenario", config="multi-site")
 
         warehouse = Site.objects.get(name="Warehouse")
         warehouse.description = "outdated"
@@ -38,7 +38,7 @@ class TestMockSetupCommands:
         membership.can_view_firmware = False
         membership.save(update_fields=["can_view_firmware"])
 
-        call_command("load_mock_scenario", config="multi-site")
+        call_command("load_scenario", config="multi-site")
 
         warehouse.refresh_from_db()
         membership.refresh_from_db()
@@ -46,9 +46,9 @@ class TestMockSetupCommands:
         assert warehouse.description == "Storage facility with environmental monitoring"
         assert membership.can_view_firmware is True
 
-    def test_load_mock_scenario_fails_for_missing_file(self):
+    def test_load_scenario_fails_for_missing_file(self):
         with pytest.raises(CommandError):
-            call_command("load_mock_scenario", config="missing-scenario")
+            call_command("load_scenario", config="missing-scenario")
 
 
 @pytest.mark.django_db
