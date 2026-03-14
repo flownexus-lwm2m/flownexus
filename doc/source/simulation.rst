@@ -73,12 +73,144 @@ Running a single command sets up the entire stack:
 
 This command orchestrates:
 1.  **Redis**: Starts the message broker (via Podman).
-2.  **Django**: Starts the development server at http://localhost:8000.
-3.  **Celery**: Starts a worker to process background tasks (like FOTA commands).
-4.  **Mock Simulation**: Starts the device simulator and the Mock Leshan API.
+2.  **Database**: Creates a temporary SQLite database (in ``/tmp/``) with migrations.
+3.  **Django**: Starts the development server at http://localhost:8000.
+4.  **Celery**: Starts a worker to process background tasks (like FOTA commands).
+5.  **Mock Simulation**: Starts the device simulator and the Mock Leshan API.
 
 The script ensures all processes are synchronized and provides a clean shutdown
-(via Ctrl+C) by killing all spawned process groups.
+(via Ctrl+C) by stopping the spawned processes and the temporary Redis service.
+
+.. important::
+   The mock environment always uses a **temporary database** in ``/tmp/`` to ensure
+   it never interferes with production data. Each run starts with a fresh database.
+
+Scenario-Based Configuration
+............................
+
+The mock environment supports scenario-based configurations for testing different
+features. Scenarios are defined in YAML files in ``simulation/configs/``.
+
+Available Scenarios:
+
+**default** (``make run-mock``)
+  * 5 devices, 1 site
+  * Single admin user (admin/admin)
+  * Ideal for basic frontend development
+
+**multi-site** (``make run-mock-multi-site``)
+  * 15 devices with multiple sites and users
+  * Multiple test users with RBAC roles
+  * Ideal for testing multi-tenant features
+
+Verbose Mode
+............
+
+By default, ``make run-mock`` suppresses most Django and Celery output to keep
+the console clean. To see detailed logs (migrations, Django requests, Celery
+logs), use the ``-v`` flag:
+
+.. code-block:: console
+
+   # Run with verbose output
+   host:~/flownexus$ python3 scripts/run_mock_env.py --fresh -v
+
+   # Or for multi-site scenario with verbose mode
+   host:~/flownexus$ python3 scripts/run_mock_env.py --scenario multi-site --fresh -v
+
+Test Users for Multi-Site Scenario:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Username
+     - Password
+     - Role
+     - Site(s)
+   * - admin
+     - admin
+     - Global Superuser
+     - All sites
+   * - admin-plant
+     - password
+     - Site Admin
+     - Manufacturing Plant
+   * - user-plant
+     - password
+     - Site User
+     - Manufacturing Plant
+   * - admin-warehouse
+     - password
+     - Site Admin
+     - Warehouse
+   * - user-warehouse
+     - password
+     - Site User
+     - Warehouse
+   * - user-multi
+     - password
+     - Site User
+     - Manufacturing Plant + Warehouse
+
+Creating Custom Scenarios
+.........................
+
+You can create custom scenarios by adding YAML files to ``simulation/configs/``.
+
+Example scenario structure:
+
+.. code-block:: yaml
+
+   scenario_name: "my-scenario"
+   description: "Custom scenario for testing"
+
+   devices:
+     count: 10
+     interval: 5.0
+
+   sites:
+     - name: "Site A"
+       description: "Test site A"
+
+   users:
+     - username: "admin"
+       password: "admin"
+       is_superuser: true
+       sites: []
+
+     - username: "site-admin"
+       password: "password"
+       is_superuser: false
+       sites:
+         - name: "Site A"
+           role: "ADMIN"
+           permissions:
+             can_view_overview: true
+             can_manage_firmware: true
+
+To run a custom scenario:
+
+.. code-block:: console
+
+   # Basic usage (quiet mode)
+   host:~/flownexus$ python3 scripts/run_mock_env.py --scenario my-scenario --fresh
+
+   # With verbose output
+   host:~/flownexus$ python3 scripts/run_mock_env.py --scenario my-scenario --fresh -v
+
+   # Available options:
+   #   --scenario <name>   Select scenario configuration (default: default)
+   #   --fresh             Delete existing database and start fresh
+   #   -v, --verbose       Show detailed Django/Celery logs
+
+Each scenario file is intentionally small. The mock setup currently consumes:
+
+* ``devices.count``
+* ``devices.interval``
+* ``sites``
+* ``users``
+
+Anything outside that should be treated as future work rather than active config.
 
 Manual Control
 ..............

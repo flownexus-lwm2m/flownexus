@@ -5,128 +5,276 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+import argparse
 import os
 import signal
 import subprocess
 import sys
+import tempfile
 import time
+from pathlib import Path
 
-# Use absolute paths to avoid relative path confusion
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VENV_BIN = os.path.join(ROOT_DIR, "server/django/.venv/bin")
-PYTHON_EXEC = os.path.join(VENV_BIN, "python")
-CELERY_EXEC = os.path.join(VENV_BIN, "celery")
+import yaml
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+VENV_BIN = ROOT_DIR / "server/django/.venv/bin"
+PYTHON_EXEC = VENV_BIN / "python"
+CELERY_EXEC = VENV_BIN / "celery"
+COMPOSE_FILE = ROOT_DIR / "server/compose.yml"
+SCENARIO_DIR = ROOT_DIR / "simulation/configs"
+SIM_CONFIG = ROOT_DIR / "simulation/sim_mock.yaml"
+
+processes = []
+redis_started = False
 
 
-def signal_handler(sig, frame):
+def build_env(db_path):
+    env = os.environ.copy()
+    env["DJANGO_DB_PATH"] = str(db_path)
+    env["LESHAN_URI"] = "http://localhost:8081"
+    env["PYTHONPATH"] = str(ROOT_DIR / "server/django")
+    return env
+
+
+def ensure_binary(path):
+    if not path.exists():
+        sys.exit(f"Missing required executable: {path}")
+
+
+def load_scenario(scenario_name):
+    scenario_path = SCENARIO_DIR / f"{scenario_name}.yaml"
+    if not scenario_path.exists():
+        sys.exit(f"Scenario not found: {scenario_path}")
+
+    with scenario_path.open(encoding="utf-8") as handle:
+        return yaml.safe_load(handle) or {}
+
+
+def run_command(command, env, description, cwd=ROOT_DIR, quiet=False):
+    stdout = subprocess.DEVNULL if quiet else None
+    stderr = subprocess.DEVNULL if quiet else None
+    result = subprocess.run(command, cwd=cwd, env=env, stdout=stdout, stderr=stderr)
+    if result.returncode != 0:
+        sys.exit(f"{description} failed")
+
+
+def start_process(command, env, description, cwd=ROOT_DIR, quiet=False):
+    stdout = subprocess.DEVNULL if quiet else None
+    stderr = subprocess.DEVNULL if quiet else None
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        preexec_fn=os.setsid,
+        stdout=stdout,
+        stderr=stderr,
+    )
+    processes.append((description, process))
+    return process
+
+
+def shutdown(signum=None, frame=None):
+    del signum, frame
     print("\nShutting down mock environment...")
-    for p in processes:
+
+    for _, process in processes:
         try:
-            # Kill the entire process group
-            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
-        except Exception:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        except ProcessLookupError:
             pass
 
-    # Wait a bit and force kill if still alive
     time.sleep(1)
-    for p in processes:
-        try:
-            os.killpg(os.getpgid(p.pid), signal.SIGKILL)
-        except Exception:
-            pass
+
+    for _, process in processes:
+        if process.poll() is None:
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+    if redis_started:
+        subprocess.run(
+            ["podman-compose", "-f", str(COMPOSE_FILE), "stop", "redis"],
+            cwd=ROOT_DIR,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+def setup_database(env, scenario_name, quiet):
+    print("\n--- Setting up temporary database ---")
+    run_command(
+        [str(PYTHON_EXEC), str(ROOT_DIR / "server/django/manage.py"), "migrate"],
+        env,
+        "Database migration",
+        quiet=quiet,
+    )
+    run_command(
+        [
+            str(PYTHON_EXEC),
+            str(ROOT_DIR / "server/django/manage.py"),
+            "load_initial_resource_types",
+        ],
+        env,
+        "Resource type load",
+        quiet=quiet,
+    )
+    run_command(
+        [
+            str(PYTHON_EXEC),
+            str(ROOT_DIR / "server/django/manage.py"),
+            "load_mock_scenario",
+            "--config",
+            scenario_name,
+        ],
+        env,
+        "Scenario load",
+        quiet=quiet,
+    )
+    print("Database setup complete.")
 
-processes = []
 
-# 1. Start Redis
-print("--- Starting Redis ---")
-subprocess.run(["podman-compose", "-f", "server/compose.yml", "up", "-d", "redis"], cwd=ROOT_DIR)
-time.sleep(2)  # Give Redis a moment
+def wait_for_django():
+    import requests
+
+    print("Waiting for Django...")
+    for _ in range(30):
+        try:
+            response = requests.get("http://localhost:8000", timeout=1)
+            if response.status_code < 500:
+                print("Django is ready!")
+                return
+        except requests.RequestException:
+            time.sleep(1)
+
+    sys.exit("Django did not become ready in time")
 
 
-# 2. Environment for Django and Celery
-env = os.environ.copy()
-env["LESHAN_URI"] = "http://localhost:8081"
-env["PYTHONPATH"] = os.path.join(ROOT_DIR, "server/django")
+def print_login_info(scenario_name, scenario):
+    users = scenario.get("users", [])
+    if scenario_name == "multi-site":
+        print("\nTest Users:")
+        for user in users:
+            username = user["username"]
+            password = user["password"]
+            if user.get("is_superuser"):
+                role = "Global superuser"
+            else:
+                memberships = user.get("sites", [])
+                site_names = ", ".join(site["name"] for site in memberships)
+                role = memberships[0].get("role", "USER") if memberships else "USER"
+                role = f"{role} - {site_names}" if site_names else role
+            print(f"  {username} / {password} ({role})")
+    else:
+        admin_user = users[0] if users else {"username": "admin", "password": "admin"}
+        print(f"\nDefault Login: {admin_user['username']} / {admin_user['password']}")
 
-# 3. Start Django
-print("--- Starting Django ---")
-django_cmd = [
-    PYTHON_EXEC,
-    os.path.join(ROOT_DIR, "server/django/manage.py"),
-    "runserver",
-    "0.0.0.0:8000",
-]
-p_django = subprocess.Popen(django_cmd, env=env, cwd=ROOT_DIR, preexec_fn=os.setsid)
-processes.append(p_django)
 
-# Wait for Django to be ready
-print("Waiting for Django...")
-for _ in range(30):
-    try:
-        import requests
+def main():
+    global redis_started
 
-        resp = requests.get("http://localhost:8000", timeout=1)
-        print("Django is ready!")
-        break
-    except Exception:
-        time.sleep(1)
-else:
-    print("Warning: Django not ready, proceeding anyway...")
+    parser = argparse.ArgumentParser(description="Run the flownexus mock environment")
+    parser.add_argument("--scenario", default="default", help="Scenario config name")
+    parser.add_argument("--fresh", action="store_true", help="Delete existing temp database")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show subprocess output")
+    args = parser.parse_args()
 
-# 4. Start Celery
-print("--- Starting Celery ---")
-celery_cmd = [CELERY_EXEC, "-A", "core", "worker", "--loglevel=info", "-P", "gevent", "-c", "10"]
-p_celery = subprocess.Popen(
-    celery_cmd, env=env, cwd=os.path.join(ROOT_DIR, "server/django"), preexec_fn=os.setsid
-)
-processes.append(p_celery)
+    ensure_binary(PYTHON_EXEC)
+    ensure_binary(CELERY_EXEC)
 
-# 5. Start Simulation
-print("--- Starting Simulation ---")
-sim_cmd = [
-    PYTHON_EXEC,
-    os.path.join(ROOT_DIR, "simulation/simulate.py"),
-    "--config",
-    os.path.join(ROOT_DIR, "simulation/sim_mock.yaml"),
-]
-p_sim = subprocess.Popen(sim_cmd, env=env, cwd=ROOT_DIR, preexec_fn=os.setsid)
-processes.append(p_sim)
+    scenario = load_scenario(args.scenario)
+    devices = scenario.get("devices", {})
+    device_count = int(devices.get("count", 5))
+    interval = float(devices.get("interval", 2.0))
 
-print("\nMock Environment is UP!")
-print("Dashboard: http://localhost:8000")
-print("Press Ctrl+C to stop everything.")
+    temp_dir = Path(tempfile.gettempdir())
+    db_path = temp_dir / f"flownexus_mock_{args.scenario}.sqlite3"
+    if args.fresh and db_path.exists():
+        print(f"Removing existing database: {db_path}")
+        db_path.unlink()
 
-try:
+    env = build_env(db_path)
+    quiet = not args.verbose
+
+    print(f"Using temporary database: {db_path}")
+    setup_database(env, args.scenario, quiet)
+
+    print("\n--- Starting Redis ---")
+    run_command(
+        ["podman-compose", "-f", str(COMPOSE_FILE), "up", "-d", "redis"],
+        os.environ.copy(),
+        "Redis startup",
+        quiet=quiet,
+    )
+    redis_started = True
+    time.sleep(2)
+
+    print("--- Starting Django ---")
+    start_process(
+        [str(PYTHON_EXEC), str(ROOT_DIR / "server/django/manage.py"), "runserver", "0.0.0.0:8000"],
+        env,
+        "Django",
+        quiet=quiet,
+    )
+    wait_for_django()
+
+    print("--- Starting Celery ---")
+    celery_loglevel = "info" if args.verbose else "warning"
+    start_process(
+        [
+            str(CELERY_EXEC),
+            "-A",
+            "core",
+            "worker",
+            f"--loglevel={celery_loglevel}",
+            "-P",
+            "gevent",
+            "-c",
+            "10",
+        ],
+        env,
+        "Celery",
+        cwd=ROOT_DIR / "server/django",
+        quiet=quiet,
+    )
+
+    print("--- Starting Simulation ---")
+    start_process(
+        [
+            str(PYTHON_EXEC),
+            str(ROOT_DIR / "simulation/simulate.py"),
+            "--config",
+            str(SIM_CONFIG),
+            "--count",
+            str(device_count),
+            "--interval",
+            str(interval),
+        ],
+        env,
+        "Simulation",
+        quiet=False,
+    )
+
+    print("\n" + "=" * 60)
+    print("Mock Environment is UP!")
+    print(f"Scenario: {args.scenario}")
+    print("Dashboard: http://localhost:8000")
+    print(f"Database: {db_path}")
+    print("=" * 60)
+    print_login_info(args.scenario, scenario)
+    print("\nPress Ctrl+C to stop everything.")
+
     while True:
         time.sleep(1)
-        # Check if any process died
-        for p in processes:
-            if p.poll() is not None:
-                # If it's the simulation, it might have finished if duration was set
-                # but usually it should stay up.
-                print(f"Process {p.args} died with code {p.returncode}")
-                signal_handler(None, None)
-except KeyboardInterrupt:
-    signal_handler(None, None)
+        for description, process in processes:
+            if process.poll() is not None:
+                print(f"{description} exited with code {process.returncode}")
+                shutdown()
 
 
-print("\nMock Environment is UP!")
-print("Dashboard: http://localhost:8000")
-print("Press Ctrl+C to stop everything.")
-
-try:
-    while True:
-        time.sleep(1)
-        # Check if any process died
-        for p in processes:
-            if p.poll() is not None:
-                print(f"Process {p.args} died with code {p.returncode}")
-                signal_handler(None, None)
-except KeyboardInterrupt:
-    signal_handler(None, None)
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+    main()

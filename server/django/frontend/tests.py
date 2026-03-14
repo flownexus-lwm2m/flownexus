@@ -245,6 +245,41 @@ class TestMultiSiteAccessControl:
         # Session should have the new site id
         assert client.session.get("current_site_id") == site2.id
 
+    def test_superadmin_can_switch_to_unassigned_view(self, client):
+        user = UserFactory(is_superuser=True, is_staff=True)
+        site = SiteFactory(name="Assigned Site")
+        EndpointFactory.create_batch(2, site=None, registered=True)
+        EndpointFactory.create_batch(3, site=site, registered=True)
+
+        client.force_login(user)
+
+        switch_response = client.get(
+            reverse("frontend:switch_site", kwargs={"site_id": "unassigned"})
+        )
+        assert switch_response.status_code == 302
+        assert client.session.get("current_site_id") == "unassigned"
+
+        response = client.get(reverse("frontend:dashboard"))
+
+        assert response.status_code == 200
+        assert response.context["current_site_key"] == "unassigned"
+        assert response.context["total_devices"] == 2
+        assert response.context["registered_devices"] == 2
+        assert b"Unassigned Devices" in response.content
+
+    def test_regular_user_cannot_switch_to_unassigned_view(self, client):
+        user = UserFactory()
+        site = SiteFactory(name="User Site")
+        SiteMembershipFactory(user=user, site=site, role=SiteMembership.Role.USER)
+
+        client.force_login(user)
+        client.get(reverse("frontend:dashboard"))
+
+        response = client.get(reverse("frontend:switch_site", kwargs={"site_id": "unassigned"}))
+
+        assert response.status_code == 302
+        assert client.session.get("current_site_id") == site.id
+
     def test_permission_check_blocks_access(self, client):
         """Users without specific permissions should be blocked."""
         user = UserFactory()

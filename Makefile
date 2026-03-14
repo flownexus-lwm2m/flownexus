@@ -5,6 +5,7 @@
 	build-sim \
 	test-e2e \
 	run-mock \
+	run-mock-multi-site \
 	compliance \
 	doc-html \
 	doc-pdf \
@@ -14,9 +15,13 @@
 test-django:
 	cd server/django && tox -e unit-tests
 
-# Start a mock simulation session for frontend development
+# Start a mock simulation session for frontend development (default scenario)
 run-mock:
-	python3 scripts/run_mock_env.py
+	python3 scripts/run_mock_env.py --fresh
+
+# Start mock environment with multi-site scenario for RBAC testing
+run-mock-multi-site:
+	python3 scripts/run_mock_env.py --scenario multi-site --fresh
 
 # Build Zephyr simulation binaries
 build-sim:

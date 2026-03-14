@@ -1,0 +1,130 @@
+#
+# Mock Simulation Configuration - Multi-Site Scenario
+# Multi-tenant setup with RBAC test users
+#
+scenario_name: "multi-site"
+description: "Multi-site setup with 15 devices across 3 sites for RBAC testing"
+
+# Device simulation settings
+devices:
+  count: 15
+  interval: 2.0
+
+# Device-to-site assignments (IMEI IDs mapped to sites)
+# Devices not listed will remain unassigned (site=None)
+device_assignments:
+  Manufacturing Plant:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+  Warehouse:
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  Office:
+    - 11
+    - 12
+    - 13
+  # Devices 14, 15 left unassigned
+
+# Sites configuration
+sites:
+  - name: "Manufacturing Plant"
+    description: "Main production facility with industrial sensors"
+  - name: "Warehouse"
+    description: "Storage facility with environmental monitoring"
+  - name: "Office"
+    description: "Corporate headquarters with HVAC monitoring"
+
+# Test users with RBAC roles
+users:
+  - username: "admin"
+    password: "admin"
+    is_superuser: true
+    sites: []
+
+  # Manufacturing Plant users
+  - username: "admin-plant"
+    password: "password"
+    is_superuser: false
+    sites:
+      - name: "Manufacturing Plant"
+        role: "ADMIN"
+        permissions:
+          can_view_overview: true
+          can_view_firmware: true
+          can_view_data_analysis: true
+          can_manage_firmware: true
+          can_perform_operations: true
+          can_manage_devices: true
+
+  - username: "user-plant"
+    password: "password"
+    is_superuser: false
+    sites:
+      - name: "Manufacturing Plant"
+        role: "USER"
+        permissions:
+          can_view_overview: true
+          can_view_firmware: true
+          can_view_data_analysis: true
+          can_manage_firmware: false
+          can_perform_operations: false
+          can_manage_devices: false
+
+  # Warehouse users
+  - username: "admin-warehouse"
+    password: "password"
+    is_superuser: false
+    sites:
+      - name: "Warehouse"
+        role: "ADMIN"
+        permissions:
+          can_view_overview: true
+          can_view_firmware: true
+          can_view_data_analysis: true
+          can_manage_firmware: true
+          can_perform_operations: true
+          can_manage_devices: true
+
+  - username: "user-warehouse"
+    password: "password"
+    is_superuser: false
+    sites:
+      - name: "Warehouse"
+        role: "USER"
+        permissions:
+          can_view_overview: true
+          can_view_firmware: true
+          can_view_data_analysis: true
+          can_manage_firmware: false
+          can_perform_operations: false
+          can_manage_devices: false
+
+  # Multi-site user
+  - username: "user-multi"
+    password: "password"
+    is_superuser: false
+    sites:
+      - name: "Manufacturing Plant"
+        role: "USER"
+        permissions:
+          can_view_overview: true
+          can_view_firmware: true
+          can_view_data_analysis: true
+          can_manage_firmware: false
+          can_perform_operations: false
+          can_manage_devices: false
+      - name: "Warehouse"
+        role: "USER"
+        permissions:
+          can_view_overview: true
+          can_view_firmware: true
+          can_view_data_analysis: true
+          can_manage_firmware: false
+          can_perform_operations: false
+          can_manage_devices: false

@@ -1,0 +1,23 @@
+#
+# Mock Simulation Configuration - Default Scenario
+# Single site with basic admin user
+#
+scenario_name: "default"
+description: "Standard 5-device setup for basic testing"
+
+# Device simulation settings
+devices:
+  count: 5
+  interval: 2.0
+
+# Sites configuration
+sites:
+  - name: "Default Site"
+    description: "Default site for testing"
+
+# Test users (in addition to default admin)
+users:
+  - username: "admin"
+    password: "admin"
+    is_superuser: true
+    sites: []

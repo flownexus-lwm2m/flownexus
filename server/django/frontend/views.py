@@ -13,11 +13,15 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from core.middleware import UNASSIGNED_SITE_KEY
 from sensordata.models import Endpoint, Event, Firmware, Resource, ResourceType
 
 
 def _get_site_filtered_endpoints(request):
     """Get endpoints filtered by the user's current site context."""
+    if getattr(request, "current_site_key", None) == UNASSIGNED_SITE_KEY:
+        return Endpoint.objects.filter(site__isnull=True)
+
     site = getattr(request, "site", None)
     if site:
         return Endpoint.objects.filter(site=site)
@@ -41,14 +45,16 @@ def switch_site(request, site_id):
         return redirect("login")
 
     # Verify user has access to this site
-    if request.user.is_superuser:
+    if request.user.is_superuser and site_id == UNASSIGNED_SITE_KEY:
+        request.session["current_site_id"] = UNASSIGNED_SITE_KEY
+    elif request.user.is_superuser:
         # Global admin can switch to any site
         try:
             from sensordata.models import Site
 
             site = Site.objects.get(id=site_id, is_active=True)
             request.session["current_site_id"] = site.id
-        except Exception:
+        except (Site.DoesNotExist, ValueError):
             pass
     else:
         # Check if user has membership to this site
@@ -59,7 +65,7 @@ def switch_site(request, site_id):
                 user=request.user, site_id=site_id, site__is_active=True
             )
             request.session["current_site_id"] = membership.site.id
-        except SiteMembership.DoesNotExist:
+        except (SiteMembership.DoesNotExist, ValueError):
             pass
 
     # Redirect back to referring page or dashboard

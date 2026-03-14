@@ -11,6 +11,7 @@ import time
 from sensordata.models import Site, SiteMembership
 
 logger = logging.getLogger("core.request_logging")
+UNASSIGNED_SITE_KEY = "unassigned"
 
 
 class RequestLoggingMiddleware:
@@ -76,6 +77,7 @@ class SiteContextMiddleware:
         if request.user.is_authenticated:
             # Set site context
             site_id = request.session.get("current_site_id")
+            request.current_site_key = None
 
             # Global admins can access all sites
             if request.user.is_superuser:
@@ -93,9 +95,13 @@ class SiteContextMiddleware:
             # Set current site
             if site_id:
                 # Verify user has access to this site
-                if request.is_global_admin:
+                if request.is_global_admin and site_id == UNASSIGNED_SITE_KEY:
+                    request.site = None
+                    request.current_site_key = UNASSIGNED_SITE_KEY
+                elif request.is_global_admin:
                     try:
                         request.site = Site.objects.get(id=site_id, is_active=True)
+                        request.current_site_key = str(request.site.id)
                     except Site.DoesNotExist:
                         request.site = self._get_default_site(request)
                 else:
@@ -105,6 +111,7 @@ class SiteContextMiddleware:
                         )
                         request.site = membership.site
                         request.site_membership = membership
+                        request.current_site_key = str(membership.site.id)
                     except SiteMembership.DoesNotExist:
                         request.site = self._get_default_site(request)
             else:
@@ -121,6 +128,7 @@ class SiteContextMiddleware:
             site = Site.objects.filter(is_active=True).first()
             if site:
                 request.session["current_site_id"] = site.id
+                request.current_site_key = str(site.id)
             return site
 
         # Regular user - get first site they have access to
@@ -132,5 +140,6 @@ class SiteContextMiddleware:
         if membership:
             request.site_membership = membership
             request.session["current_site_id"] = membership.site.id
+            request.current_site_key = str(membership.site.id)
             return membership.site
         return None

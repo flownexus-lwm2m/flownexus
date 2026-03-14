@@ -160,10 +160,13 @@ MEDIA_ROOT = os.getenv("MEDIA_ROOT", BASE_DIR / "media" / "binaries")
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# Support for temporary database path (used by mock environments)
+DB_PATH = os.getenv("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": DB_PATH,
     }
 }
 
