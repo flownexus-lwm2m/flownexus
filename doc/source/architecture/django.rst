@@ -111,7 +111,7 @@ the Django app that contains the application logic.
      of an update.
 
    Site
-     Represents a customer or tenant organization in a multi-site deployment.
+     Represents an organizational unit for grouping devices within a single deployment.
      Devices (Endpoints) belong to exactly one Site, and users can be assigned
      to one or multiple Sites with specific roles and permissions.
 
