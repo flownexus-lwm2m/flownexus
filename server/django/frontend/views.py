@@ -26,6 +26,7 @@ from .forms import (
     FirmwareUpdateForm,
     FirmwareUploadForm,
     GlobalAdminUserCreationForm,
+    ProfilePasswordChangeForm,
     SiteMembershipCreateForm,
     SiteMembershipUpdateForm,
 )
@@ -641,3 +642,31 @@ def data_analysis(request):
     }
 
     return render(request, "frontend/data_analysis.html", context)
+
+
+@login_required
+def profile(request):
+    """Display user profile with memberships and password change form."""
+    memberships = (
+        SiteMembership.objects.filter(user=request.user)
+        .select_related("site")
+        .order_by("site__name")
+    )
+
+    password_form = ProfilePasswordChangeForm(user=request.user)
+    password_success = False
+
+    if request.method == "POST":
+        password_form = ProfilePasswordChangeForm(user=request.user, data=request.POST)
+        if password_form.is_valid():
+            password_form.save()
+            password_success = True
+            password_form = ProfilePasswordChangeForm(user=request.user)
+
+    context = {
+        "memberships": memberships,
+        "password_form": password_form,
+        "password_success": password_success,
+    }
+
+    return render(request, "frontend/profile.html", context)

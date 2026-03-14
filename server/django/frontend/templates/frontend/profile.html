@@ -1,0 +1,140 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Profile{% endblock %}
+{% block page_title %}Profile{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title mb-1">Account Information</h3>
+          <div class="text-secondary">Your account details and settings.</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="datagrid">
+          <div class="datagrid-item">
+            <div class="datagrid-title">Username</div>
+            <div class="datagrid-content">{{ user.username }}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Email</div>
+            <div class="datagrid-content">{{ user.email|default:"Not set" }}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Date Joined</div>
+            <div class="datagrid-content">{{ user.date_joined|date:"d.m.Y H:i" }}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Last Login</div>
+            <div class="datagrid-content">{{ user.last_login|date:"d.m.Y H:i" }}</div>
+          </div>
+          <div class="datagrid-item">
+            <div class="datagrid-title">Role</div>
+            <div class="datagrid-content">
+              {% if user.is_superuser %}
+              <span class="badge bg-purple-lt">Global Admin</span>
+              {% else %}
+              <span class="badge bg-azure-lt">Standard User</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title mb-1">Change Password</h3>
+          <div class="text-secondary">Update your account password.</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if password_success %}
+        <div class="alert alert-success" role="alert">
+          Password changed successfully.
+        </div>
+        {% endif %}
+        <form method="post" action="{% url 'frontend:profile' %}">
+          {% csrf_token %}
+          {% for field in password_form %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+            {% endif %}
+            {% if field.help_text %}
+            <small class="form-hint">{{ field.help_text }}</small>
+            {% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 17l0 -5" /><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 8l0 0" /></svg>
+            Change Password
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title mb-1">Site Memberships</h3>
+          <div class="text-secondary">Sites you have access to and your role in each.</div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+          <thead>
+            <tr>
+              <th>Site</th>
+              <th>Role</th>
+              <th>Permissions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for membership in memberships %}
+            <tr>
+              <td>{{ membership.site.name }}</td>
+              <td>
+                {% if membership.role == membership.Role.ADMIN %}
+                <span class="badge bg-azure-lt">Site Admin</span>
+                {% else %}
+                <span class="badge bg-secondary-lt">Site User</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="small text-secondary">
+                  {% if membership.can_view_overview %}Overview{% endif %}
+                  {% if membership.can_view_devices %}, Devices{% endif %}
+                  {% if membership.can_view_firmware %}, Firmware{% endif %}
+                  {% if membership.can_view_data %}, Data{% endif %}
+                  {% if membership.can_manage_firmware %}, Manage Firmware{% endif %}
+                  {% if membership.can_perform_operations %}, Operations{% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-center text-secondary py-4">
+                {% if user.is_superuser %}
+                You have global access to all sites as a Global Admin.
+                {% else %}
+                You are not assigned to any sites. Contact an administrator.
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -6,7 +6,7 @@
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 
 from sensordata.models import Endpoint, Firmware, FirmwareUpdate, Site, SiteMembership
 
@@ -167,3 +167,12 @@ class FirmwareUpdateForm(forms.ModelForm):
             "endpoint": forms.Select(attrs={"class": "form-select"}),
             "firmware": forms.Select(attrs={"class": "form-select"}),
         }
+
+
+class ProfilePasswordChangeForm(TablerStyledFormMixin, PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].label = "Current Password"
+        self.fields["new_password1"].label = "New Password"
+        self.fields["new_password2"].label = "Confirm New Password"
+        self._apply_tabler_styles()
