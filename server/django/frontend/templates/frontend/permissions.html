@@ -1,0 +1,566 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Permissions{% endblock %}
+{% block page_title %}User Roles{% endblock %}
+
+{% block extra_css %}
+<style>
+  .permissions-layout {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .permissions-stack {
+    display: grid;
+    gap: 1rem;
+  }
+  .permissions-section-heading {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .permissions-section-title {
+    margin: 0;
+  }
+  .permissions-card-grid {
+    display: grid;
+    gap: 1rem;
+  }
+  .permissions-card-span-2 {
+    grid-column: 1 / -1;
+  }
+  .permissions-table code {
+    font-size: 0.8rem;
+  }
+  .permissions-table-scroll {
+    max-height: 40rem;
+    overflow-y: auto;
+  }
+  .memberships-table-scroll {
+    max-height: 35rem;
+  }
+  .permissions-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--tblr-bg-surface);
+  }
+  .permissions-filter-row th {
+    background: var(--tblr-bg-surface);
+    padding-top: 0.5rem;
+    padding-bottom: 0.75rem;
+  }
+  .permissions-table .form-select,
+  .permissions-table .form-control {
+    min-width: 8rem;
+  }
+  .permissions-table .transfer-form .form-select {
+    width: auto;
+    min-width: 8rem;
+    max-width: 12rem;
+  }
+  .permissions-table .transfer-form button {
+    flex-shrink: 0;
+  }
+  .permissions-checkbox-grid {
+    display: flex;
+    gap: 0.75rem 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .permissions-checkbox-grid .form-check {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+  .membership-card {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .membership-summary {
+    min-width: 10rem;
+    flex-shrink: 0;
+  }
+  .membership-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .membership-form-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .membership-role-row {
+    display: grid;
+    gap: 0.75rem;
+    align-items: start;
+  }
+  .membership-role-field .form-select {
+    min-width: 12rem;
+  }
+  .permissions-no-results {
+    min-height: 10rem;
+  }
+  .bulk-device-filter {
+    margin-bottom: 0.75rem;
+  }
+  .permissions-card-grid .card {
+    display: flex;
+    flex-direction: column;
+  }
+  .permissions-card-grid .card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .permissions-card-grid form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .permissions-card-grid form .col-12:last-child {
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+  @media (min-width: 1200px) {
+    .permissions-card-grid {
+      grid-template-columns: repeat(2, 1fr);
+      align-items: stretch;
+    }
+    .permissions-card-grid-devices {
+      grid-template-columns: 0.6fr 1.4fr;
+    }
+    .membership-card {
+      flex-wrap: nowrap;
+      align-items: center;
+    }
+    .membership-summary {
+      min-width: 12rem;
+      max-width: 14rem;
+    }
+    .membership-actions {
+      justify-content: flex-end;
+    }
+    .membership-role-row {
+      grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="permissions-layout">
+  <section class="permissions-stack">
+    <div class="permissions-section-heading">
+      <div class="text-secondary">Create users, assign memberships, and manage per-site permissions.</div>
+    </div>
+
+    <div class="permissions-card-grid">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Create User</h3>
+        </div>
+        <div class="card-body">
+          <form method="post" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="create_user" value="1">
+            <div class="col-12">
+              <label class="form-label">{{ user_creation_form.username.label }}</label>
+              {{ user_creation_form.username }}
+              {% for error in user_creation_form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ user_creation_form.email.label }}</label>
+              {{ user_creation_form.email }}
+              {% for error in user_creation_form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ user_creation_form.password1.label }}</label>
+              {{ user_creation_form.password1 }}
+              {% for error in user_creation_form.password1.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ user_creation_form.password2.label }}</label>
+              {{ user_creation_form.password2 }}
+              {% for error in user_creation_form.password2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            {% for error in user_creation_form.non_field_errors %}<div class="col-12 text-danger small">{{ error }}</div>{% endfor %}
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary">Create User</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Add Membership</h3>
+        </div>
+        <div class="card-body">
+          <form method="post" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="create_membership" value="1">
+            <div class="col-md-4">
+              <label class="form-label">{{ membership_create_form.user.label }}</label>
+              {{ membership_create_form.user }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ membership_create_form.site.label }}</label>
+              {{ membership_create_form.site }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ membership_create_form.role.label }}</label>
+              {{ membership_create_form.role }}
+            </div>
+            <div class="col-12">
+              <div class="permissions-checkbox-grid">
+                {% for field in membership_create_form %}
+                  {% if field.name != 'user' and field.name != 'site' and field.name != 'role' %}
+                  <label class="form-check">
+                    {{ field }}
+                    <span class="form-check-label">{{ field.label }}</span>
+                  </label>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              {% for error in membership_create_form.non_field_errors %}<div class="text-danger small mt-2">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary">Add Membership</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="card permissions-card-span-2">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title mb-1">Current Memberships</h3>
+          <div class="text-secondary">Edit permissions in place or revoke access entirely.</div>
+        </div>
+      </div>
+      <div class="table-responsive permissions-table-scroll memberships-table-scroll">
+        <table class="table card-table table-vcenter permissions-table" id="memberships-table">
+          <thead>
+            <tr>
+              <th>Memberships</th>
+            </tr>
+            <tr class="permissions-filter-row">
+              <th>
+                <input
+                  type="text"
+                  class="form-control form-control-sm permissions-filter"
+                  data-table="memberships-table"
+                  data-column="membership-search"
+                  placeholder="Search user, email, site, role, permission"
+                  aria-label="Search memberships"
+                >
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for membership in memberships %}
+            <tr data-membership-search="{{ membership.user.username|lower }} {{ membership.user.email|default:''|lower }} {{ membership.site.name|lower }} {{ membership.get_role_display|lower }} {% for field in membership.update_form %}{% if field.name != 'role' and field.value %}{{ field.label|lower }} {% endif %}{% endfor %}">
+              <td>
+                <div class="membership-card">
+                  <div class="membership-summary">
+                    <div class="fw-semibold">{{ membership.user.username }}</div>
+                    <div class="text-secondary small">{{ membership.user.email|default:"No email" }}</div>
+                    <div class="text-secondary small">{{ membership.site.name }}</div>
+                  </div>
+                  <div class="flex-fill">
+                    <form method="post" class="membership-form-grid">
+                      {% csrf_token %}
+                      <input type="hidden" name="update_membership" value="1">
+                      <input type="hidden" name="membership_id" value="{{ membership.id }}">
+                      <div class="membership-role-row">
+                        <div class="membership-role-field">{{ membership.update_form.role }}</div>
+                        <div class="membership-actions">
+                          <span class="badge bg-secondary-lt">{{ membership.get_role_display }}</span>
+                          <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="permissions-checkbox-grid">
+                          {% for field in membership.update_form %}
+                            {% if field.name != 'role' %}
+                            <label class="form-check">
+                              {{ field }}
+                              <span class="form-check-label">{{ field.label }}</span>
+                            </label>
+                            {% endif %}
+                          {% endfor %}
+                        </div>
+                        {% for error in membership.update_form.non_field_errors %}<div class="text-danger small mt-2">{{ error }}</div>{% endfor %}
+                      </div>
+                    </form>
+                    <div class="membership-actions mt-2">
+                      <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="revoke_membership" value="1">
+                        <input type="hidden" name="membership_id" value="{{ membership.id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Revoke Membership</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="text-center text-secondary py-4">No site memberships exist yet.</td>
+            </tr>
+            {% endfor %}
+            <tr id="memberships-table-no-results" class="d-none">
+              <td class="text-center text-secondary py-5 permissions-no-results">No memberships match the current filters.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="permissions-stack">
+    <div class="permissions-section-heading">
+      <h3 class="page-title permissions-section-title">Device Assignments</h3>
+      <div class="text-secondary">Assign unassigned devices, then review and transfer assigned devices below.</div>
+    </div>
+
+    <div class="permissions-card-grid permissions-card-grid-devices">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Assign Devices</h3>
+        </div>
+        <div class="card-body">
+          <div>
+            <div class="text-secondary">Filter unassigned devices, then assign one or many to a site during onboarding.</div>
+          </div>
+          <form method="post" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="bulk_assign" value="1">
+            <div class="col-12">
+              <input
+                type="text"
+                id="bulk-device-filter"
+                class="form-control bulk-device-filter"
+                placeholder="Filter unassigned devices"
+                aria-label="Filter bulk assignment devices"
+              >
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ bulk_assignment_form.endpoints.label }}</label>
+              {{ bulk_assignment_form.endpoints }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ bulk_assignment_form.site.label }}</label>
+              {{ bulk_assignment_form.site }}
+            </div>
+            {% for error in bulk_assignment_form.non_field_errors %}<div class="col-12 text-danger small">{{ error }}</div>{% endfor %}
+            <div class="col-12 mt-3">
+              <button type="submit" class="btn btn-outline-primary">Assign</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title mb-1">Assigned Devices</h3>
+            <div class="text-secondary">Transfer devices between sites without leaving the page.</div>
+          </div>
+        </div>
+        <div class="table-responsive permissions-table-scroll">
+          <table class="table card-table table-vcenter permissions-table" id="assigned-devices-table">
+            <thead>
+               <tr>
+                  <th style="width: 30%;">Device</th>
+                  <th style="width: 20%;">Current Site</th>
+                  <th style="width: 35%;">Destination</th>
+                  <th style="width: 15%;">Action</th>
+               </tr>
+               <tr class="permissions-filter-row">
+                 <th>
+                   <input
+                     type="text"
+                     class="form-control form-control-sm permissions-filter"
+                     data-table="assigned-devices-table"
+                     data-column="device"
+                     placeholder="Search device"
+                     aria-label="Search assigned device"
+                   >
+                 </th>
+                 <th>
+                   <input
+                     type="text"
+                     class="form-control form-control-sm permissions-filter"
+                     data-table="assigned-devices-table"
+                     data-column="site"
+                     placeholder="Search site"
+                     aria-label="Search assigned site"
+                   >
+                 </th>
+                 <th>
+                   <input
+                     type="text"
+                     class="form-control form-control-sm permissions-filter"
+                     data-table="assigned-devices-table"
+                     data-column="destination"
+                     placeholder="Search destination"
+                     aria-label="Search destination"
+                   >
+                 </th>
+                 <th></th>
+               </tr>
+            </thead>
+            <tbody>
+               {% for endpoint in assigned_endpoints %}
+               <tr data-device="{{ endpoint.endpoint|lower }}" data-site="{{ endpoint.site.name|lower }}" data-destination="{{ endpoint.transfer_form.site.value|default:''|lower }} {{ endpoint.site.name|lower }}">
+                 <td><code>{{ endpoint.endpoint }}</code></td>
+                 <td>{{ endpoint.site.name }}</td>
+                 <td>
+                    {{ endpoint.transfer_form.site }}
+                 </td>
+                 <td>
+                   <form method="post" class="d-inline transfer-device-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="transfer_device" value="1">
+                    <input type="hidden" name="endpoint_id" value="{{ endpoint.endpoint }}">
+                    <input type="hidden" name="site" class="transfer-site-value" value="{{ endpoint.transfer_form.site.value|default:'' }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Transfer</button>
+                  </form>
+                 </td>
+               </tr>
+               {% empty %}
+               <tr>
+                 <td colspan="4" class="text-center text-secondary py-4">No assigned devices yet.</td>
+               </tr>
+               {% endfor %}
+               <tr id="assigned-devices-table-no-results" class="d-none">
+                 <td colspan="4" class="text-center text-secondary py-5 permissions-no-results">No assigned devices match the current filters.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let bulkAssignmentOptions = [];
+
+  function filterPermissionsTable(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) {
+      return;
+    }
+
+    const rows = Array.from(table.querySelectorAll('tbody tr')).filter(
+      (row) => !row.id.endsWith('-no-results')
+    );
+    const filters = Array.from(document.querySelectorAll(`.permissions-filter[data-table="${tableId}"]`)).reduce(
+      (acc, input) => {
+        acc[input.dataset.column] = input.value.trim().toLowerCase();
+        return acc;
+      },
+      {}
+    );
+    const noResultsRow = document.getElementById(`${tableId}-no-results`);
+
+    let visibleRows = 0;
+
+    rows.forEach((row) => {
+      const matches = Object.entries(filters).every(([column, value]) => {
+        if (!value) {
+          return true;
+        }
+        return (row.getAttribute(`data-${column}`) || '').includes(value);
+      });
+
+      row.classList.toggle('d-none', !matches);
+      if (matches) {
+        visibleRows += 1;
+      }
+    });
+
+    if (noResultsRow) {
+      noResultsRow.classList.toggle('d-none', visibleRows > 0 || rows.length === 0);
+    }
+  }
+
+  function initializeBulkAssignmentFilter() {
+    const searchInput = document.getElementById('bulk-device-filter');
+    const select = document.getElementById('id_bulk-assign-endpoints');
+
+    if (!searchInput || !select) {
+      return;
+    }
+
+    bulkAssignmentOptions = Array.from(select.options).map((option) => ({
+      value: option.value,
+      label: option.text,
+      selected: option.selected,
+    }));
+
+    const renderOptions = () => {
+      const query = searchInput.value.trim().toLowerCase();
+      const selectedValues = new Set(Array.from(select.selectedOptions).map((option) => option.value));
+      select.innerHTML = '';
+
+      bulkAssignmentOptions
+        .filter((option) => option.label.toLowerCase().includes(query))
+        .forEach((option) => {
+          const element = document.createElement('option');
+          element.value = option.value;
+          element.text = option.label;
+          element.selected = selectedValues.has(option.value) || option.selected;
+          select.appendChild(element);
+        });
+    };
+
+    select.addEventListener('change', () => {
+      const selectedValues = new Set(Array.from(select.selectedOptions).map((option) => option.value));
+      bulkAssignmentOptions = bulkAssignmentOptions.map((option) => ({
+        ...option,
+        selected: selectedValues.has(option.value),
+      }));
+    });
+
+    searchInput.addEventListener('input', renderOptions);
+    renderOptions();
+  }
+
+  function initializeTransferDeviceSync() {
+    const rows = document.querySelectorAll('#assigned-devices-table tbody tr');
+    rows.forEach((row) => {
+      const select = row.querySelector('select[name^="transfer-"]');
+      const hiddenInput = row.querySelector('.transfer-site-value');
+      if (select && hiddenInput) {
+        select.addEventListener('change', () => {
+          hiddenInput.value = select.value;
+        });
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.permissions-filter').forEach((input) => {
+      input.addEventListener('input', () => {
+        filterPermissionsTable(input.dataset.table);
+      });
+    });
+
+    ['memberships-table', 'assigned-devices-table'].forEach(filterPermissionsTable);
+    initializeBulkAssignmentFilter();
+    initializeTransferDeviceSync();
+  });
+</script>
+{% endblock %}

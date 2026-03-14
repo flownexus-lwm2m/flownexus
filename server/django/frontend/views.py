@@ -7,16 +7,30 @@
 from datetime import timedelta
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Max
 from django.http import HttpResponseForbidden, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from core.middleware import UNASSIGNED_SITE_KEY
 from core.permissions import get_site_filtered_endpoints, has_site_permission
-from sensordata.models import Event, Firmware, Resource, ResourceType
+from sensordata.models import Endpoint, Event, Firmware, Resource, ResourceType, SiteMembership
+
+from .forms import (
+    BulkDeviceAssignmentForm,
+    DeviceAssignmentForm,
+    DeviceTransferForm,
+    FirmwareUpdateForm,
+    FirmwareUploadForm,
+    GlobalAdminUserCreationForm,
+    SiteMembershipCreateForm,
+    SiteMembershipUpdateForm,
+)
+
+User = get_user_model()
 
 
 DEVICE_DETAIL_RESOURCES: dict[tuple[int, int], str] = {
@@ -83,6 +97,60 @@ def _enrich_endpoints_with_details(endpoints: list[Any]) -> list[Any]:
             setattr(endpoint, attribute_name, latest_values.get((endpoint.pk, *resource_key)))
 
     return endpoints
+
+
+def _build_permissions_context(
+    *,
+    user_creation_form: GlobalAdminUserCreationForm | None = None,
+    membership_create_form: SiteMembershipCreateForm | None = None,
+    device_assignment_form: DeviceAssignmentForm | None = None,
+    bulk_assignment_form: BulkDeviceAssignmentForm | None = None,
+    membership_update_forms: dict[int, SiteMembershipUpdateForm] | None = None,
+    device_transfer_forms: dict[str, DeviceTransferForm] | None = None,
+) -> dict[str, Any]:
+    memberships = list(
+        SiteMembership.objects.select_related("user", "site").order_by(
+            "user__username", "site__name"
+        )
+    )
+    membership_update_forms = membership_update_forms or {}
+    for membership in memberships:
+        membership.update_form = membership_update_forms.get(
+            membership.pk,
+            SiteMembershipUpdateForm(instance=membership, prefix=f"membership-{membership.pk}"),
+        )
+
+    assigned_endpoints = list(
+        Endpoint.objects.select_related("site")
+        .filter(site__isnull=False)
+        .order_by("site__name", "endpoint")
+    )
+    device_transfer_forms = device_transfer_forms or {}
+    for endpoint in assigned_endpoints:
+        endpoint.transfer_form = device_transfer_forms.get(
+            endpoint.pk,
+            DeviceTransferForm(
+                prefix=f"transfer-{endpoint.pk}", initial={"site": endpoint.site_id}
+            ),
+        )
+
+    unassigned_endpoints = list(Endpoint.objects.filter(site__isnull=True).order_by("endpoint"))
+    users = list(User.objects.order_by("username").prefetch_related("site_memberships__site"))
+
+    return {
+        "user_creation_form": user_creation_form
+        or GlobalAdminUserCreationForm(prefix="create-user"),
+        "membership_create_form": membership_create_form
+        or SiteMembershipCreateForm(prefix="create-membership"),
+        "device_assignment_form": device_assignment_form
+        or DeviceAssignmentForm(prefix="assign-device"),
+        "bulk_assignment_form": bulk_assignment_form
+        or BulkDeviceAssignmentForm(prefix="bulk-assign"),
+        "managed_users": users,
+        "memberships": memberships,
+        "assigned_endpoints": assigned_endpoints,
+        "unassigned_endpoints": unassigned_endpoints,
+    }
 
 
 @login_required
@@ -266,8 +334,6 @@ def firmware_list(request):
     from sensordata.models import FirmwareUpdate
     from sensordata.tasks import process_pending_operations
 
-    from .forms import FirmwareUpdateForm, FirmwareUploadForm
-
     can_manage_firmware = _check_site_permission(request, "can_manage_firmware")
     can_perform_operations = _check_site_permission(request, "can_perform_operations")
 
@@ -363,6 +429,87 @@ def firmware_list(request):
             "updates": updates,
             "can_manage_firmware": can_manage_firmware,
         },
+    )
+
+
+@login_required
+def permissions(request):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
+    context_overrides: dict[str, Any] = {}
+
+    if request.method == "POST":
+        if "create_user" in request.POST:
+            user_creation_form = GlobalAdminUserCreationForm(request.POST, prefix="create-user")
+            if user_creation_form.is_valid():
+                user_creation_form.save()
+                return redirect("frontend:permissions")
+            context_overrides["user_creation_form"] = user_creation_form
+
+        elif "create_membership" in request.POST:
+            membership_create_form = SiteMembershipCreateForm(
+                request.POST, prefix="create-membership"
+            )
+            if membership_create_form.is_valid():
+                membership_create_form.save()
+                return redirect("frontend:permissions")
+            context_overrides["membership_create_form"] = membership_create_form
+
+        elif "update_membership" in request.POST:
+            membership = get_object_or_404(SiteMembership, pk=request.POST.get("membership_id"))
+            membership_form = SiteMembershipUpdateForm(
+                request.POST,
+                instance=membership,
+                prefix=f"membership-{membership.pk}",
+            )
+            if membership_form.is_valid():
+                membership_form.save()
+                return redirect("frontend:permissions")
+            context_overrides["membership_update_forms"] = {membership.pk: membership_form}
+
+        elif "revoke_membership" in request.POST:
+            membership = get_object_or_404(SiteMembership, pk=request.POST.get("membership_id"))
+            membership.delete()
+            return redirect("frontend:permissions")
+
+        elif "assign_device" in request.POST:
+            device_assignment_form = DeviceAssignmentForm(request.POST, prefix="assign-device")
+            if device_assignment_form.is_valid():
+                endpoint = device_assignment_form.cleaned_data["endpoint"]
+                endpoint.site = device_assignment_form.cleaned_data["site"]
+                endpoint.save(update_fields=["site"])
+                return redirect("frontend:permissions")
+            context_overrides["device_assignment_form"] = device_assignment_form
+
+        elif "transfer_device" in request.POST:
+            endpoint = get_object_or_404(
+                Endpoint.objects.select_related("site"),
+                pk=request.POST.get("endpoint_id"),
+            )
+            transfer_form = DeviceTransferForm(request.POST, prefix=f"transfer-{endpoint.pk}")
+            if transfer_form.is_valid():
+                endpoint.site = transfer_form.cleaned_data["site"]
+                endpoint.save(update_fields=["site"])
+                return redirect("frontend:permissions")
+            context_overrides["device_transfer_forms"] = {endpoint.pk: transfer_form}
+
+        elif "bulk_assign" in request.POST:
+            bulk_assignment_form = BulkDeviceAssignmentForm(request.POST, prefix="bulk-assign")
+            if bulk_assignment_form.is_valid():
+                site = bulk_assignment_form.cleaned_data["site"]
+                endpoint_ids = [
+                    endpoint.pk for endpoint in bulk_assignment_form.cleaned_data["endpoints"]
+                ]
+                Endpoint.objects.filter(pk__in=endpoint_ids, site__isnull=True).update(site=site)
+                return redirect("frontend:permissions")
+            context_overrides["bulk_assignment_form"] = bulk_assignment_form
+
+        else:
+            return HttpResponseForbidden("Unknown permissions action.")
+
+    return render(
+        request, "frontend/permissions.html", _build_permissions_context(**context_overrides)
     )
 
 
