@@ -1,0 +1,12 @@
+.highlight .gp {
+    color: #ffa200;
+    font-weight: bold;
+}
+
+/* Fixes miscalculationg about the margin, which causes a scrollbar between
+ * the primary sidebar and the content
+ */
+#rtd-footer-container {
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+}
