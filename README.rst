@@ -1,17 +1,34 @@
 .. image:: doc/source/_static/flownexus_logo_gray.svg
 
-flownexus Overview 🌐
-======================
-
-This repository hosts a framework to build IoT applications using the LwM2M
-protocol. The framework is based on a Leshan LwM2M server and a Django Backend.
-This combination allows to manage low power IoT devices, e.g. running Zephyr OS
-efficiently.
-
-Getting Started 🛠️
+flownexus Overview
 ==================
 
-Explore our `documentation <https://jonas-rem.github.io/flownexus/>`_ to learn
-more about the project and get started!
+flownexus is an open-source LwM2M device management framework built for IoT
+developers. It combines a Leshan LwM2M server with a Django backend and Tabler
+frontend to give you telemetry, application data, FOTA, and device control out
+of the box.
 
-**⚠️ Warning: The framework is a work in progress and is not yet ready for production use.**
+Run the entire stack — including emulated Zephyr devices — on your laptop.
+Deploy the same setup on a single vserver and manage up to 10k devices.
+
+.. image:: doc/source/_static/flownexus_screenshot.png
+   :alt: flownexus dashboard
+
+Device inventory showing registered IoT devices with telemetry data.
+
+Data Flow
+---------
+
+1. Emulate firmware with Zephyr on `native_sim <https://docs.zephyrproject.org/latest/boards/native/native_sim/doc/index.html>`_
+2. Device sends data via LwM2M
+3. Leshan LwM2M server receives the data
+4. Leshan forwards data to Django via REST API
+5. Django visualizes the data
+
+Getting Started
+===============
+
+Explore our `documentation <https://flownexus-lwm2m.github.io/flownexus>`_ to
+learn more about the project and get started!
+
+**⚠️ Warning: The framework is WIP and is not yet ready for production use.**
