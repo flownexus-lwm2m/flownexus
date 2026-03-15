@@ -44,25 +44,25 @@ The following table shows the access levels for each role:
 +-------------------------+-----------+------------+--------------+
 | Feature                 | Site User | Site Admin | Global Admin |
 +=========================+===========+============+==============+
-| Devices tab             | ✓         | ✓          | ✓            |
+| Devices tab             | Yes       | Yes        | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Firmware tab            | ✗         | ✓          | ✓            |
+| Firmware tab            | No        | Yes        | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Data tab                | ✓         | ✓          | ✓            |
+| Data tab                | Yes       | Yes        | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Permissions tab         | ✗         | ✗          | ✓            |
+| Permissions tab         | No        | No         | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Manage Firmware         | ✗         | ✓          | ✓            |
+| Manage Firmware         | No        | Yes        | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Perform Operations      | ✗         | ✓          | ✓            |
+| Perform Operations      | No        | Yes        | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Manage Devices          | ✗         | ✗          | ✓            |
+| Manage Devices          | No        | No         | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Assign Devices to Sites | ✗         | ✗          | ✓            |
+| Assign Devices to Sites | No        | No         | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Create Users            | ✗         | ✗          | ✓            |
+| Create Users            | No        | No         | Yes          |
 +-------------------------+-----------+------------+--------------+
-| Assign Permissions      | ✗         | ✗          | ✓            |
+| Assign Permissions      | No        | No         | Yes          |
 +-------------------------+-----------+------------+--------------+
 
 Users are assigned to Sites through **SiteMembership** with specific roles:
