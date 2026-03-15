@@ -8,13 +8,11 @@ developers. It combines a Leshan LwM2M server with a Django backend and Tabler
 frontend to give you telemetry, application data, FOTA, and device control out
 of the box.
 
-Run the entire stack — including emulated Zephyr devices — on your laptop.
-Deploy the same setup on a single vserver and manage up to 10k devices.
+Run the entire stack on your laptop, including emulated Zephyr devices.
+Deploy the same setup on a single vserver and manage up to 10 k devices.
 
 .. image:: doc/source/_static/flownexus_screenshot.png
    :alt: flownexus dashboard
-
-Device inventory showing registered IoT devices with telemetry data.
 
 Data Flow
 ---------
