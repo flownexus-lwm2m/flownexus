@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>flownexus - LwM2M device management</title>
+    <meta
+      name="description"
+      content="flownexus is an open-source, LwM2M platform for Zephyr-based IoT deployments with FOTA, device operations, and a Django web UI."
+    />
+    <link rel="icon" href="assets/flownexus_favicon.svg" type="image/svg+xml"/>
+    <link rel="stylesheet" href="assets/tabler.min.css"/>
+    <link rel="stylesheet" href="assets/site.css"/>
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="landing-nav">
+        <div class="container-xl">
+          <a class="brand-lockup" href="#top" aria-label="flownexus home">
+            <span class="brand-mark">
+              <img src="assets/flownexus_favicon.svg" alt=""/>
+            </span>
+            <span class="brand-copy">
+              <strong>flownexus</strong>
+              <span>Open Source LwM2M server for Zephyr IoT devices</span>
+            </span>
+          </a>
+          <nav class="nav-links" aria-label="Primary">
+            <a href="https://docs.flownexus.org" target="_blank" rel="noreferrer">Docs</a>
+            <a href="https://github.com/flownexus-lwm2m/flownexus" target="_blank" rel="noreferrer">GitHub</a>
+            <a class="btn btn-primary" href="https://dashboard.flownexus.org" target="_blank" rel="noreferrer">Dashboard</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero">
+          <div class="container-xl">
+            <div class="hero-content">
+              <h1>Manage Zephyr devices via LwM2M</h1>
+              <p class="hero-lead">
+                flownexus combines a Leshan LwM2M server, a Django backend, and a Tabler UI into a
+                local-first platform for data, firmware rollouts, device operations, and
+                multi-site access control.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-primary btn-lg" href="https://dashboard.flownexus.org" target="_blank" rel="noreferrer">Dashboard</a>
+                <a class="btn btn-outline-secondary btn-lg" href="https://docs.flownexus.org" target="_blank" rel="noreferrer">Docs</a>
+              </div>
+              <div class="hero-meta" aria-label="Highlights">
+                <span class="meta-pill">Runs on a single core VPS</span>
+                <span class="meta-pill">Developer Friendly, simulate everything locally</span>
+                <span class="meta-pill">Firmware OTA Updates</span>
+              </div>
+
+            </div>
+
+            <div class="hero-screenshot">
+              <div class="screenshot-frame">
+                <div class="browser-header">
+                  <div class="window-controls">
+                    <span class="win-btn close"></span>
+                  </div>
+                </div>
+                <img
+                  src="assets/flownexus_screenshot.png"
+                  alt="flownexus dashboard showing telemetry cards, device overview, and charts"
+                  loading="eager"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="container-xl">
+            <div class="kpi-strip">
+              <div class="kpi">
+                <strong>Zephyr</strong>
+                <span>Works with Zephyr targets, simulations, and example firmware</span>
+              </div>
+              <div class="kpi">
+                <strong>LwM2M</strong>
+                <span>Built around device-native management and observation flows</span>
+              </div>
+              <div class="kpi">
+                <strong>SQL DB</strong>
+                <span>SQL Database that is accessed through ORM for simplicity</span>
+              </div>
+              <div class="kpi">
+                <strong>Django</strong>
+                <span>Stores telemetry, powers APIs, and provides the web interface</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block" id="capabilities">
+          <div class="container-xl">
+            <div class="section-heading">
+              <span class="section-kicker">Capabilities</span>
+              <h2>An Open Source IoT Server that focuses on user experience and iteration speed!</h2>
+              <p>
+                flownexus focuses on the real work of device operations: observing resources,
+                writing configuration, tracking firmware updates, visualizing events, and keeping
+                site-level access under control.
+              </p>
+            </div>
+
+            <div class="capability-grid">
+              <article class="glass-card">
+                <div class="icon-badge bg-blue-soft">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"/></svg>
+                </div>
+                <h3>Build on your own machine</h3>
+                <p>
+                  Build and simulate the whole stack on a single machine allows for fast iteration.
+                </p>
+                <div class="feature-points">
+                  <span>Mock Sensors</span>
+                  <span>Simulate devices on Zephyr native_sim</span>
+                  <span>Co-Develop Firmware and Server infrastructure!</span>
+                </div>
+              </article>
+
+              <article class="glass-card">
+                <div class="icon-badge bg-orange-soft">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11l4 4l4 -4"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 21h14"/></svg>
+                </div>
+                <h3>Firmware delivery with tracked state</h3>
+                <p>
+                  Manage OTA updates through the LwM2M firmware object, follow each device through
+                  download and update states, and keep rollout results visible in the database.
+                </p>
+                <div class="feature-points">
+                  <span>Package URI based HTTP(S) pull updates</span>
+                  <span>Result and state tracking per endpoint</span>
+                  <span>Mock simulation support for fast verification</span>
+                </div>
+              </article>
+
+              <article class="glass-card">
+                <div class="icon-badge bg-green-soft">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 12a5 5 0 0 1 10 0"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 17v.01"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 19h14"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 10a9 9 0 0 1 18 0"/></svg>
+                </div>
+                <h3>Direct device operations</h3>
+                <p>
+                  Use LwM2M-centric interactions to write resources, observe changes, and queue
+                  endpoint operations without inventing a parallel control plane.
+                </p>
+                <div class="feature-points">
+                  <span>Write and observe workflows rooted in the protocol</span>
+                  <span>Queued operations with explicit status tracking</span>
+                  <span>Certificate-based authentication and encryption</span>
+                </div>
+              </article>
+
+              <article class="glass-card">
+                <div class="icon-badge bg-slate-soft">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 4v13"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 7v13"/></svg>
+                </div>
+                <h3>Multi-site access control</h3>
+                <p>
+                  Segment devices into sites, assign users by role, and give operators only the
+                  firmware, device, and administrative permissions they actually need.
+                </p>
+                <div class="feature-points">
+                  <span>Site user, site admin, and global admin roles</span>
+                  <span>Scoped access to device data and operations</span>
+                  <span>Designed for practical single-deployment teams</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+
+
+      </main>
+
+      <footer class="footer">
+        <div class="container-xl">
+          <div class="footer-grid">
+            <div class="footer-card">
+              <strong class="footer-title">Links</strong>
+              <div class="footer-links">
+                <a href="https://docs.flownexus.org" target="_blank" rel="noreferrer">Docs</a>
+                <a href="https://github.com/flownexus-lwm2m/flownexus" target="_blank" rel="noreferrer">GitHub</a>
+                <a href="https://dashboard.flownexus.org" target="_blank" rel="noreferrer">Dashboard</a>
+              </div>
+            </div>
+            <div class="footer-card impressum">
+              <strong class="footer-title">Impressum</strong>
+              <p>
+                Tech22 GmbH<br>
+                Geschäftsführer: Oliver Völckers<br>
+                Insterburgallee 15, D-14055 Berlin, Deutschland<br>
+                Umsatzsteuer ID: DE362615523<br>
+                Amtsgericht Berlin-Charlottenburg HRB 254228 B
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
