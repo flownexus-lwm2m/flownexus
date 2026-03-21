@@ -16,6 +16,7 @@ Required:
   --version     Git revision to deploy
 
 Optional:
+  --setup-only  Only create directories and reload caddy, skip container deployment
   --deploy-user User that owns the repository and runs Podman (default: flownexus)
   --app-root    Repository root (default: script parent directory)
   --web-root    Web root (default: /var/www/flownexus)
@@ -36,12 +37,17 @@ caddyfile_target="/etc/caddy/Caddyfile"
 health_url="http://127.0.0.1:8000/admin/login/"
 version=""
 caddyfile_source="/home/flownexus/flownexus/deploy/Caddyfile"
+setup_only=0
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --version)
             version="${2:-}"
             shift 2
+            ;;
+        --setup-only)
+            setup_only=1
+            shift
             ;;
         --caddyfile)
             caddyfile_source="${2:-}"
@@ -110,13 +116,18 @@ install -d -o "$deploy_user" -g "$deploy_user" -m 2775 "$db_path"
 caddy validate --config "$caddyfile_source"
 install -m 0644 "$caddyfile_source" "$caddyfile_target"
 
+systemctl reload caddy || systemctl restart caddy
+
+if [ "$setup_only" -eq 1 ]; then
+    printf '%s\n' "Setup complete: directories created and caddy reloaded"
+    exit 0
+fi
+
 runuser -u "$deploy_user" -- env \
     APP_VERSION="$version" \
     DJANGO_DB_HOST_PATH="$db_path" \
     FIRMWARE_STORAGE_HOST_PATH="$firmware_path" \
-    sh -lc "cd '$app_root' && podman-compose -f server/compose.yml up -d --build"
-
-systemctl reload caddy || systemctl restart caddy
+    sh -lc "cd '$app_root' && podman-compose -f '$app_root/server/compose.yml' up -d --build"
 
 curl -fsS "$health_url" > /dev/null
 podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
