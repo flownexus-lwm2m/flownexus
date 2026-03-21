@@ -89,219 +89,444 @@ The container can be built and started with the following commands:
 
 .. _setup-a-virtual-server-label:
 
-Setup a Virtual Server
-----------------------
+Production Deployment
+---------------------
 
-flownexus can be deployed to a virtual server. This chapter explains a basic
-setup of a virtual server with a domain name. A requirement is to have a Linux
-server and a domain name. The domain name must point to the server, e.g. via a
-A/AAAA-Record.
+flownexus can be deployed to a virtual server using Caddy as a reverse proxy.
+This deployment supports four subdomains:
 
-The setup has been tested with a Debian 12 server with a 1C/1GB RAM
-configuration.
+* **flownexus.org** - Main landing page (static HTML)
+* **docs.flownexus.org** - Documentation (Sphinx HTML)
+* **fw.flownexus.org** - Firmware download server
+* **dashboard.flownexus.org** - Dynamic dashboard (Django application)
 
-CA and self-signed Certificate
-..............................
+Architecture Overview
+.....................
 
-Leshan and the HTTPs download server for firware binaries use self-signed
-certificates. The flownexus frontend uses certificates that have been issued
-via Let's Encrypt. The following commands create a self-signed certificate for
-the domain ``flownexus.org``:
+The deployment uses a split traffic routing approach:
 
-**Create a Certificate Authority (CA)**
+* **HTTP/HTTPS (Ports 80/443)**: Handled by Caddy reverse proxy
+* **UDP Traffic (Ports 5683/5684)**: Directly bound to host, bypassing Caddy for LwM2M
 
-1. Generate the CA Private Key:
+.. code-block:: text
 
-   .. code-block::
+   Internet
+       │
+       ├──→ Caddy (Ports 80/443)
+       │     ├──→ flownexus.org (static)
+       │     ├──→ docs.flownexus.org (static)
+       │     ├──→ fw.flownexus.org (static + browse)
+       │     └──→ dashboard.flownexus.org (reverse proxy → localhost:8000)
+       │
+       └──→ LwM2M UDP (Ports 5683/5684) → Direct to Leshan container
+             ├──→ 5683/udp - CoAP (unencrypted)
+             └──→ 5684/udp - DTLS/CoAPS (encrypted)
 
-      openssl ecparam -genkey -name prime256v1 -out ca.key
+This architecture provides:
 
-2. Create a Self-Signed CA Certificate with 100 years validity:
+* **Caddy** - Reverse proxy with automatic HTTPS
+* **Podman** - Container runtime (rootless)
+* **Podman Compose** - Container orchestration
+* **GitHub Actions** - CI/CD pipeline
 
-   .. code-block::
+Server Requirements
+...................
 
-      openssl req -new -x509 -key ca.key -out ca.crt -days 36500 -subj "/CN=flownexus.org"
+* Linux server (tested on Debian 13)
+* Domain name with DNS A/AAAA records pointing to server
+* Minimum: 1 vCPU
 
+Initial Server Setup
+....................
 
-**Create a Server Certificate Signed by the CA**
+This section contains the required one-time manual bootstrap steps for a new
+server. After these steps are complete, normal application deployments are
+handled by GitHub Actions.
 
-1. Generate the Server Private Key
-
-   .. code-block::
-
-      openssl ecparam -genkey -name prime256v1 -out fw_flownexus_org.key
-
-2. Generate a Certificate Signing Request (CSR)
-
-   .. code-block::
-
-        openssl req -new -key fw_flownexus_org.key -out fw_flownexus_org.csr -subj "/CN=fw.flownexus.org"
-
-3. Generate the Server Certificate Signed by the CA
-
-   .. code-block::
-
-      openssl x509 -req -in fw_flownexus_org.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out fw_flownexus_org.crt -days 3650 -sha256
-
-
-**Generated Files**
-
-- ``ca.key``: CA private key
-- ``ca.crt``: CA certificate
-- ``fw_flownexus_org.key``: Server private key
-- ``fw_flownexus_org.csr``: Server certificate signing request
-- ``fw_flownexus_org.crt``: Server certificate signed by the CA
-
-Copy the server certificate and key to the server and store then in
-``/etc/nginx/ssl/``. Keep the CA certificate and key in a secure location.
-
-Nginx as Reverse Proxy
-......................
-
-The following steps show how to configure Nginx as a reverse proxy for the
-flownexus server. The Nginx server listens on port 443 and forwards the
-requests to the Django server running on port 8000:
-
+1. Install required packages:
 
 .. code-block:: console
-   :caption: Nginx setup, create Let's Encrypt certificate
 
+   vserver:~$ sudo apt update && sudo apt upgrade -y
+   vserver:~$ sudo apt install -y podman podman-compose caddy git curl rsync ufw
 
-   # Update Sytem, install required packages and enable the firewall
-   vserver:~/ apt update
-   vserver:~/ apt install git podman podman-compose nginx certbot python3-certbot-nginx
+2. Create a non-root user:
 
-   # Generate a certificate with letsencrypt:
-   vserver:~/ certbot --nginx -d flownexus.org -d www.flownexus.org
-   vserver:~/ Create nginx config at /etc/nginx/sites-available/flownexus (see example below)
+**Important:** Complete this step while logged in as root (or your initial
+admin user).
 
-
-.. code-block:: nginx
-   :caption: Nginx config for the Frontend ``/etc/nginx/sites-available/flownexus.org``
-   :linenos:
-
-   server {
-           listen 443 ssl http2;
-           listen [::]:443 ssl http2;
-           server_name flownexus.org www.flownexus.org;
-
-           error_log /var/log/nginx/flownexus.org.error.log;
-           access_log /var/log/nginx/flownexus.org.access.log;
-           ssl_certificate /etc/letsencrypt/live/flownexus.org/fullchain.pem; # managed by Certbot
-           ssl_certificate_key /etc/letsencrypt/live/flownexus.org/privkey.pem; # managed by Certbot
-
-           location / {
-                   proxy_pass http://127.0.0.1:8000/;
-                   proxy_set_header Host $http_host;
-                   proxy_set_header X-Real-IP $remote_addr;
-                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                   proxy_set_header X-Forwarded-Proto $scheme;
-                   proxy_set_header X-Frame-Options SAMEORIGIN;
-           }
-   }
-
-   server {
-           listen 80;
-           listen [::]:80;
-           server_name flownexus.org www.flownexus.org;
-
-           # Redirect all HTTP requests to HTTPs
-           return 301 https://$host$request_uri;
-   }
-
-
-.. code-block:: nginx
-   :caption: Nginx config for the https dl Server ``/etc/nginx/sites-available/fw.flownexus.org``
-   :linenos:
-
-   server {
-           listen 443 ssl;
-           listen [::]:443 ssl http2;
-           server_name fw.flownexus.org;
-
-           ssl_certificate /etc/nginx/ssl/fw_flownexus_org.crt;
-           ssl_certificate_key /etc/nginx/ssl/fw_flownexus_org.key;
-
-           location /binaries {
-                   root /var/www/flownexus/;
-                   # Debug option: uncomment to list files
-                   # autoindex on;
-           }
-   }
-
-   server {
-        listen 80;
-        server_name fw.flownexus.org;
-
-        # Redirect all HTTP requests to HTTPS
-        return 301 https://$host$request_uri;
-   }
-
-
-After creating the Nginx config, activate the config and restart the Nginx.
+Create a dedicated user for running the application instead of using root:
 
 .. code-block:: console
-   :caption: Activate the Nginx config
 
-   # Activate the Nginx config:
-   vserver:~/ ln -s /etc/nginx/sites-available/flownexus.org /etc/nginx/sites-enabled/
-   vserver:~/ ln -s /etc/nginx/sites-available/fw.flownexus.org /etc/nginx/sites-enabled/
+   vserver:~$ sudo useradd -m -s /bin/bash flownexus
+   vserver:~$ sudo passwd flownexus
+   vserver:~$ sudo usermod -aG sudo flownexus
 
-   # Test the Nginx config:
-   vserver:~/ nginx -t
+**Note:** Log out and log back in for the sudo group membership to take effect.
 
-   # Restart Nginx:
-   vserver:~/ systemctl restart nginx
-
-Test the Download Server
-........................
-
-If you have setup an A/AAAA-Record, you can now test the download server. It is
-available at https://fw.flownexus.org/binaries. If you uncomment the option
-``autoindex on;`` in the Nginx config, you can list the files in the directory.
-
-.. figure:: images/https_server_demo.png
-   :width: 50%
-
-Start flownexus
-...............
-
-After the setup, download flownexus and start it with using podman-compose in
-detached mode. Make sure to change the ``DEPLOY_SECRET_KEY`` and ``DEBUG`` flag
-in the ``settings.py`` file before deploying.:
+Allow the GitHub Actions deploy key to run the required deployment commands
+without an interactive password prompt:
 
 .. code-block:: console
-   :caption: Start flownexus with podman-compose
 
+   vserver:~$ sudo tee /etc/sudoers.d/flownexus-deploy > /dev/null <<'EOF'
+   flownexus ALL=(root) NOPASSWD: /usr/bin/rsync
+   flownexus ALL=(root) NOPASSWD: /usr/bin/mkdir
+   flownexus ALL=(root) NOPASSWD: /usr/bin/chown
+   flownexus ALL=(root) NOPASSWD: /usr/bin/chmod
+   flownexus ALL=(root) NOPASSWD: /usr/bin/mv
+   flownexus ALL=(root) NOPASSWD: /usr/bin/systemctl reload caddy
+   flownexus ALL=(root) NOPASSWD: /usr/bin/systemctl restart caddy
+   flownexus ALL=(root) NOPASSWD: /usr/bin/systemctl is-active caddy
+   flownexus ALL=(root) NOPASSWD: /usr/bin/caddy validate --config /tmp/Caddyfile.new
+   EOF
 
-   vserver:~/ git clone https://github.com/flownexus-lwm2m/flownexus.git
-   # Change the DEPLOY_SECRET_KEY and DEBUG flag in the settings.py file
-   vserver:~/flownexus$ make server-build
-   vserver:~/flownexus$ podman-compose -f server/compose.yml up -d
+Validate the sudoers file before continuing:
 
-flownexus is now available at https://flownexus.org. The server is running in a
-Docker container and the Nginx server is used as a reverse proxy.
+.. code-block:: console
+
+   vserver:~$ sudo visudo -cf /etc/sudoers.d/flownexus-deploy
+
+Set up SSH access for the new user. Since the user is new, add your SSH key
+manually:
+
+.. code-block:: console
+
+   # Create .ssh directory and add your public key
+   vserver:~$ sudo mkdir -p ~flownexus/.ssh
+   vserver:~$ echo "YOUR_PUBLIC_KEY_HERE" | sudo tee ~flownexus/.ssh/authorized_keys
+
+   # Fix permissions (important!)
+   vserver:~$ sudo chmod 700 ~flownexus/.ssh
+   vserver:~$ sudo chmod 600 ~flownexus/.ssh/authorized_keys
+   vserver:~$ sudo chown -R flownexus:flownexus ~flownexus/.ssh
+
+Replace ``YOUR_PUBLIC_KEY_HERE`` with your actual public key content from
+``~/.ssh/id_ed25519.pub`` on your local machine.
+
+Now you can SSH as the flownexus user:
+
+.. code-block:: console
+
+   local:~$ ssh flownexus@your-server-ip
+
+**Generate SSH Key for GitHub Actions (on your local machine):**
+
+Before setting up GitHub Actions, generate a dedicated SSH key pair:
+
+.. code-block:: console
+
+   # Generate a new SSH key (do NOT add a passphrase)
+   local:~$ ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/flownexus_deploy
+
+   # This creates two files:
+   # ~/.ssh/flownexus_deploy     (private key - keep secret!)
+   # ~/.ssh/flownexus_deploy.pub (public key - copy to server)
+
+   # Copy the public key to the server (as root or flownexus user)
+   local:~$ cat ~/.ssh/flownexus_deploy.pub
+
+   # On the server, add this to authorized_keys:
+   vserver:~$ echo "PASTE_PUBLIC_KEY_HERE" >> ~flownexus/.ssh/authorized_keys
+
+   # Add the private key to GitHub Secrets:
+   # 1. Go to GitHub repo → Settings → Secrets and variables → Actions
+   # 2. Click "New repository secret"
+   # 3. Name: SSH_PRIVATE_KEY
+   # 4. Value: Copy contents of ~/.ssh/flownexus_deploy (private key)
+   # 5. Click "Add secret"
+
+3. Clone the repository:
+
+.. code-block:: console
+
+   vserver:~$ cd ~flownexus
+   vserver:~flownexus$ git clone https://github.com/flownexus-lwm2m/flownexus.git
+
+4. Create directory structure:
+
+.. code-block:: console
+
+   vserver:~$ sudo mkdir -p /var/www/flownexus/{landing,docs,binaries}
+   vserver:~$ sudo mkdir -p ~flownexus/flownexus/server/data
+   vserver:~$ sudo chown -R caddy:caddy /var/www/flownexus
+   vserver:~$ sudo chown -R flownexus:flownexus ~flownexus/flownexus/server/data
+   vserver:~$ sudo mkdir -p /var/log/caddy
+
+5. Configure firewall:
+
+.. code-block:: console
+
+   vserver:~$ sudo ufw enable
+   vserver:~$ sudo ufw allow 22/tcp    # SSH
+   vserver:~$ sudo ufw allow 80/tcp    # HTTP
+   vserver:~$ sudo ufw allow 443/tcp   # HTTPS
+   vserver:~$ sudo ufw allow 5683/udp  # LwM2M CoAP (unencrypted)
+   vserver:~$ sudo ufw allow 5684/udp  # LwM2M DTLS/CoAPS (encrypted)
+
+Optional Manual Backend Start
+.............................
+
+This section is not required for normal deployments. Use it only for the first
+local smoke test on a fresh server or for manual recovery/debugging.
+
+1. Start the containers:
+
+.. code-block:: console
+
+   vserver:~flownexus/flownexus$ export APP_VERSION=$(git describe --always --dirty --tags)
+   vserver:~flownexus/flownexus$ podman-compose -f server/compose.yml up -d --build
+
+2. Verify services are running:
+
+.. code-block:: console
+
+   vserver:~flownexus/flownexus$ podman ps
+   vserver:~flownexus/flownexus$ curl http://localhost:8000/admin/login/
+   vserver:~flownexus/flownexus$ curl http://localhost/admin/login/
+
+Automated CI/CD
+................
+
+This is the normal deployment path after the initial server bootstrap. When
+code is pushed to the main branch:
+
+1. **Build static assets locally** (landing page, Sphinx documentation)
+2. **Deploy static files via rsync** to ``/var/www/flownexus/``
+3. **Deploy Caddyfile** and reload Caddy configuration
+4. **SSH to server and run** ``git pull origin main`` to update backend code
+5. **Build and restart containers** with ``podman-compose -f server/compose.yml up -d --build``
+
+The backend code is pulled directly from the repository on the server, ensuring
+the deployed code matches the git commit exactly.
+
+The Django container stores its SQLite database in
+``~flownexus/flownexus/server/data/db.sqlite3`` and stores uploaded
+firmware directly in ``/var/www/flownexus/binaries`` so the same files are
+immediately available through the firmware download host. These paths are
+configured via ``DJANGO_DB_HOST_PATH`` and ``FIRMWARE_STORAGE_HOST_PATH`` in
+the deployment environment; local development falls back to ``./data`` and
+``./firmware`` inside ``server/``.
+
+Required GitHub Secrets:
+
+* ``SSH_PRIVATE_KEY`` - Private key for the deploy user
+
+The workflow uses ``sudo -n`` on the server for ``rsync``, Caddy validation,
+directory ownership fixes, and Caddy reload/health checks. The deploy user must
+therefore have the matching passwordless sudo rules configured as shown above.
+
+To deploy to a different domain or server layout, update ``deploy/Caddyfile``
+and the environment values in ``.github/workflows/deploy.yml``.
+
+Optional Certificate Maintenance
+................................
+
+Caddy automatically manages Let's Encrypt certificates. No manual intervention
+is required. Certificates are stored in ``/var/lib/caddy/``.
+
+Use the following only if you need to troubleshoot or force a renewal:
+
+.. code-block:: console
+
+   vserver:~$ sudo caddy reload --config /etc/caddy/Caddyfile
+
+Troubleshooting
+.................
+
+Everything in this section is optional and only needed for debugging a broken
+deployment or validating a suspicious state.
+
+Caddy Issues
+~~~~~~~~~~~~
+
+**Check Caddy logs:**
+
+.. code-block:: console
+
+   vserver:~$ sudo journalctl -u caddy -f
+
+**Validate configuration:**
+
+.. code-block:: console
+
+   vserver:~$ sudo caddy validate --config /etc/caddy/Caddyfile
+
+**Test Caddy locally:**
+
+.. code-block:: console
+
+   vserver:~$ sudo caddy run --config /etc/caddy/Caddyfile
+
+Container Issues
+~~~~~~~~~~~~~~~~
+
+**Check container status:**
+
+.. code-block:: console
+
+   vserver:~$ podman ps -a
+
+**View logs:**
+
+.. code-block:: console
+
+   vserver:~$ podman logs flownexus-django
+   vserver:~$ podman logs flownexus-leshan
+   vserver:~$ podman logs flownexus-redis
+
+**Restart specific service:**
+
+.. code-block:: console
+
+   vserver:~$ podman restart flownexus-django
+
+SSL Certificate Issues
+~~~~~~~~~~~~~~~~~~~~~~
+
+Caddy handles SSL automatically. If certificates fail:
+
+.. code-block:: console
+
+   # Force certificate renewal
+   vserver:~$ sudo caddy reload --config /etc/caddy/Caddyfile
+
+   # Check certificate status
+   vserver:~$ sudo caddy list-modules | grep tls
 
 Security Considerations
 .......................
 
-Consider
-enabling the firewall and only keep required ports open:
+This section is guidance to review before exposing the stack publicly. It is
+not an extra deployment procedure, but these items still matter for a real
+internet-facing setup.
 
-- **Port 80, TCP**: HTTP
-- **Port 443, TCP**: HTTPS
-- **Port 22, TCP**: SSH
-- **Port 5683, UDP**: CoAP
+Required open ports:
+
+* **Port 22, TCP**: SSH access
+* **Port 80, TCP**: HTTP (redirects to HTTPS)
+* **Port 443, TCP**: HTTPS
+* **Port 5683, UDP**: LwM2M CoAP (unencrypted)
+* **Port 5684, UDP**: LwM2M DTLS/CoAPS (encrypted)
+
+Security Best Practices:
+
+1. **SSH Keys**: Use ed25519 keys for deployment: ``ssh-keygen -t ed25519 -a 100``
+2. **File Permissions**: Ensure ``/var/www/flownexus`` is owned by ``caddy:caddy``
+3. **Firewall**: Only open required ports (22, 80, 443, 5683/udp, 5684/udp)
+4. **Updates**: Regularly update Caddy and container base images
+5. **Secrets**: Never commit secrets to the repository
+
+Before deploying to production:
+
+1. Change the Django ``SECRET_KEY`` in production settings
+2. Disable Django ``DEBUG`` mode
+3. Use strong passwords for admin accounts
+4. Configure firewall rules
+5. Set up automated backups
+
+Customizing for Your Deployment
+................................
+
+This section is only needed if you want to change the default domains, server
+paths, or deploy user.
+
+To deploy on a different server or domain, update these files:
+
+``deploy/Caddyfile``
+~~~~~~~~~~~~~~~~~~~~
+
+Change the configured domains and the Let's Encrypt email address:
+
+.. code-block:: text
+
+   webmaster@flownexus.org
+   flownexus.org
+   docs.flownexus.org
+   fw.flownexus.org
+   dashboard.flownexus.org
+
+``.github/workflows/deploy.yml``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Adjust the deployment environment values near the top of the file:
+
+.. code-block:: yaml
+
+   env:
+     DEPLOY_USER: flownexus
+     SERVER_HOST: flownexus.org
+     APP_ROOT: ~flownexus/flownexus
+     DJANGO_DB_HOST_PATH: ~flownexus/flownexus/server/data
+     FIRMWARE_STORAGE_HOST_PATH: /var/www/flownexus/binaries
+
+Also update any username or home-directory references in the server setup
+commands throughout this chapter.
+
+When following the server setup instructions, replace:
+
+* ``flownexus`` with your desired username
+* ``~flownexus`` with your user's home directory
+* Server IP addresses in SSH commands
+
+After making these changes, commit and push to trigger deployment.
+
+File Locations
+....................
+
++------------------+--------------------------------------------------+------------------------+
+| File             | Location                                         | Purpose                |
++==================+==================================================+========================+
+| Static website   | ``/var/www/flownexus/landing/``                  | Landing page           |
++------------------+--------------------------------------------------+------------------------+
+| Documentation    | ``/var/www/flownexus/docs/``                     | Sphinx HTML            |
++------------------+--------------------------------------------------+------------------------+
+| Firmware         | ``/var/www/flownexus/binaries/``                 | Firmware downloads     |
++------------------+--------------------------------------------------+------------------------+
+| SQLite database  | ``~flownexus/flownexus/server/data/``            | Persistent Django data |
++------------------+--------------------------------------------------+------------------------+
+| Caddy config     | ``/etc/caddy/Caddyfile``                         | Reverse proxy          |
++------------------+--------------------------------------------------+------------------------+
+| Caddy data       | ``/var/lib/caddy/``                              | SSL certificates       |
++------------------+--------------------------------------------------+------------------------+
+| Container config | ``~flownexus/flownexus/server/compose.yml``      | Podman services        |
++------------------+--------------------------------------------------+------------------------+
+| Logs             | ``/var/log/caddy/``                              | Access logs            |
++------------------+--------------------------------------------------+------------------------+
+
+Maintenance
+.............
+
+Everything in this section is optional day-2 operations guidance.
+
+Updating Containers
+~~~~~~~~~~~~~~~~~~~
+
+Usually GitHub Actions performs updates for you. Use these commands only when
+you intentionally want to update or recover the server manually.
+
+.. code-block:: console
+
+   vserver:~flownexus/flownexus$ git pull
+   vserver:~flownexus/flownexus$ export APP_VERSION=$(git describe --always --dirty --tags)
+   vserver:~flownexus/flownexus$ podman-compose -f server/compose.yml up -d --build
+
+Cleaning Up
+~~~~~~~~~~~
+
+Use these commands only for manual housekeeping.
+
+.. code-block:: console
+
+   # Remove old container images
+   vserver:~$ podman image prune -a
+
+   # Clean up volumes
+   vserver:~$ podman volume prune
 
 .. warning::
 
   flownexus is not production ready. This server setup is only intended for
-  testing purposes.
-
-  The current flownexus configuration uses the default Django
-  ``DEPLOY_SECRET_KEY`` and enables the ``DEBUG`` flag. This is a security risk
-  and must be change before deploying.
-
-  Currently, the default django inbuild webserver is used. This is not
-  recommended for production use. Consider using a production-ready webserver
-  like Nginx or Apache.
+  testing purposes. Review and harden the configuration before using in
+  production.
