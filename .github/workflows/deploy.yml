@@ -1,0 +1,200 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  PYTHON_VERSION: '3.13'
+  DEPLOY_USER: flownexus
+  SERVER_HOST: flownexus.org
+  APP_ROOT: /home/flownexus/flownexus
+  DJANGO_DB_HOST_PATH: /home/flownexus/flownexus/server/data
+  FIRMWARE_STORAGE_HOST_PATH: /var/www/flownexus/binaries
+  LANDING_PAGE_LOCAL_PATH: utils/landing_page
+  DOC_BUILD_LOCAL_PATH: doc/build/html
+  LANDING_PAGE_REMOTE_PATH: /var/www/flownexus/landing
+  DOCS_REMOTE_PATH: /var/www/flownexus/docs
+  CADDYFILE_REMOTE_PATH: /etc/caddy/Caddyfile
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ==========================================
+      # 1. CHECKOUT AND SETUP
+      # ==========================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # ==========================================
+      # 2. BUILD STATIC ASSETS
+      # ==========================================
+
+      # 2.1 Build Sphinx Documentation
+      - name: Install documentation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            default-jre \
+            plantuml \
+            graphviz \
+            tox \
+            texlive-latex-extra \
+            texlive-xetex \
+            latexmk \
+            imagemagick \
+            librsvg2-bin
+
+      - name: Build documentation (HTML)
+        run: |
+          cd doc
+          tox -e html
+
+      - name: Build documentation (PDF)
+        run: |
+          cd doc
+          tox -e pdf
+          # Copy PDF to build for reference
+          mkdir -p build/html/_downloads
+          cp build/pdf/latex/*.pdf build/html/_downloads/ || true
+
+      # 2.2 Prepare Landing Page
+      - name: Prepare landing page assets
+        run: |
+          # Landing page is already static HTML in utils/landing_page
+          # Just verify it exists
+          ls -la utils/landing_page/
+          ls -la utils/landing_page/assets/
+
+      # ==========================================
+      # 3. DEPLOY STATIC ASSETS VIA RSYNC
+      # ==========================================
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      # 3.1 Deploy Main Website
+      - name: Deploy landing page
+        run: |
+          rsync -avz --delete \
+            --rsync-path="sudo -n rsync" \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./${{ env.LANDING_PAGE_LOCAL_PATH }}/ \
+            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.LANDING_PAGE_REMOTE_PATH }}/
+
+      # 3.2 Deploy Documentation
+      - name: Deploy documentation
+        run: |
+          rsync -avz --delete \
+            --rsync-path="sudo -n rsync" \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./${{ env.DOC_BUILD_LOCAL_PATH }}/ \
+            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.DOCS_REMOTE_PATH }}/
+
+      # 3.3 Deploy Firmware (if any in repo)
+      # Note: Firmware files are typically uploaded separately
+      # This step ensures the directory exists
+      - name: Ensure firmware directory exists
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
+            "sudo -n mkdir -p '${{ env.FIRMWARE_STORAGE_HOST_PATH }}' && \
+             sudo -n chown -R caddy:caddy '${{ env.FIRMWARE_STORAGE_HOST_PATH }}' && \
+             sudo -n chmod 755 '${{ env.FIRMWARE_STORAGE_HOST_PATH }}'"
+
+      # ==========================================
+      # 4. DEPLOY BACKEND CODE AND CONFIGURATION
+      # ==========================================
+
+      - name: Deploy Caddyfile
+        run: |
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./deploy/Caddyfile \
+            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:/tmp/Caddyfile.new
+
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
+            "sudo -n caddy validate --config /tmp/Caddyfile.new && \
+             sudo -n mv /tmp/Caddyfile.new '${{ env.CADDYFILE_REMOTE_PATH }}'"
+
+      - name: Update Backend Code
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
+            "cd '${{ env.APP_ROOT }}' && \
+             git fetch origin && \
+             git checkout ${{ github.sha }}"
+
+      # ==========================================
+      # 5. RESTART SERVICES
+      # ==========================================
+
+      - name: Reload Caddy
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
+            "sudo -n systemctl reload caddy || sudo -n systemctl restart caddy"
+
+      - name: Deploy Dashboard Containers
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
+            "cd '${{ env.APP_ROOT }}' && \
+             export APP_VERSION=${{ github.sha }} && \
+             export DJANGO_DB_HOST_PATH=${{ env.DJANGO_DB_HOST_PATH }} && \
+             export FIRMWARE_STORAGE_HOST_PATH=${{ env.FIRMWARE_STORAGE_HOST_PATH }} && \
+             podman-compose -f server/compose.yml up -d --build"
+
+      - name: Verify deployment
+        run: |
+          echo "Checking service health..."
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
+            "sleep 5 && \
+             curl -sf http://localhost:8000/admin/login/ > /dev/null && \
+             sudo -n systemctl is-active caddy > /dev/null && \
+             podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+
+      # ==========================================
+      # 6. CLEANUP
+      # ==========================================
+
+      - name: Cleanup SSH keys
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          rm -f ~/.ssh/config
+
+  # ==========================================
+  # NOTIFICATION (Optional)
+  # ==========================================
+  notify:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Deployment status
+        run: |
+          if [ "${{ needs.build-and-deploy.result }}" == "success" ]; then
+            echo "Deployment successful!"
+          else
+            echo "Deployment failed!"
+            exit 1
+          fi

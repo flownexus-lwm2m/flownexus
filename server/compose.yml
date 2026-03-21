@@ -1,57 +1,125 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Flownexus Compose Configuration
+# Usage: podman-compose -f server/compose.yml up -d
+#
+# This configuration is designed for Podman (rootless recommended).
+# Key features:
+# - Uses 'podman-' prefix for networks
+# - SELinux context (:Z for private, :z for shared)
+# - Binds to localhost only for security
+
+version: "3.8"
+
 services:
   django:
-    stop_grace_period: 1s
+    container_name: flownexus-django
+    stop_grace_period: 5s
     build:
       context: ./django
       dockerfile: Dockerfile.django
       args:
         APP_VERSION: ${APP_VERSION:-dev}
     volumes:
-      - ./django:/django
-      - ./logs:/django/logs
-      - /var/www/:/var/www/
+      # Django code (read-only, private SELinux context)
+      - ./django:/django:ro,Z
+      # Persistent SQLite database storage
+      - ${DJANGO_DB_HOST_PATH:-./data}:/data:rw,Z
+      # Logs directory (writable, shared context)
+      - ./logs:/django/logs:rw,z
+      # Firmware binaries for upload and download
+      - ${FIRMWARE_STORAGE_HOST_PATH:-./firmware}:/var/www/flownexus/binaries:rw,z
+    # Only bind to localhost - Caddy will reverse proxy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     networks:
-      - mynetwork
+      - flownexus-network
     environment:
       - LESHAN_URI=http://leshan:8080
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - C_FORCE_ROOT=true
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - DJANGO_DB_PATH=/data/db.sqlite3
+      - MEDIA_ROOT=/var/www/flownexus/binaries
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - leshan
 
   redis:
-    stop_grace_period: 1s
+    container_name: flownexus-redis
+    stop_grace_period: 3s
     build:
       context: ./redis
       dockerfile: Dockerfile.redis
     volumes:
-      - ./redis:/redis
-      - ./logs:/redis/logs
-    networks:
-      - mynetwork
+      # Redis data (private SELinux context)
+      - ./redis:/redis:rw,Z
+      - ./logs:/redis/logs:rw,z
+    # Only bind to localhost - not exposed externally
     ports:
-      - "6379:6379"
-    # Restart the container unless it is explicitly stopped
+      - "127.0.0.1:6379:6379"
+    networks:
+      - flownexus-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   leshan:
-    stop_grace_period: 1s
+    container_name: flownexus-leshan
+    stop_grace_period: 5s
     build:
       context: ./leshan
       dockerfile: Dockerfile.leshan
     volumes:
-      - ./leshan:/leshan
-      - ./logs:/leshan/logs
+      # Leshan configuration (read-only)
+      - ./leshan:/leshan:rw,Z
+      - ./logs:/leshan/logs:rw,z
+      # Certificates for DTLS
+      - ./leshan/certs:/leshan/certs:ro,Z
+    # CRITICAL: UDP port bound directly to host (0.0.0.0) - bypasses Caddy
+    # This is required for LwM2M CoAP communication
     ports:
-      - "5683:5683/udp" # LWM2M default UDP port
-      - "5684:5684"     # For LWM2M over DTLS
+      - "0.0.0.0:5683:5683/udp"      # LwM2M CoAP UDP
+      - "127.0.0.1:8080:8080"         # Leshan REST API (internal only)
+      - "0.0.0.0:5684:5684/udp"       # LwM2M DTLS (if enabled)
     networks:
-      - mynetwork
+      - flownexus-network
     environment:
       - DATA_SENDER_URI=http://django:8000
+      - LESHAN_COAP_PORT=5683
+      - LESHAN_DTLS_PORT=5684
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Required for binding to low ports without root
+    cap_add:
+      - NET_BIND_SERVICE
 
 # Define the custom network
 networks:
-  mynetwork:
+  flownexus-network:
     driver: bridge
+    # Podman-specific: Use 'podman-' prefix to avoid conflicts
+    name: podman-flownexus-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
