@@ -16,14 +16,10 @@ env:
   PYTHON_VERSION: '3.13'
   DEPLOY_USER: flownexus
   SERVER_HOST: flownexus.org
-  APP_ROOT: /home/flownexus/flownexus
-  DJANGO_DB_HOST_PATH: /home/flownexus/flownexus/server/data
-  FIRMWARE_STORAGE_HOST_PATH: /var/www/flownexus/binaries
   LANDING_PAGE_LOCAL_PATH: utils/landing_page
   DOC_BUILD_LOCAL_PATH: doc/build/html
   LANDING_PAGE_REMOTE_PATH: /var/www/flownexus/landing
   DOCS_REMOTE_PATH: /var/www/flownexus/docs
-  CADDYFILE_REMOTE_PATH: /etc/caddy/Caddyfile
 
 jobs:
   build-and-deploy:
@@ -99,7 +95,6 @@ jobs:
       - name: Deploy landing page
         run: |
           rsync -avz --delete \
-            --rsync-path="sudo -n rsync" \
             -e "ssh -i ~/.ssh/deploy_key" \
             ./${{ env.LANDING_PAGE_LOCAL_PATH }}/ \
             ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.LANDING_PAGE_REMOTE_PATH }}/
@@ -108,69 +103,27 @@ jobs:
       - name: Deploy documentation
         run: |
           rsync -avz --delete \
-            --rsync-path="sudo -n rsync" \
             -e "ssh -i ~/.ssh/deploy_key" \
             ./${{ env.DOC_BUILD_LOCAL_PATH }}/ \
             ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.DOCS_REMOTE_PATH }}/
 
-      # 3.3 Deploy Firmware (if any in repo)
-      # Note: Firmware files are typically uploaded separately
-      # This step ensures the directory exists
-      - name: Ensure firmware directory exists
+      - name: Update backend code
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sudo -n mkdir -p '${{ env.FIRMWARE_STORAGE_HOST_PATH }}' && \
-             sudo -n chown -R caddy:caddy '${{ env.FIRMWARE_STORAGE_HOST_PATH }}' && \
-             sudo -n chmod 755 '${{ env.FIRMWARE_STORAGE_HOST_PATH }}'"
-
-      # ==========================================
-      # 4. DEPLOY BACKEND CODE AND CONFIGURATION
-      # ==========================================
-
-      - name: Deploy Caddyfile
-        run: |
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./deploy/Caddyfile \
-            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:/tmp/Caddyfile.new
-
-          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sudo -n caddy validate --config /tmp/Caddyfile.new && \
-             sudo -n mv /tmp/Caddyfile.new '${{ env.CADDYFILE_REMOTE_PATH }}'"
-
-      - name: Update Backend Code
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "cd '${{ env.APP_ROOT }}' && \
+            "cd /home/flownexus/flownexus && \
              git fetch origin && \
              git checkout ${{ github.sha }}"
 
-      # ==========================================
-      # 5. RESTART SERVICES
-      # ==========================================
-
-      - name: Reload Caddy
+      - name: Deploy dashboard stack
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sudo -n systemctl reload caddy || sudo -n systemctl restart caddy"
-
-      - name: Deploy Dashboard Containers
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "cd '${{ env.APP_ROOT }}' && \
-             export APP_VERSION=${{ github.sha }} && \
-             export DJANGO_DB_HOST_PATH=${{ env.DJANGO_DB_HOST_PATH }} && \
-             export FIRMWARE_STORAGE_HOST_PATH=${{ env.FIRMWARE_STORAGE_HOST_PATH }} && \
-             podman-compose -f server/compose.yml up -d --build"
+            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus --version ${{ github.sha }}"
 
       - name: Verify deployment
         run: |
           echo "Checking service health..."
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sleep 5 && \
-             curl -sf http://localhost:8000/admin/login/ > /dev/null && \
-             sudo -n systemctl is-active caddy > /dev/null && \
-             podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+            "sleep 5 && podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
 
       # ==========================================
       # 6. CLEANUP

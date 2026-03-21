@@ -140,8 +140,8 @@ Initial Server Setup
 ....................
 
 This section contains the required one-time manual bootstrap steps for a new
-server. After these steps are complete, normal application deployments are
-handled by GitHub Actions.
+server. After that, normal deployments are handled by GitHub Actions via
+``deploy/deploy-flownexus``.
 
 1. Install required packages:
 
@@ -165,22 +165,12 @@ Create a dedicated user for running the application instead of using root:
 
 **Note:** Log out and log back in for the sudo group membership to take effect.
 
-Allow the GitHub Actions deploy key to run the required deployment commands
-without an interactive password prompt:
+Allow the GitHub Actions deploy key to run the deploy script without an
+interactive password prompt:
 
 .. code-block:: console
 
-   vserver:~$ sudo tee /etc/sudoers.d/flownexus-deploy > /dev/null <<'EOF'
-   flownexus ALL=(root) NOPASSWD: /usr/bin/rsync
-   flownexus ALL=(root) NOPASSWD: /usr/bin/mkdir
-   flownexus ALL=(root) NOPASSWD: /usr/bin/chown
-   flownexus ALL=(root) NOPASSWD: /usr/bin/chmod
-   flownexus ALL=(root) NOPASSWD: /usr/bin/mv
-   flownexus ALL=(root) NOPASSWD: /usr/bin/systemctl reload caddy
-   flownexus ALL=(root) NOPASSWD: /usr/bin/systemctl restart caddy
-   flownexus ALL=(root) NOPASSWD: /usr/bin/systemctl is-active caddy
-   flownexus ALL=(root) NOPASSWD: /usr/bin/caddy validate --config /tmp/Caddyfile.new
-   EOF
+   vserver:~$ sudo sh -c "printf '%s\n' 'flownexus ALL=(root) NOPASSWD: /home/flownexus/flownexus/deploy/deploy-flownexus' > /etc/sudoers.d/flownexus-deploy && chmod 440 /etc/sudoers.d/flownexus-deploy"
 
 Validate the sudoers file before continuing:
 
@@ -244,17 +234,7 @@ Before setting up GitHub Actions, generate a dedicated SSH key pair:
    vserver:~$ cd ~flownexus
    vserver:~flownexus$ git clone https://github.com/flownexus-lwm2m/flownexus.git
 
-4. Create directory structure:
-
-.. code-block:: console
-
-   vserver:~$ sudo mkdir -p /var/www/flownexus/{landing,docs,binaries}
-   vserver:~$ sudo mkdir -p ~flownexus/flownexus/server/data
-   vserver:~$ sudo chown -R caddy:caddy /var/www/flownexus
-   vserver:~$ sudo chown -R flownexus:flownexus ~flownexus/flownexus/server/data
-   vserver:~$ sudo mkdir -p /var/log/caddy
-
-5. Configure firewall:
+4. Configure firewall:
 
 .. code-block:: console
 
@@ -265,27 +245,6 @@ Before setting up GitHub Actions, generate a dedicated SSH key pair:
    vserver:~$ sudo ufw allow 5683/udp  # LwM2M CoAP (unencrypted)
    vserver:~$ sudo ufw allow 5684/udp  # LwM2M DTLS/CoAPS (encrypted)
 
-Optional Manual Backend Start
-.............................
-
-This section is not required for normal deployments. Use it only for the first
-local smoke test on a fresh server or for manual recovery/debugging.
-
-1. Start the containers:
-
-.. code-block:: console
-
-   vserver:~flownexus/flownexus$ export APP_VERSION=$(git describe --always --dirty --tags)
-   vserver:~flownexus/flownexus$ podman-compose -f server/compose.yml up -d --build
-
-2. Verify services are running:
-
-.. code-block:: console
-
-   vserver:~flownexus/flownexus$ podman ps
-   vserver:~flownexus/flownexus$ curl http://localhost:8000/admin/login/
-   vserver:~flownexus/flownexus$ curl http://localhost/admin/login/
-
 Automated CI/CD
 ................
 
@@ -294,31 +253,30 @@ code is pushed to the main branch:
 
 1. **Build static assets locally** (landing page, Sphinx documentation)
 2. **Deploy static files via rsync** to ``/var/www/flownexus/``
-3. **Deploy Caddyfile** and reload Caddy configuration
-4. **SSH to server and run** ``git pull origin main`` to update backend code
-5. **Build and restart containers** with ``podman-compose -f server/compose.yml up -d --build``
+3. **Update the backend checkout and run ``deploy/deploy-flownexus``** to refresh code, Caddy, and containers
 
-The backend code is pulled directly from the repository on the server, ensuring
-the deployed code matches the git commit exactly.
+If you are switching an existing server to this new flow, run a one-time
+``git pull`` in ``~flownexus/flownexus`` first so the server has the current
+``deploy/deploy-flownexus`` script.
 
-The Django container stores its SQLite database in
-``~flownexus/flownexus/server/data/db.sqlite3`` and stores uploaded
-firmware directly in ``/var/www/flownexus/binaries`` so the same files are
-immediately available through the firmware download host. These paths are
-configured via ``DJANGO_DB_HOST_PATH`` and ``FIRMWARE_STORAGE_HOST_PATH`` in
-the deployment environment; local development falls back to ``./data`` and
-``./firmware`` inside ``server/``.
+The workflow updates the backend checkout, then runs the deploy script on the
+server. The script creates the required directories, installs the Caddyfile,
+and restarts the stack. The Django container stores its SQLite database in
+``~flownexus/flownexus/server/data/db.sqlite3`` and stores uploaded firmware in
+``/var/www/flownexus/binaries``.
 
 Required GitHub Secrets:
 
 * ``SSH_PRIVATE_KEY`` - Private key for the deploy user
 
-The workflow uses ``sudo -n`` on the server for ``rsync``, Caddy validation,
-directory ownership fixes, and Caddy reload/health checks. The deploy user must
-therefore have the matching passwordless sudo rules configured as shown above.
+The workflow uses ``sudo -n`` only to invoke ``deploy/deploy-flownexus``.
+That script performs the privileged server setup and restart steps in one place.
 
 To deploy to a different domain or server layout, update ``deploy/Caddyfile``
 and the environment values in ``.github/workflows/deploy.yml``.
+
+If you switch an existing server to this flow, run ``git pull`` once in
+``~flownexus/flownexus`` so the server has the current deploy script.
 
 Optional Certificate Maintenance
 ................................
@@ -413,7 +371,7 @@ Required open ports:
 Security Best Practices:
 
 1. **SSH Keys**: Use ed25519 keys for deployment: ``ssh-keygen -t ed25519 -a 100``
-2. **File Permissions**: Ensure ``/var/www/flownexus`` is owned by ``caddy:caddy``
+2. **File Permissions**: Ensure ``/var/www/flownexus`` stays writable by ``flownexus`` and readable by Caddy
 3. **Firewall**: Only open required ports (22, 80, 443, 5683/udp, 5684/udp)
 4. **Updates**: Regularly update Caddy and container base images
 5. **Secrets**: Never commit secrets to the repository
