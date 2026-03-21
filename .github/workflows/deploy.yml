@@ -91,22 +91,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      # 3.1 Deploy Main Website
-      - name: Deploy landing page
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./${{ env.LANDING_PAGE_LOCAL_PATH }}/ \
-            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.LANDING_PAGE_REMOTE_PATH }}/
-
-      # 3.2 Deploy Documentation
-      - name: Deploy documentation
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./${{ env.DOC_BUILD_LOCAL_PATH }}/ \
-            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.DOCS_REMOTE_PATH }}/
-
+      # 3.1 Update backend code first (so deploy script exists)
       - name: Update backend code
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
@@ -114,6 +99,29 @@ jobs:
              git fetch origin && \
              git checkout ${{ github.sha }}"
 
+      # 3.2 Ensure directories exist with proper permissions
+      - name: Setup deployment directories
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
+            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus --setup-only --version ${{ github.sha }}"
+
+      # 3.3 Deploy Main Website
+      - name: Deploy landing page
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./${{ env.LANDING_PAGE_LOCAL_PATH }}/ \
+            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.LANDING_PAGE_REMOTE_PATH }}/
+
+      # 3.4 Deploy Documentation
+      - name: Deploy documentation
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./${{ env.DOC_BUILD_LOCAL_PATH }}/ \
+            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.DOCS_REMOTE_PATH }}/
+
+      # 3.5 Deploy containers (re-runs deploy script, but it's idempotent)
       - name: Deploy dashboard stack
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
