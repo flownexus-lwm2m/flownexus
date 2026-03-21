@@ -25,7 +25,11 @@ SECRET_KEY = "django-insecure-ttm_sr56l7mv#4smgm*+tffm*$q%!qqp@#q7*_*y38^^#9%@7*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-CSRF_TRUSTED_ORIGINS = ["https://flownexus.org", "https://www.flownexus.org"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://flownexus.org",
+    "https://www.flownexus.org",
+    "https://dashboard.flownexus.org",
+]
 
 LOGGING = {
     "version": 1,
