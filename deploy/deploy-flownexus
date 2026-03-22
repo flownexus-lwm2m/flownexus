@@ -241,7 +241,7 @@ runuser -u "$deploy_user" -- env \
 printf '%s\n' "Waiting for services to start..."
 sleep 10
 
-max_retries=30
+max_retries=60
 retry_delay=5
 retry_count=0
 health_ok=0
