@@ -14,12 +14,10 @@ After=network-online.target
 [Container]
 ContainerName=flownexus-leshan
 Image=localhost/flownexus-leshan:latest
-Network=flownexus.network
+Network=podman-flownexus-network
 PublishPort=0.0.0.0:5683:5683/udp
 PublishPort=127.0.0.1:8080:8080
 PublishPort=0.0.0.0:5684:5684/udp
-Volume=/home/flownexus/flownexus/server/leshan:/leshan:rw,Z
-Volume=/home/flownexus/flownexus/server/leshan/certs:/leshan/certs:ro,Z
 Environment=DATA_SENDER_URI=http://flownexus-django:8000
 Environment=LESHAN_COAP_PORT=5683
 Environment=LESHAN_DTLS_PORT=5684

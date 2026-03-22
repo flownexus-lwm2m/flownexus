@@ -204,17 +204,25 @@ systemctl --user start podman.socket 2>/dev/null || true
 
 # Install quadlet files
 mkdir -p ~/.config/containers/systemd
+rm -f ~/.config/containers/systemd/flownexus-*.volume ~/.config/containers/systemd/flownexus.network
 cp "$app_root/deploy/quadlet/"*.container ~/.config/containers/systemd/
-cp "$app_root/deploy/quadlet/"*.volume ~/.config/containers/systemd/
-cp "$app_root/deploy/quadlet/"*.network ~/.config/containers/systemd/
 
 # Reload systemd to pick up new quadlet files
 systemctl --user daemon-reload
 
+# Ensure the shared network exists
+podman network exists podman-flownexus-network || podman network create podman-flownexus-network
+
 # Stop existing containers gracefully
+systemctl --user stop podman-compose@server.service 2>/dev/null || true
+systemctl --user disable podman-compose@server.service 2>/dev/null || true
 systemctl --user stop flownexus-django.service 2>/dev/null || true
 systemctl --user stop flownexus-leshan.service 2>/dev/null || true
 systemctl --user stop flownexus-redis.service 2>/dev/null || true
+podman stop -t 30 flownexus-django 2>/dev/null || true
+podman stop -t 30 flownexus-leshan 2>/dev/null || true
+podman stop -t 10 flownexus-redis 2>/dev/null || true
+podman rm -f flownexus-django flownexus-leshan flownexus-redis 2>/dev/null || true
 sleep 2
 
 # Build images using podman-compose (reuses existing build logic)

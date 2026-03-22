@@ -14,10 +14,8 @@ After=network-online.target
 [Container]
 ContainerName=flownexus-redis
 Image=localhost/flownexus-redis:latest
-Network=flownexus.network
+Network=podman-flownexus-network
 PublishPort=127.0.0.1:6379:6379
-Volume=/home/flownexus/flownexus/server/redis:/redis:rw,Z
-Volume=flownexus-redis-data.volume:/redis/data:rw,Z
 Exec=redis-server /redis/redis.conf
 HealthCmd=redis-cli ping
 HealthInterval=10s
