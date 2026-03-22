@@ -24,7 +24,7 @@ Environment=DATA_SENDER_URI=http://flownexus-django:8000
 Environment=LESHAN_COAP_PORT=5683
 Environment=LESHAN_DTLS_PORT=5684
 AddCapability=NET_BIND_SERVICE
-HealthCmd=curl -f http://localhost:8080/api/clients/
+HealthCmd=curl -f http://localhost:8080/api/clients
 HealthInterval=30s
 HealthTimeout=10s
 HealthRetries=3
