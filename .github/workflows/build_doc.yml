@@ -14,15 +14,15 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: '3.13'
+        enable-cache: true
 
-    - name: Install Packages
+    - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install default-jre plantuml graphviz jq tox texlive-latex-extra texlive-xetex latexmk python3-pip imagemagick librsvg2-bin -y
+        sudo apt-get install default-jre plantuml graphviz texlive-latex-extra texlive-xetex latexmk imagemagick librsvg2-bin -y
 
     - name: Build static site
       run: |

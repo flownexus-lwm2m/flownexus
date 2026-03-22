@@ -12,14 +12,14 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: '3.13'
+        enable-cache: true
 
-    - name: Install dependencies
+    - name: Install system tools
       run: |
-        pip install requests podman-compose west
+        pip install podman-compose west
 
     - name: Run E2E Tests
       run: make test-e2e || echo "Skipping full E2E as Zephyr build is local-only for now"
