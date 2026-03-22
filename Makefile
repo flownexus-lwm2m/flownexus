@@ -10,7 +10,8 @@
 	doc-html \
 	doc-pdf \
 	doc \
-	server-run
+	server-run \
+	deploy
 
 # Run Django tests using uv
 test-django:
@@ -78,3 +79,21 @@ server-run:
 		DJANGO_DB_HOST_PATH=./server/data \
 		FIRMWARE_STORAGE_HOST_PATH=./server/firmware \
 		podman-compose -f server/compose.yml up --build
+
+# Deploy to production server (requires sudo and SSH access)
+# This uses systemd Quadlet for persistent rootless containers
+deploy:
+	@echo "Deploying Flownexus to production..."
+	@echo "Usage: make deploy SERVER=flownexus.org USER=flownexus"
+	@if [ -z "$(SERVER)" ]; then \
+		echo "Error: SERVER variable not set. Example: make deploy SERVER=flownexus.org"; \
+		exit 1; \
+	fi
+	@if [ -z "$(USER)" ]; then \
+		USER=flownexus; \
+	fi
+	@echo "Deploying to $(SERVER) as user $(USER)..."
+	ssh $(USER)@$(SERVER) "cd /home/$(USER)/flownexus && git fetch origin && git checkout main && git pull"
+	ssh -t $(USER)@$(SERVER) "sudo /home/$(USER)/flownexus/deploy/deploy-flownexus"
+	@echo "Deployment complete. View logs with:"
+	@echo "  ssh $(USER)@$(SERVER) 'journalctl --user -u flownexus-django -f'"

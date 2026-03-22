@@ -127,8 +127,11 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Checking service health..."
+          sleep 10
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sleep 5 && podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+            "systemctl --user is-active flownexus-redis.service && \
+             systemctl --user is-active flownexus-leshan.service && \
+             systemctl --user is-active flownexus-django.service"
 
       # ==========================================
       # 6. CLEANUP
