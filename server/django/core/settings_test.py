@@ -19,3 +19,11 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # Always execute Celery tasks synchronously in tests
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
+# Remove WhiteNoise middleware - not needed for tests (no static file serving)
+# This eliminates warnings about missing static_collect directory
+MIDDLEWARE = [
+    m
+    for m in MIDDLEWARE  # noqa: F405
+    if m != "whitenoise.middleware.WhiteNoiseMiddleware"
+]
