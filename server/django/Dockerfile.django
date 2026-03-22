@@ -1,6 +1,9 @@
 # Use the official lightweight Python image.
 FROM docker.io/library/python:3.13-slim
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -12,18 +15,20 @@ ENV APP_VERSION=${APP_VERSION}
 # Create and set the working directory in the container
 WORKDIR /django
 
-# Install dependencies
-COPY requirements.txt /django/
-RUN pip install --no-cache-dir -r /django/requirements.txt
+# Copy dependency files from repo root
+COPY pyproject.toml uv.lock /django/
+
+# Install production dependencies only
+RUN uv sync --no-dev --frozen
 
 # Copy the rest of the code
 COPY . /django/
 
 # Collect static files
-RUN python manage.py collectstatic --noinput
+RUN uv run python manage.py collectstatic --noinput
 
 # Give execution rights on the start-up script
 RUN chmod +x /django/django_start.sh
 
-# Configure the container to run in an executed manner, replace "myproject" with your Django project name
+# Configure the container to run in an executed manner
 ENTRYPOINT ["/django/django_start.sh"]

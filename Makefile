@@ -11,9 +11,9 @@
 	doc-pdf \
 	doc
 
-# Run Django tests in an isolated environment using Tox
+# Run Django tests using uv
 test-django:
-	cd server/django && tox -e unit-tests
+	cd server/django && uv run --extra test pytest sensordata/tests/ frontend/tests.py
 
 # Start a mock simulation session for frontend development (default scenario)
 run-mock:
@@ -42,18 +42,26 @@ test-e2e: build-sim
 
 # Run compliance checks (linting, formatting, git history)
 compliance:
-	tox -c utils/ci/tox.ini -e compliance
+	uv run --group dev ruff check .
+	uv run --group dev ruff format --check .
+	uv run --group dev gitlint --commits "origin/HEAD..HEAD"
 
 # Build documentation
-doc-html:
-	cd doc && tox -e html
+doc-html: doc-generate
+	cd doc && uv run --group docs sphinx-build -E -W --keep-going -b html source build/html
 
-doc-pdf:
-	cd doc && tox -e pdf
+doc-pdf: doc-generate
+	cd doc && uv run --group docs sphinx-build -M latexpdf source build/pdf
+
+# Generate documentation artifacts (OpenAPI schema, ERD diagram)
+doc-generate:
+	mkdir -p doc/build/generated
+	uv run --group docs python server/django/manage.py graph_models sensordata -o doc/source/images/erd.svg
+	uv run --group docs python server/django/manage.py generate_openapi -o doc/build/generated/openapi-schema.yaml
 
 # Serve documentation with live reload
-doc:
-	cd doc && tox -e doc
+doc: doc-generate
+	cd doc && uv run --group docs sphinx-autobuild source build/html --port 8001 --host 0.0.0.0
 
 # Placeholder for all tests
 test-all: test-django test-e2e compliance

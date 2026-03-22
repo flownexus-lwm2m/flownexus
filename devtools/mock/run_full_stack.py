@@ -17,9 +17,6 @@ from pathlib import Path
 import yaml
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-VENV_BIN = ROOT_DIR / "server/django/.venv/bin"
-PYTHON_EXEC = VENV_BIN / "python"
-CELERY_EXEC = VENV_BIN / "celery"
 COMPOSE_FILE = ROOT_DIR / "server/compose.yml"
 SCENARIO_DIR = ROOT_DIR / "devtools/mock/scenarios"
 SIM_CONFIG = ROOT_DIR / "devtools/mock/config.yaml"
@@ -34,11 +31,6 @@ def build_env(db_path):
     env["LESHAN_URI"] = "http://localhost:8081"
     env["PYTHONPATH"] = str(ROOT_DIR / "server/django")
     return env
-
-
-def ensure_binary(path):
-    if not path.exists():
-        sys.exit(f"Missing required executable: {path}")
 
 
 def load_scenario(scenario_name):
@@ -126,15 +118,18 @@ def shutdown(signum=None, frame=None):
 def setup_database(env, scenario_name, quiet):
     print("\n--- Setting up temporary database ---")
     run_command(
-        [str(PYTHON_EXEC), str(ROOT_DIR / "server/django/manage.py"), "migrate"],
+        ["uv", "run", "--no-dev", "python", "server/django/manage.py", "migrate"],
         env,
         "Database migration",
         quiet=quiet,
     )
     run_command(
         [
-            str(PYTHON_EXEC),
-            str(ROOT_DIR / "server/django/manage.py"),
+            "uv",
+            "run",
+            "--no-dev",
+            "python",
+            "server/django/manage.py",
             "load_initial_resource_types",
         ],
         env,
@@ -143,8 +138,11 @@ def setup_database(env, scenario_name, quiet):
     )
     run_command(
         [
-            str(PYTHON_EXEC),
-            str(ROOT_DIR / "server/django/manage.py"),
+            "uv",
+            "run",
+            "--no-dev",
+            "python",
+            "server/django/manage.py",
             "load_scenario",
             "--config",
             scenario_name,
@@ -201,9 +199,6 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Show subprocess output")
     args = parser.parse_args()
 
-    ensure_binary(PYTHON_EXEC)
-    ensure_binary(CELERY_EXEC)
-
     scenario = load_scenario(args.scenario)
 
     temp_dir = Path(tempfile.gettempdir())
@@ -231,7 +226,7 @@ def main():
 
     print("--- Starting Django ---")
     start_process(
-        [str(PYTHON_EXEC), str(ROOT_DIR / "server/django/manage.py"), "runserver", "0.0.0.0:8000"],
+        ["uv", "run", "--no-dev", "python", "server/django/manage.py", "runserver", "0.0.0.0:8000"],
         env,
         "Django",
         quiet=quiet,
@@ -242,7 +237,10 @@ def main():
     celery_loglevel = "info" if args.verbose else "warning"
     start_process(
         [
-            str(CELERY_EXEC),
+            "uv",
+            "run",
+            "--no-dev",
+            "celery",
             "-A",
             "core",
             "worker",
@@ -261,8 +259,12 @@ def main():
     print("--- Starting Simulation ---")
     start_process(
         [
-            str(PYTHON_EXEC),
-            str(ROOT_DIR / "devtools/mock/run.py"),
+            "uv",
+            "run",
+            "--group",
+            "mock",
+            "python",
+            "devtools/mock/run.py",
             "--config",
             str(sim_config),
         ],
