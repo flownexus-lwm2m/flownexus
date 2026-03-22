@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-name: Deploy to Production
+name: Deploy
 
 on:
   push:
@@ -143,19 +143,3 @@ jobs:
           rm -f ~/.ssh/deploy_key
           rm -f ~/.ssh/config
 
-  # ==========================================
-  # NOTIFICATION (Optional)
-  # ==========================================
-  notify:
-    needs: build-and-deploy
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Deployment status
-        run: |
-          if [ "${{ needs.build-and-deploy.result }}" == "success" ]; then
-            echo "Deployment successful!"
-          else
-            echo "Deployment failed!"
-            exit 1
-          fi
