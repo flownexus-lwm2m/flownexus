@@ -1,0 +1,38 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Flownexus Leshan LwM2M Server
+# Rootless Quadlet container definition
+#
+
+[Unit]
+Description=Flownexus Leshan LwM2M Server
+After=network-online.target
+
+[Container]
+ContainerName=flownexus-leshan
+Image=localhost/flownexus-leshan:latest
+Network=flownexus.network
+PublishPort=0.0.0.0:5683:5683/udp
+PublishPort=127.0.0.1:8080:8080
+PublishPort=0.0.0.0:5684:5684/udp
+Volume=/home/flownexus/flownexus/server/leshan:/leshan:rw,Z
+Volume=/home/flownexus/flownexus/server/leshan/certs:/leshan/certs:ro,Z
+Environment=DATA_SENDER_URI=http://flownexus-django:8000
+Environment=LESHAN_COAP_PORT=5683
+Environment=LESHAN_DTLS_PORT=5684
+AddCapability=NET_BIND_SERVICE
+HealthCmd=curl -f http://localhost:8080/api/
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=60s
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

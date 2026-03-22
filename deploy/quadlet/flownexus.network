@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+[Network]
+NetworkName=flownexus-network
+Driver=bridge
+
+[IPAM]
+Driver=default
+Config=subnet=172.20.0.0/16,gateway=172.20.0.1

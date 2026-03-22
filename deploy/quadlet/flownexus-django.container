@@ -1,0 +1,42 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Flownexus Django Application
+# Rootless Quadlet container definition
+#
+
+[Unit]
+Description=Flownexus Django Application
+After=flownexus-redis.service flownexus-leshan.service network-online.target
+Requires=flownexus-redis.service flownexus-leshan.service
+
+[Container]
+ContainerName=flownexus-django
+Image=localhost/flownexus-django:latest
+Network=flownexus.network
+PublishPort=127.0.0.1:8000:8000
+Volume=/home/flownexus/flownexus/server/django:/django:ro,Z
+Volume=flownexus-django-data.volume:/data:rw,Z
+Volume=/var/www/flownexus/binaries:/var/www/flownexus/binaries:rw,z
+Volume=flownexus-django-venv.volume:/django/.venv
+Environment=LESHAN_URI=http://flownexus-leshan:8080
+Environment=CELERY_BROKER_URL=redis://flownexus-redis:6379/0
+Environment=CELERY_RESULT_BACKEND=redis://flownexus-redis:6379/0
+Environment=C_FORCE_ROOT=true
+Environment=DJANGO_SETTINGS_MODULE=core.settings
+Environment=DJANGO_DB_PATH=/data/db.sqlite3
+Environment=MEDIA_ROOT=/var/www/flownexus/binaries
+HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=40s
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
