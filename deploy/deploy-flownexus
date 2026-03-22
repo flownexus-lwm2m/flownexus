@@ -124,5 +124,31 @@ runuser -u "$deploy_user" -- env \
     FIRMWARE_STORAGE_HOST_PATH="$firmware_path" \
     sh -lc "cd '$app_root' && podman-compose -f '$app_root/server/compose.yml' up -d --build"
 
-curl -fsS "$health_url" > /dev/null
+# Wait for health check with retry loop (up to 5 minutes)
+max_retries=100
+retry_delay=3
+retry_count=0
+health_ok=0
+
+printf '%s\n' "Waiting for health check at $health_url..."
+
+while [ "$retry_count" -lt "$max_retries" ]; do
+    if curl -fsS "$health_url" > /dev/null 2>&1; then
+        health_ok=1
+        break
+    fi
+    retry_count=$((retry_count + 1))
+    if [ "$retry_count" -lt "$max_retries" ]; then
+        printf '  Attempt %d/%d failed, retrying in %d seconds...\n' "$retry_count" "$max_retries" "$retry_delay"
+        sleep "$retry_delay"
+    fi
+done
+
+if [ "$health_ok" -eq 0 ]; then
+    printf '%s\n' "ERROR: Health check failed after $max_retries attempts (~5 minutes)" >&2
+    podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+    exit 1
+fi
+
+printf 'Health check passed after %d attempts\n' "$retry_count"
 podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
