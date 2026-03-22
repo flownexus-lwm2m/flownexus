@@ -97,13 +97,14 @@ jobs:
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
             "cd /home/flownexus/flownexus && \
              git fetch origin && \
-             git checkout ${{ github.sha }}"
+             git checkout ${{ github.sha }} && \
+             git submodule update --init --recursive"
 
       # 3.2 Ensure directories exist with proper permissions
       - name: Setup deployment directories
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus --setup-only --version ${{ github.sha }}"
+            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus --setup-only"
 
       # 3.3 Deploy Main Website
       - name: Deploy landing page
@@ -125,7 +126,7 @@ jobs:
       - name: Deploy dashboard stack
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus --version ${{ github.sha }}"
+            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus"
 
       - name: Verify deployment
         run: |
