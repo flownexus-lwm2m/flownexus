@@ -1,3 +1,92 @@
+#
+# Copyright (c) 2024 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+[project]
+name = "flownexus"
+version = "0.1.0"
+description = "Local-first IoT framework using LwM2M protocol"
+readme = "README.rst"
+requires-python = ">=3.13"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Jonas Remmert"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
+
+# Production dependencies - what runs in podman-compose
+# Keep this minimal for container image size
+dependencies = [
+    "django>=6.0.1,<7.0",
+    "django-extensions>=4.1,<5.0",
+    "djangorestframework>=3.16.1,<4.0",
+    "drf-spectacular>=0.29.0",  # Required by Django settings (INSTALLED_APPS)
+    "requests>=2.32.3,<3.0",
+    "urllib3>=2.0.0,<3.0",
+    "charset-normalizer>=3.0,<4.0",
+    "chardet<6",
+    "whitenoise>=6.11.0,<7.0",
+    "celery[redis]>=5.6.2,<6.0",
+    "redis>=6.4.0,<7.0",
+    "gevent>=25.9.1,<26.0",
+    "python-dateutil>=2.9.0,<3.0",
+]
+
+[project.optional-dependencies]
+# Test dependencies - not needed in production
+test = [
+    "factory-boy>=3.3.1,<4.0",
+    "pytest-django>=4.11.1,<5.0",
+    "pytest>=8.3.4,<9.0",
+]
+
+[dependency-groups]
+# Development tools - only for local dev and CI
+dev = [
+    "gitlint",
+    "pre-commit",
+    "ruff",
+]
+
+# Documentation build - heavy deps, not needed in production
+docs = [
+    "codespell>=2.4.1",
+    "graphviz>=0.21",
+    "plantuml>=0.3.0",
+    "pydot>=4.0.1",
+    "pyparsing>=3.3.2",
+    "setuptools<71",
+    "sphinx-autobuild>=2025.8.25",
+    "sphinx-book-theme>=1.1.4",
+    "sphinx>=9.1.0",
+    "sphinxcontrib-httpdomain>=1.8.1",
+    "sphinxcontrib-plantuml>=0.31",
+    "sphinxcontrib-redoc>=1.6.0",
+    "sphinx-sitemap>=2.9.0",
+]
+
+# Mock device simulator
+mock = [
+    "pyyaml>=6.0",
+]
+
+# Zephyr E2E tests
+zephyr = [
+    "docker>=7.0",
+    "pyyaml>=6.0",
+]
+
+[tool.uv]
+default-groups = []
+
 [tool.ruff]
 target-version = "py313"
 line-length = 100
@@ -20,3 +109,7 @@ known-first-party = ["flownexus", "core", "sensordata", "frontend"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings"
+python_files = ["test_*.py", "*_test.py", "tests.py"]
