@@ -71,7 +71,6 @@ docs = [
     "sphinxcontrib-httpdomain>=1.8.1",
     "sphinxcontrib-plantuml>=0.31",
     "sphinxcontrib-redoc>=1.6.0",
-    "sphinx-sitemap>=2.9.0",
 ]
 
 # Mock device simulator

@@ -38,7 +38,6 @@ extensions = [
     "sphinx.ext.imgconverter",
     "sphinx.ext.todo",
     "sphinxcontrib.redoc",
-    "sphinx_sitemap",
 ]
 
 exclude_patterns = []
@@ -48,10 +47,6 @@ html_static_path = ["_static"]
 html_favicon = "_static/flownexus_favicon.svg"
 html_baseurl = "https://flownexus-lwm2m.github.io/flownexus/"
 
-sitemap_url_scheme = "{link}"
-sitemap_locales = [None]
-# Add robots.txt so search engines can index the site
-html_extra_path = ["_static/robots.txt", "_static/google70331152569d412b.html"]
 
 # Single gray logo for both dark and light themes (not used)
 # html_logo = '_static/flownexus_logo_gray.svg'
