@@ -101,7 +101,7 @@ This deployment supports four subdomains:
 * **dashboard.flownexus.org** - Dynamic dashboard (Django application)
 
 Architecture Overview
-....................
+.....................
 
 The deployment uses a split traffic routing approach:
 
