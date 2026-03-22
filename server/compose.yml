@@ -20,8 +20,8 @@ services:
     container_name: flownexus-django
     stop_grace_period: 5s
     build:
-      context: ./django
-      dockerfile: Dockerfile.django
+      context: ..
+      dockerfile: server/django/Dockerfile.django
       args:
         APP_VERSION: ${APP_VERSION:-dev}
     volumes:

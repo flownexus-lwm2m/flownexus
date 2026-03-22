@@ -21,8 +21,8 @@ COPY pyproject.toml uv.lock /django/
 # Install production dependencies only
 RUN uv sync --no-dev --frozen
 
-# Copy the rest of the code
-COPY . /django/
+# Copy the Django application code
+COPY server/django/ /django/
 
 # Collect static files
 RUN uv run python manage.py collectstatic --noinput
