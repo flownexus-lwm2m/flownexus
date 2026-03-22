@@ -21,18 +21,14 @@ infrastructure that supports the entire IoT ecosystem by:
 Build and Run
 -------------
 
-The Django server can also run locally, without the need of a container.
-Make sure to create a virtual environment and install the requirements:
+The Django server can also run locally without containers:
 
 .. code-block:: console
 
-  host:~$ source venv/bin/activate
-  host:~$ cd workspace/flownexus/server/django
-  host:~/workspace/flownexus/server/django$ pip install -r requirements.txt
-  host:~/workspace/flownexus/server/django$ ./django_start.sh
+  host:~/flownexus$ uv sync --no-dev
+  host:~/flownexus$ uv run --no-dev server/django/django_start.sh
 
-The Django server should now be up and running under the following URL:
-``http://localhost:8000/admin``. The admin login is ``admin`` and the password
+The server will be available at ``http://localhost:8000/admin``.
 
 
 Testing

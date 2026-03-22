@@ -1,44 +1,22 @@
 flownexus Documentation
 =======================
 
-This directory contains the source code for the flownexus documentation.
-
-System Requirements
+Build Documentation
 ###################
 
-To build the documentation, you need the following system packages installed:
+Requirements::
 
-- Python 3
-- tox
-- Graphviz (for ERD diagrams)
-- Default JRE and PlantUML (for sequence diagrams)
+    sudo apt-get install python3 graphviz default-jre plantuml
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
-On Debian/Ubuntu-based systems, you can install them with::
+Build HTML::
 
-    sudo apt-get install python3 tox graphviz default-jre plantuml
+    make doc-html
 
-Build the Documentation
-#######################
+View at ``doc/build/html/index.html``.
 
-The documentation is built using ``tox``.
-
-Build HTML documentation::
-
-    tox -e html
-
-The generated documentation will be available in ``build/html/index.html``.
-
-Build PDF documentation (requires LaTeX)::
-
-    tox -e pdf
-
-Live Documentation Server
-#########################
-
-For development, you can serve the documentation with live reload::
+Live reload server::
 
     make doc
 
-This will start a web server at http://localhost:8000 that automatically
-rebuilds and refreshes when you make changes to the documentation source
-files.
+Serves at http://localhost:8001.
