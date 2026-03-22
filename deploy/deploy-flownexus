@@ -227,7 +227,7 @@ sleep 2
 
 # Build images using podman-compose (reuses existing build logic)
 cd "$app_root"
-APP_VERSION="$APP_VERSION" podman-compose -f server/compose.yml build
+APP_VERSION="$APP_VERSION" podman-compose -f "$app_root/server/compose.yml" build
 
 # Start containers via systemd
 systemctl --user start flownexus-redis.service
