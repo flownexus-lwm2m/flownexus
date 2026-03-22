@@ -27,23 +27,23 @@ class TestMockSetupCommands:
         assert ResourceType.objects.get(object_id=10240, resource_id=0).name == "ep_registered"
 
     def test_load_scenario_updates_existing_records(self):
-        call_command("load_scenario", config="multi-site")
+        call_command("load_scenario", config="test-minimal")
 
-        warehouse = Site.objects.get(name="Warehouse")
+        warehouse = Site.objects.get(name="Test Site")
         warehouse.description = "outdated"
         warehouse.save(update_fields=["description"])
 
-        user = User.objects.get(username="user-warehouse")
+        user = User.objects.get(username="test-user")
         membership = SiteMembership.objects.get(user=user, site=warehouse)
         membership.can_view_firmware = False
         membership.save(update_fields=["can_view_firmware"])
 
-        call_command("load_scenario", config="multi-site")
+        call_command("load_scenario", config="test-minimal")
 
         warehouse.refresh_from_db()
         membership.refresh_from_db()
 
-        assert warehouse.description == "Storage facility with environmental monitoring"
+        assert warehouse.description == "Test site for automated testing"
         assert membership.can_view_firmware is True
 
     def test_load_scenario_fails_for_missing_file(self):

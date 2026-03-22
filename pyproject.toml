@@ -46,6 +46,7 @@ test = [
     "factory-boy>=3.3.1,<4.0",
     "pytest-django>=4.11.1,<5.0",
     "pytest>=8.3.4,<9.0",
+    "pytest-xdist>=3.6.0",
 ]
 
 [dependency-groups]
@@ -111,5 +112,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "core.settings"
+DJANGO_SETTINGS_MODULE = "core.settings_test"
 python_files = ["test_*.py", "*_test.py", "tests.py"]
+# Enable parallel execution and database reuse for speed
+addopts = "-n auto --reuse-db"

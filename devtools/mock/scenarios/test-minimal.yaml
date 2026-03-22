@@ -1,0 +1,43 @@
+#
+# Minimal Test Scenario
+# Lightweight scenario for automated testing - loads quickly
+#
+scenario_name: "test-minimal"
+description: "Minimal scenario for unit tests (2 devices, 1 site, 1 user)"
+
+# Device simulation settings
+devices:
+  count: 2
+  interval: 1.0
+
+# Device-to-site assignments
+device_assignments:
+  Test Site:
+    - 1
+  # Device 2 left unassigned
+
+# Sites configuration
+sites:
+  - name: "Test Site"
+    description: "Test site for automated testing"
+
+# Test users
+users:
+  - username: "admin"
+    password: "admin"
+    is_superuser: true
+    sites: []
+
+  - username: "test-user"
+    password: "password"
+    is_superuser: false
+    sites:
+      - name: "Test Site"
+        role: "USER"
+        permissions:
+          can_view_overview: true
+          can_view_firmware: true
+          can_view_data_analysis: true
+          can_manage_firmware: false
+          can_perform_operations: false
+          can_manage_devices: false
