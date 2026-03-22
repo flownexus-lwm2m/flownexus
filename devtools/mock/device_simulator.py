@@ -113,7 +113,7 @@ class MockBackend:
         self.duration = config.get("duration", 0)  # 0 means infinite
         self.run = config.get("run", True)
         self.endpoints = []
-        self.start_time = time.time()
+        # start_time is set in start() after registration completes
         self.fota_states = {}  # ep -> current_fota_info
         self.enable_leshan_api = config.get("enable_leshan_api", True)
         self.leshan_api_port = config.get("leshan_api_port", 8081)
@@ -363,6 +363,9 @@ class MockBackend:
 
         print(f"\n{len(self.endpoints)}/{self.device_count} devices registered successfully")
         print(f"Sending telemetry every {self.interval}s (Press Ctrl+C to stop)\n")
+
+        # Start the duration timer now that registration is complete
+        self.start_time = time.time()
 
         tick = 0
         last_status_time = time.time()
