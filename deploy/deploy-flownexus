@@ -1,4 +1,3 @@
-#
 #!/bin/sh
 #
 # Copyright (c) 2026 Jonas Remmert
@@ -12,16 +11,30 @@ usage() {
     cat <<'EOF'
 Usage: deploy-flownexus [options]
 
+Deploy Flownexus using systemd Quadlet containers (rootless Podman).
+
 Optional:
-  --setup-only  Only create directories and reload caddy, skip container deployment
-  --deploy-user User that owns the repository and runs Podman (default: flownexus)
-  --app-root    Repository root (default: script parent directory)
-  --web-root    Web root (default: /var/www/flownexus)
-  --db-path     SQLite database directory (default: <app-root>/server/data)
-  --firmware-path Firmware download directory (default: /var/www/flownexus/binaries)
-  --caddyfile   Path to the Caddyfile (default: <app-root>/deploy/Caddyfile)
+  --local-test      Run containers locally using podman-compose (for testing)
+  --setup-only      Only create directories and reload caddy, skip container deployment
+  --deploy-user     User that owns the repository and runs containers (default: flownexus)
+  --app-root        Repository root (default: script parent directory)
+  --web-root        Web root (default: /var/www/flownexus)
+  --db-path         SQLite database directory (default: <app-root>/server/data)
+  --firmware-path   Firmware download directory (default: /var/www/flownexus/binaries)
+  --caddyfile       Path to the Caddyfile (default: <app-root>/deploy/Caddyfile)
   --caddyfile-target Final Caddyfile path (default: /etc/caddy/Caddyfile)
-  --health-url  Local health check URL (default: http://127.0.0.1:8000/admin/login/)
+  --health-url      Local health check URL (default: http://127.0.0.1:8000/admin/login/)
+  -h, --help        Show this help message
+
+Examples:
+  # Deploy to production (default)
+  sudo deploy-flownexus
+
+  # Local testing with podman-compose
+  deploy-flownexus --local-test
+
+  # Setup only (directories + caddy)
+  sudo deploy-flownexus --setup-only
 EOF
 }
 
@@ -34,9 +47,14 @@ caddyfile_target="/etc/caddy/Caddyfile"
 health_url="http://127.0.0.1:8000/admin/login/"
 caddyfile_source="/home/flownexus/flownexus/deploy/Caddyfile"
 setup_only=0
+local_test=0
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
+        --local-test)
+            local_test=1
+            shift
+            ;;
         --setup-only)
             setup_only=1
             shift
@@ -90,8 +108,29 @@ if [ -z "$caddyfile_source" ]; then
     exit 2
 fi
 
+APP_VERSION=$(cd "$app_root" && git describe --tags 2>/dev/null || echo "dev")
+
+if [ "$local_test" -eq 1 ]; then
+    # Local testing mode - use podman-compose
+    if [ -z "$db_path" ]; then
+        db_path="$app_root/server/data"
+    fi
+    
+    printf '%s\n' "Running in local test mode with podman-compose..."
+    cd "$app_root"
+    APP_VERSION="$APP_VERSION" \
+    DJANGO_DB_HOST_PATH="$db_path" \
+    FIRMWARE_STORAGE_HOST_PATH="$firmware_path" \
+    podman-compose -f server/compose.yml up -d --build
+    
+    printf '%s\n' "Local test deployment complete."
+    printf '%s\n' "View logs: podman logs -f flownexus-django"
+    exit 0
+fi
+
+# Production mode - require root for systemd/caddy operations
 if [ "$(id -u)" -ne 0 ]; then
-    printf '%s\n' "deploy-flownexus must run as root via sudo" >&2
+    printf '%s\n' "deploy-flownexus must run as root via sudo for production deployment" >&2
     exit 1
 fi
 
@@ -99,15 +138,23 @@ if [ -z "$db_path" ]; then
     db_path="$app_root/server/data"
 fi
 
+# ==========================================
+# 1. SETUP DIRECTORIES AND PERMISSIONS
+# ==========================================
+
 install -d -o "$deploy_user" -g caddy -m 2775 "$web_root"
 install -d -o "$deploy_user" -g caddy -m 2775 "$web_root/landing"
 install -d -o "$deploy_user" -g caddy -m 2775 "$web_root/docs"
 install -d -o "$deploy_user" -g caddy -m 2775 "$firmware_path"
 install -d -o "$deploy_user" -g "$deploy_user" -m 2775 "$db_path"
+install -d -o "$deploy_user" -g "$deploy_user" -m 2775 "/home/$deploy_user/backups"
+
+# ==========================================
+# 2. CONFIGURE CADDY
+# ==========================================
 
 caddy validate --config "$caddyfile_source"
 install -m 0644 "$caddyfile_source" "$caddyfile_target"
-
 systemctl reload caddy || systemctl restart caddy
 
 if [ "$setup_only" -eq 1 ]; then
@@ -115,22 +162,89 @@ if [ "$setup_only" -eq 1 ]; then
     exit 0
 fi
 
-# Compute version from git describe (e.g., v0.1.1-75-gd4994ef) or fallback to "dev"
-APP_VERSION=$(cd "$app_root" && git describe --tags 2>/dev/null || echo "dev")
+# ==========================================
+# 3. ENABLE LINGER FOR ROOTLESS CONTAINERS
+# ==========================================
 
+if ! loginctl show-user "$deploy_user" --property=Linger --value | grep -q "yes"; then
+    printf '%s\n' "Enabling linger for $deploy_user (required for rootless containers to persist after logout)..."
+    loginctl enable-linger "$deploy_user"
+fi
+
+# ==========================================
+# 4. BACKUP DATABASE
+# ==========================================
+
+db_file="$db_path/db.sqlite3"
+if [ -f "$db_file" ]; then
+    backup_dir="/home/$deploy_user/backups"
+    backup_file="db_$(date +%Y-%m-%d_%H-%M-%S).sqlite3"
+    printf '%s\n' "Backing up database to $backup_dir/$backup_file..."
+    install -d -o "$deploy_user" -g "$deploy_user" -m 2775 "$backup_dir"
+    cp "$db_file" "$backup_dir/$backup_file"
+    chown "$deploy_user:$deploy_user" "$backup_dir/$backup_file"
+fi
+
+# ==========================================
+# 5. DEPLOY CONTAINERS VIA SYSTEMD QUADLET
+# ==========================================
+
+printf '%s\n' "Deploying containers via systemd Quadlet..."
+
+# Get the user's UID for XDG_RUNTIME_DIR
+user_uid=$(id -u "$deploy_user")
+
+# Create the deployment script for the user
+deploy_script=$(cat << INNEREOF
+#!/bin/sh
+set -e
+
+# Ensure podman socket is running
+systemctl --user start podman.socket 2>/dev/null || true
+
+# Install quadlet files
+mkdir -p ~/.config/containers/systemd
+cp "$app_root/deploy/quadlet/"*.container ~/.config/containers/systemd/
+cp "$app_root/deploy/quadlet/"*.volume ~/.config/containers/systemd/
+cp "$app_root/deploy/quadlet/"*.network ~/.config/containers/systemd/
+
+# Reload systemd to pick up new quadlet files
+systemctl --user daemon-reload
+
+# Stop existing containers gracefully
+systemctl --user stop flownexus-django.service 2>/dev/null || true
+systemctl --user stop flownexus-leshan.service 2>/dev/null || true
+systemctl --user stop flownexus-redis.service 2>/dev/null || true
+sleep 2
+
+# Build images using podman-compose (reuses existing build logic)
+cd "$app_root"
+APP_VERSION="$APP_VERSION" podman-compose -f server/compose.yml build
+
+# Start containers via systemd
+systemctl --user start flownexus-redis.service
+systemctl --user start flownexus-leshan.service
+systemctl --user start flownexus-django.service
+INNEREOF
+)
+
+# Run deployment as the deploy user
 runuser -u "$deploy_user" -- env \
-    APP_VERSION="$APP_VERSION" \
-    DJANGO_DB_HOST_PATH="$db_path" \
-    FIRMWARE_STORAGE_HOST_PATH="$firmware_path" \
-    sh -lc "cd '$app_root' && podman-compose -f '$app_root/server/compose.yml' up -d --build"
+    XDG_RUNTIME_DIR="/run/user/$user_uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_uid/bus" \
+    sh -c "$deploy_script"
 
-# Wait for health check with retry loop (up to 5 minutes)
-max_retries=100
-retry_delay=3
+# ==========================================
+# 6. VERIFY DEPLOYMENT
+# ==========================================
+
+printf '%s\n' "Waiting for services to start..."
+sleep 10
+
+max_retries=30
+retry_delay=5
 retry_count=0
 health_ok=0
-
-printf '%s\n' "Waiting for health check at $health_url..."
 
 while [ "$retry_count" -lt "$max_retries" ]; do
     if curl -fsS "$health_url" > /dev/null 2>&1; then
@@ -145,10 +259,25 @@ while [ "$retry_count" -lt "$max_retries" ]; do
 done
 
 if [ "$health_ok" -eq 0 ]; then
-    printf '%s\n' "ERROR: Health check failed after $max_retries attempts (~5 minutes)" >&2
-    podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+    printf '%s\n' "ERROR: Health check failed after $max_retries attempts" >&2
+    printf '%s\n' "Check service status:" >&2
+    runuser -u "$deploy_user" -- systemctl --user status flownexus-redis.service --no-pager || true
+    runuser -u "$deploy_user" -- systemctl --user status flownexus-leshan.service --no-pager || true
+    runuser -u "$deploy_user" -- systemctl --user status flownexus-django.service --no-pager || true
     exit 1
 fi
 
-printf 'Health check passed after %d attempts\n' "$retry_count"
-podman ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+printf '%s\n' ""
+printf '%s\n' "=========================================="
+printf '%s\n' "Deployment successful!"
+printf '%s\n' "=========================================="
+printf '%s\n' ""
+printf '%s\n' "Service Status:"
+runuser -u "$deploy_user" -- systemctl --user is-active flownexus-redis.service
+runuser -u "$deploy_user" -- systemctl --user is-active flownexus-leshan.service
+runuser -u "$deploy_user" -- systemctl --user is-active flownexus-django.service
+printf '%s\n' ""
+printf '%s\n' "View logs with:"
+printf '%s\n' "  journalctl --user -u flownexus-django -f"
+printf '%s\n' "  journalctl --user -u flownexus-redis -f"
+printf '%s\n' "  journalctl --user -u flownexus-leshan -f"
