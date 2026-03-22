@@ -101,7 +101,7 @@ This deployment supports four subdomains:
 * **dashboard.flownexus.org** - Dynamic dashboard (Django application)
 
 Architecture Overview
-.....................
+....................
 
 The deployment uses a split traffic routing approach:
 
@@ -126,8 +126,39 @@ This architecture provides:
 
 * **Caddy** - Reverse proxy with automatic HTTPS
 * **Podman** - Container runtime (rootless)
-* **Podman Compose** - Container orchestration
+* **systemd Quadlet** - Container orchestration via systemd units
 * **GitHub Actions** - CI/CD pipeline
+
+Container Management with systemd Quadlet
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The production deployment uses **systemd Quadlet** instead of Podman Compose. Quadlet
+provides native systemd integration for rootless containers, offering several advantages:
+
+* **Automatic startup** - Containers start on boot via systemd
+* **Better lifecycle management** - systemd handles stop/start/restart
+* **Health checks** - systemd monitors container health automatically
+* **Logging** - Centralized logging via ``journalctl``
+* **Crash recovery** - Automatic restart on failure
+* **SSH session independence** - Containers persist after logout (via ``loginctl enable-linger``)
+
+Quadlet files are located in ``deploy/quadlet/`` and define three services:
+
+* **flownexus-redis** - Redis cache and message broker
+* **flownexus-leshan** - LwM2M server with CoAP/DTLS endpoints
+* **flownexus-django** - Django application with Celery worker
+
+Each service is defined as a ``.container`` file that systemd converts to a service unit.
+Logs are captured by systemd journal instead of files, viewable with:
+
+.. code-block:: console
+
+   vserver:~$ journalctl --user -u flownexus-django -f
+   vserver:~$ journalctl --user -u flownexus-redis -f
+   vserver:~$ journalctl --user -u flownexus-leshan -f
+
+For local development and testing, use ``podman-compose -f server/compose.yml up``
+which provides the same container configuration but without systemd integration.
 
 Server Requirements
 ...................
@@ -320,25 +351,33 @@ Caddy Issues
 Container Issues
 ~~~~~~~~~~~~~~~~
 
-**Check container status:**
+**Check service status:**
 
 .. code-block:: console
 
-   vserver:~$ podman ps -a
+   vserver:~$ systemctl --user status flownexus-django
+   vserver:~$ systemctl --user status flownexus-redis
+   vserver:~$ systemctl --user status flownexus-leshan
 
-**View logs:**
+**View logs (via systemd journal):**
 
 .. code-block:: console
 
-   vserver:~$ podman logs flownexus-django
-   vserver:~$ podman logs flownexus-leshan
-   vserver:~$ podman logs flownexus-redis
+   vserver:~$ journalctl --user -u flownexus-django -f
+   vserver:~$ journalctl --user -u flownexus-redis -f
+   vserver:~$ journalctl --user -u flownexus-leshan -f
 
 **Restart specific service:**
 
 .. code-block:: console
 
-   vserver:~$ podman restart flownexus-django
+   vserver:~$ systemctl --user restart flownexus-django
+
+**View all flownexus services:**
+
+.. code-block:: console
+
+   vserver:~$ systemctl --user list-units 'flownexus-*'
 
 SSL Certificate Issues
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -433,25 +472,31 @@ After making these changes, commit and push to trigger deployment.
 File Locations
 ....................
 
-+------------------+--------------------------------------------------+------------------------+
-| File             | Location                                         | Purpose                |
-+==================+==================================================+========================+
-| Static website   | ``/var/www/flownexus/landing/``                  | Landing page           |
-+------------------+--------------------------------------------------+------------------------+
-| Documentation    | ``/var/www/flownexus/docs/``                     | Sphinx HTML            |
-+------------------+--------------------------------------------------+------------------------+
-| Firmware         | ``/var/www/flownexus/binaries/``                 | Firmware downloads     |
-+------------------+--------------------------------------------------+------------------------+
-| SQLite database  | ``~flownexus/flownexus/server/data/``            | Persistent Django data |
-+------------------+--------------------------------------------------+------------------------+
-| Caddy config     | ``/etc/caddy/Caddyfile``                         | Reverse proxy          |
-+------------------+--------------------------------------------------+------------------------+
-| Caddy data       | ``/var/lib/caddy/``                              | SSL certificates       |
-+------------------+--------------------------------------------------+------------------------+
-| Container config | ``~flownexus/flownexus/server/compose.yml``      | Podman services        |
-+------------------+--------------------------------------------------+------------------------+
-| Logs             | ``/var/log/caddy/``                              | Access logs            |
-+------------------+--------------------------------------------------+------------------------+
++------------------+----------------------------------------------------------+---------------------------+
+| File             | Location                                                 | Purpose                   |
++==================+==========================================================+===========================+
+| Static website   | ``/var/www/flownexus/landing/``                          | Landing page              |
++------------------+----------------------------------------------------------+---------------------------+
+| Documentation    | ``/var/www/flownexus/docs/``                             | Sphinx HTML               |
++------------------+----------------------------------------------------------+---------------------------+
+| Firmware         | ``/var/www/flownexus/binaries/``                         | Firmware downloads        |
++------------------+----------------------------------------------------------+---------------------------+
+| SQLite database  | ``~flownexus/flownexus/server/data/``                    | Persistent Django data    |
++------------------+----------------------------------------------------------+---------------------------+
+| Database backups | ``~flownexus/backups/``                                  | Automatic DB backups      |
++------------------+----------------------------------------------------------+---------------------------+
+| Caddy config     | ``/etc/caddy/Caddyfile``                                 | Reverse proxy             |
++------------------+----------------------------------------------------------+---------------------------+
+| Caddy data       | ``/var/lib/caddy/``                                      | SSL certificates          |
++------------------+----------------------------------------------------------+---------------------------+
+| Quadlet configs  | ``~flownexus/.config/containers/systemd/``               | Container systemd units   |
++------------------+----------------------------------------------------------+---------------------------+
+| Container config | ``~flownexus/flownexus/server/compose.yml``              | Local dev (compose)       |
++------------------+----------------------------------------------------------+---------------------------+
+| Quadlet source   | ``~flownexus/flownexus/deploy/quadlet/``                 | Quadlet definitions       |
++------------------+----------------------------------------------------------+---------------------------+
+| Logs             | ``journalctl --user -u flownexus-*``                     | Container logs            |
++------------------+----------------------------------------------------------+---------------------------+
 
 Maintenance
 .............
@@ -464,10 +509,35 @@ Updating Containers
 Usually GitHub Actions performs updates for you. Use these commands only when
 you intentionally want to update or recover the server manually.
 
+**Option 1: Using make deploy (Recommended for manual deploys)**
+
+From your local development machine:
+
+.. code-block:: console
+
+   local:~$ make deploy SERVER=flownexus.org USER=flownexus
+
+This will:
+1. SSH to the server and update the git checkout
+2. Run the deploy script via sudo
+
+**Option 2: Direct deployment on server**
+
 .. code-block:: console
 
    vserver:~flownexus/flownexus$ git pull
-   vserver:~flownexus/flownexus$ export APP_VERSION=$(git describe --always --dirty --tags)
+   vserver:~flownexus/flownexus$ sudo deploy/deploy-flownexus
+
+To deploy only the container changes without updating static assets:
+
+.. code-block:: console
+
+   vserver:~flownexus/flownexus$ sudo deploy/deploy-flownexus --setup-only
+
+For local development and testing, use Podman Compose:
+
+.. code-block:: console
+
    vserver:~flownexus/flownexus$ podman-compose -f server/compose.yml up -d --build
 
 Cleaning Up
