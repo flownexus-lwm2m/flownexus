@@ -110,7 +110,7 @@ services:
       - LESHAN_DTLS_PORT=5684
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/clients/"]
       interval: 30s
       timeout: 10s
       retries: 3
