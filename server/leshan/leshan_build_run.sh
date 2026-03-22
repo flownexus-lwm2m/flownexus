@@ -1,14 +1,13 @@
 #!/bin/bash
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 
 # Exit immediately if a command fails, and ensure pipeline failures are captured
 set -e
 set -o pipefail
 
-# Ensure logs directory exists
-mkdir -p logs
-
-logfile="logs/leshan_$(date +%Y-%m-%d_%H-%M-%S).log"
-touch "$logfile"
-
-mvn clean install 2>&1 | tee -a "$logfile"
-java -jar target/leshan-svr-0.9-jar-with-dependencies.jar 2>&1 | tee -a "$logfile"
+mvn clean install
+exec java -jar target/leshan-svr-0.9-jar-with-dependencies.jar
