@@ -9,7 +9,8 @@
 	compliance \
 	doc-html \
 	doc-pdf \
-	doc
+	doc \
+	server-run
 
 # Run Django tests using uv
 test-django:
@@ -69,3 +70,11 @@ test-all: test-django test-e2e compliance
 # Build the server containers with the current git version
 server-build:
 	@APP_VERSION=$$(git describe --always --dirty --tags) podman-compose -f server/compose.yml build
+
+# Run server stack in foreground with persistent data (Ctrl+C to stop)
+server-run:
+	@echo "Starting flownexus server stack..."
+	@APP_VERSION=$$(git describe --always --dirty --tags 2>/dev/null || echo "dev") \
+		DJANGO_DB_HOST_PATH=./server/data \
+		FIRMWARE_STORAGE_HOST_PATH=./server/firmware \
+		podman-compose -f server/compose.yml up --build

@@ -33,6 +33,8 @@ services:
       - ./logs:/django/logs:rw,z
       # Firmware binaries for upload and download
       - ${FIRMWARE_STORAGE_HOST_PATH:-./firmware}:/var/www/flownexus/binaries:rw,z
+      # Named volume to shadow host's .venv with container's built venv
+      - django-venv:/django/.venv
     # Only bind to localhost - Caddy will reverse proxy
     ports:
       - "127.0.0.1:8000:8000"
@@ -123,3 +125,8 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
+
+# Named volumes
+volumes:
+  # Django virtual environment to shadow host's .venv
+  django-venv:

@@ -18,8 +18,14 @@ WORKDIR /django
 # Copy dependency files from repo root
 COPY pyproject.toml uv.lock /django/
 
+# Ensure python is accessible at the expected path for uv
+RUN ln -sf /usr/local/bin/python3 /usr/bin/python3
+
 # Install production dependencies only
 RUN uv sync --no-dev --frozen
+
+# Add virtual environment to PATH so python/celery commands work in entrypoint
+ENV PATH="/django/.venv/bin:$PATH"
 
 # Copy the Django application code
 COPY server/django/ /django/
