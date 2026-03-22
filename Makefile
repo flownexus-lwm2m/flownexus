@@ -48,10 +48,10 @@ compliance:
 
 # Build documentation
 doc-html: doc-generate
-	cd doc && uv run --group docs sphinx-build -E -W --keep-going -b html source build/html
+	uv run --group docs sphinx-build -E -W --keep-going -b html doc/source doc/build/html
 
 doc-pdf: doc-generate
-	cd doc && uv run --group docs sphinx-build -M latexpdf source build/pdf
+	uv run --group docs sphinx-build -M latexpdf doc/source doc/build/pdf
 
 # Generate documentation artifacts (OpenAPI schema, ERD diagram)
 doc-generate:
@@ -61,7 +61,7 @@ doc-generate:
 
 # Serve documentation with live reload
 doc: doc-generate
-	cd doc && uv run --group docs sphinx-autobuild source build/html --port 8001 --host 0.0.0.0
+	uv run --group docs sphinx-autobuild doc/source doc/build/html --port 8001 --host 0.0.0.0
 
 # Placeholder for all tests
 test-all: test-django test-e2e compliance
