@@ -26,8 +26,8 @@ services:
       args:
         APP_VERSION: ${APP_VERSION:-dev}
     volumes:
-      # Django code (read-only, private SELinux context)
-      - ./django:/django:ro,Z
+      # Django code (read-write, private SELinux context) - needs rw for .venv mount
+      - ./django:/django:rw,Z
       # Persistent SQLite database storage
       - ${DJANGO_DB_HOST_PATH:-./data}:/data:rw,Z
       # Logs directory (writable, shared context)

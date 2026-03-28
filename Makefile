@@ -75,10 +75,13 @@ server-build:
 # Run server stack in foreground with persistent data (Ctrl+C to stop)
 server-run:
 	@echo "Starting flownexus server stack..."
-	@APP_VERSION=$$(git describe --always --dirty --tags 2>/dev/null || echo "dev") \
-		DJANGO_DB_HOST_PATH=./server/data \
-		FIRMWARE_STORAGE_HOST_PATH=./server/firmware \
-		podman-compose -f server/compose.yml up --build
+	@trap 'echo "Shutting down containers..."; podman-compose -f server/compose.yml down; exit 0' INT TERM; \
+	APP_VERSION=$$(git describe --always --dirty --tags 2>/dev/null || echo "dev") \
+		DJANGO_DB_HOST_PATH=$$(pwd)/server/data \
+		FIRMWARE_STORAGE_HOST_PATH=$$(pwd)/server/firmware \
+		podman-compose -f server/compose.yml up --build; \
+	echo "Shutting down containers..."; \
+	podman-compose -f server/compose.yml down
 
 # Deploy to production server (requires sudo and SSH access)
 # This uses systemd Quadlet for persistent rootless containers
