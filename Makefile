@@ -73,8 +73,11 @@ server-build:
 	@APP_VERSION=$$(git describe --always --dirty --tags) podman-compose -f server/compose.yml build
 
 # Run server stack in foreground with persistent data (Ctrl+C to stop)
+# Uses --build to rebuild images and -v to remove named volumes (e.g. django-venv)
+# so that dependency changes in uv.lock are always picked up.
 server-run:
 	@echo "Starting flownexus server stack..."
+	@podman-compose -f server/compose.yml down -v 2>/dev/null || true
 	@trap 'echo "Shutting down containers..."; podman-compose -f server/compose.yml down; exit 0' INT TERM; \
 	APP_VERSION=$$(git describe --always --dirty --tags 2>/dev/null || echo "dev") \
 		DJANGO_DB_HOST_PATH=$$(pwd)/server/data \
