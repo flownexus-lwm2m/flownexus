@@ -39,6 +39,7 @@ import org.eclipse.leshan.server.registration.RegistrationListener;
 import org.eclipse.leshan.server.registration.RegistrationUpdate;
 import org.eclipse.leshan.server.observation.ObservationListener;
 import org.eclipse.leshan.server.californium.endpoint.CaliforniumServerEndpointsProvider;
+import org.eclipse.californium.core.config.CoapConfig;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -91,7 +92,13 @@ public class LeshanSvr{
 
     public LeshanSvr() {
         LeshanServerBuilder builder = new LeshanServerBuilder();
-        builder.setEndpointsProviders(new CaliforniumServerEndpointsProvider());
+        // Raise the CoAP block-wise reassembly limit from the Californium default
+        // (8 KB) to 20 KB to support larger LwM2M Send payloads.
+        CaliforniumServerEndpointsProvider endpointsProvider =
+                new CaliforniumServerEndpointsProvider.Builder()
+                        .setConfiguration(cfg -> cfg.set(CoapConfig.MAX_RESOURCE_BODY_SIZE, 20480))
+                        .build();
+        builder.setEndpointsProviders(endpointsProvider);
         server = builder.build();
         mapper = new ObjectMapper();
         module = new SimpleModule();

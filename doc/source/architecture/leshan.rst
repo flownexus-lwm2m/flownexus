@@ -64,3 +64,31 @@ requests are re-initiated.
 
    - SingleObserve (Temperature Sensor Value): ``{3303, 0, 5700}``
    - CompositeObject (Custom Object Id): ``{10300}``
+
+CoAP Block-wise Transfer Limit
+-------------------------------
+
+LwM2M devices may send large payloads (e.g. batched sensor data via the LwM2M
+Send operation) using CoAP block-wise transfer (RFC 7959). In this mode the
+device splits the payload into smaller blocks and sends them sequentially.
+Californium, the CoAP library underlying Leshan, reassembles the blocks in
+memory before passing the complete body to the application.
+
+To guard against memory exhaustion, Californium enforces a maximum reassembly
+size via the ``MAX_RESOURCE_BODY_SIZE`` configuration key. If the total
+assembled payload exceeds this limit, the server aborts the transfer and returns
+a ``4.13 Request Entity Too Large`` CoAP response to the device.
+
+The Californium default for this value is 8 KB. flownexus raises it to **20 KB**
+to accommodate larger LwM2M Send payloads. The setting is applied in
+``LeshanSvr.java`` when constructing the endpoints provider:
+
+.. code-block:: java
+
+   new CaliforniumServerEndpointsProvider.Builder()
+       .setConfiguration(cfg ->
+           cfg.set(CoapConfig.MAX_RESOURCE_BODY_SIZE, 20480))
+       .build();
+
+If devices need to transmit payloads larger than 20 KB, increase the value
+accordingly and rebuild the Leshan container.
