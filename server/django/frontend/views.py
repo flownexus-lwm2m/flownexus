@@ -646,6 +646,9 @@ def data_analysis(request):
                 events = events.filter(time__lte=end_date)
             if endpoint_id:
                 events = events.filter(endpoint_id=endpoint_id)
+            event_type_filter = request.GET.get("event_type") or None
+            if event_type_filter:
+                events = events.filter(event_type=event_type_filter)
 
             paginator = Paginator(events, 50)
             page_number = request.GET.get("page", 1)
@@ -678,11 +681,21 @@ def data_analysis(request):
                 }
             )
 
+    # Get distinct event types for the filter dropdown (scoped to user's site)
+    event_types = (
+        Event.objects.filter(endpoint__in=endpoints)
+        .values_list("event_type", flat=True)
+        .distinct()
+        .order_by("event_type")
+    )
+
     context = {
         "endpoints": endpoints,
         "resource_types": resource_types,
+        "event_types": event_types,
         "selected_endpoint": request.GET.get("endpoint", ""),
         "selected_resource_type": request.GET.get("resource_type", ""),
+        "selected_event_type": request.GET.get("event_type", ""),
         "selected_time_range": time_range,
         "selected_time_from": request.GET.get("time_from", ""),
         "selected_time_to": request.GET.get("time_to", ""),
@@ -704,6 +717,7 @@ def _parse_export_filters(request: Any) -> dict[str, Any]:
     resource_type_id = request.GET.get("resource_type") or None
     if resource_type_id == "all":
         resource_type_id = None
+    event_type_filter = request.GET.get("event_type") or None
     time_range = request.GET.get("time_range", "24h")
     mode = request.GET.get("mode", "values")
 
@@ -744,6 +758,7 @@ def _parse_export_filters(request: Any) -> dict[str, Any]:
     return {
         "endpoint_id": endpoint_id,
         "resource_type_id": resource_type_id,
+        "event_type_filter": event_type_filter,
         "mode": mode,
         "start_date": start_date,
         "end_date": end_date,
@@ -762,6 +777,7 @@ def data_analysis_export(request):
     filters = _parse_export_filters(request)
     endpoint_id = filters["endpoint_id"]
     resource_type_id = filters["resource_type_id"]
+    event_type_filter = filters["event_type_filter"]
     mode = filters["mode"]
     start_date = filters["start_date"]
     end_date = filters["end_date"]
@@ -826,6 +842,8 @@ def data_analysis_export(request):
             events = events.filter(time__lte=end_date)
         if endpoint_id:
             events = events.filter(endpoint_id=endpoint_id)
+        if event_type_filter:
+            events = events.filter(event_type=event_type_filter)
 
         count = events.count()
         if count > EXPORT_ROW_LIMIT:

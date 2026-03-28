@@ -92,6 +92,15 @@
               {% endfor %}
             </select>
           </div>
+          <div class="mb-3" id="event-type-filter" style="display: none;">
+            <label class="form-label">Event Type</label>
+            <select class="form-select" name="event_type">
+              <option value="" {% if not selected_event_type %}selected{% endif %}>All Types</option>
+              {% for et in event_types %}
+              <option value="{{ et }}" {% if selected_event_type == et %}selected{% endif %}>{{ et }}</option>
+              {% endfor %}
+            </select>
+          </div>
           <div class="mb-3" id="resource-type-filter">
             <label class="form-label">Resource Type</label>
             <select class="form-select" name="resource_type">
@@ -227,6 +236,11 @@
   function toggleResourceFilter() {
     const mode = document.querySelector('select[name="mode"]').value;
     el('resource-type-filter').style.display = mode === 'values' ? 'block' : 'none';
+    el('event-type-filter').style.display = mode === 'events' ? 'block' : 'none';
+    // Reset event_type to "All Types" when switching away from events mode
+    if (mode !== 'events') {
+      document.querySelector('select[name="event_type"]').value = '';
+    }
   }
 
   function toggleCustomRange() {
