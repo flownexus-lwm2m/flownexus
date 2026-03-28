@@ -5,16 +5,19 @@
 #
 
 from datetime import timedelta
+from io import BytesIO
 from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Max
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
 from core.middleware import UNASSIGNED_SITE_KEY
 from core.permissions import get_site_filtered_endpoints, has_site_permission
@@ -689,7 +692,183 @@ def data_analysis(request):
     return render(request, "frontend/data_analysis.html", context)
 
 
+EXPORT_ROW_LIMIT = 50_000
+
+
+def _parse_export_filters(request: Any) -> dict[str, Any]:
+    """Parse and normalise the shared filter parameters used by both the data_analysis
+    view and the export view so the logic lives in exactly one place."""
+    endpoint_id = request.GET.get("endpoint") or None
+    if endpoint_id == "all":
+        endpoint_id = None
+    resource_type_id = request.GET.get("resource_type") or None
+    if resource_type_id == "all":
+        resource_type_id = None
+    time_range = request.GET.get("time_range", "24h")
+    mode = request.GET.get("mode", "values")
+
+    now = timezone.now()
+    start_date = None
+    end_date = None
+    if time_range == "1h":
+        start_date = now - timedelta(hours=1)
+    elif time_range == "7d":
+        start_date = now - timedelta(days=7)
+    elif time_range == "30d":
+        start_date = now - timedelta(days=30)
+    elif time_range == "custom":
+        time_from_str = request.GET.get("time_from")
+        time_to_str = request.GET.get("time_to")
+        if time_from_str:
+            try:
+                parsed = parse_datetime(time_from_str)
+                if parsed:
+                    start_date = (
+                        timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+                    )
+            except (ValueError, TypeError):
+                pass
+        if time_to_str:
+            try:
+                parsed = parse_datetime(time_to_str)
+                if parsed:
+                    end_date = timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+                    end_date = end_date + timedelta(minutes=1)
+            except (ValueError, TypeError):
+                pass
+    elif time_range == "all":
+        start_date = None
+    else:  # default 24h
+        start_date = now - timedelta(hours=24)
+
+    return {
+        "endpoint_id": endpoint_id,
+        "resource_type_id": resource_type_id,
+        "mode": mode,
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+
+
 @login_required
+def data_analysis_export(request):
+    """Stream an Excel (.xlsx) export of all rows matching the current filter.
+
+    Returns HTTP 400 JSON if the result set would exceed EXPORT_ROW_LIMIT rows.
+    """
+    if not _check_site_permission(request, "can_view_data_analysis"):
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
+    filters = _parse_export_filters(request)
+    endpoint_id = filters["endpoint_id"]
+    resource_type_id = filters["resource_type_id"]
+    mode = filters["mode"]
+    start_date = filters["start_date"]
+    end_date = filters["end_date"]
+
+    site_endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
+
+    wb = Workbook()
+    ws = wb.active
+    bold = Font(bold=True)
+
+    if mode == "values":
+        resources = (
+            Resource.objects.filter(endpoint__in=site_endpoints)
+            .order_by("timestamp_created")
+            .select_related("endpoint", "resource_type")
+        )
+        if start_date:
+            resources = resources.filter(timestamp_created__gte=start_date)
+        if end_date:
+            resources = resources.filter(timestamp_created__lte=end_date)
+        if endpoint_id:
+            resources = resources.filter(endpoint_id=endpoint_id)
+        if resource_type_id:
+            resources = resources.filter(resource_type_id=resource_type_id)
+
+        count = resources.count()
+        if count > EXPORT_ROW_LIMIT:
+            msg = f"Export exceeds {EXPORT_ROW_LIMIT:,} rows. Narrow your filter and try again."
+            return JsonResponse({"error": msg}, status=400)
+
+        multi_endpoint = not bool(endpoint_id)
+        if multi_endpoint:
+            headers = ["Time", "Endpoint", "Resource Type", "Value"]
+        else:
+            headers = ["Time", "Resource Type", "Value"]
+
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = bold
+
+        for r in resources:
+            ts = r.timestamp_created.strftime("%Y-%m-%d %H:%M:%S") if r.timestamp_created else ""
+            val = r.get_value()
+            rt_name = r.resource_type.name if r.resource_type else ""
+            if multi_endpoint:
+                ws.append([ts, r.endpoint.endpoint, rt_name, val])
+            else:
+                ws.append([ts, rt_name, val])
+
+        ws.title = "Sensor Values"
+
+    else:  # events mode
+        events = (
+            Event.objects.filter(endpoint__in=site_endpoints)
+            .select_related("endpoint")
+            .prefetch_related("resources__resource__resource_type")
+            .order_by("-time")
+        )
+        if start_date:
+            events = events.filter(time__gte=start_date)
+        if end_date:
+            events = events.filter(time__lte=end_date)
+        if endpoint_id:
+            events = events.filter(endpoint_id=endpoint_id)
+
+        count = events.count()
+        if count > EXPORT_ROW_LIMIT:
+            msg = f"Export exceeds {EXPORT_ROW_LIMIT:,} rows. Narrow your filter and try again."
+            return JsonResponse({"error": msg}, status=400)
+
+        # Two-pass: collect all resource names first, then write rows
+        event_list = list(events)
+        resource_names: dict[str, None] = {}
+        for e in event_list:
+            for er in e.resources.all():
+                resource_names[er.resource.resource_type.name] = None
+        extra_cols = list(resource_names.keys())
+
+        headers = ["Time", "Endpoint", "Event Type"] + extra_cols
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = bold
+
+        for e in event_list:
+            res_data: dict[str, Any] = {}
+            for er in e.resources.all():
+                res = er.resource
+                res_data[res.resource_type.name] = res.get_value()
+            ts = e.time.strftime("%Y-%m-%d %H:%M:%S")
+            row = [ts, e.endpoint.endpoint, e.event_type]
+            row += [res_data.get(name, "") for name in extra_cols]
+            ws.append(row)
+
+        ws.title = "Events"
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="flownexus_export.xlsx"'
+    return response
+
+
 def profile(request):
     """Display user profile with memberships and password change form."""
     memberships = (

@@ -6,11 +6,13 @@
 
 import json
 from datetime import timedelta
+from io import BytesIO
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import load_workbook
 
 from sensordata.factories import (
     EndpointFactory,
@@ -22,7 +24,7 @@ from sensordata.factories import (
     SiteMembershipFactory,
     UserFactory,
 )
-from sensordata.models import Firmware, FirmwareUpdate, ResourceType, SiteMembership
+from sensordata.models import EventResource, Firmware, FirmwareUpdate, ResourceType, SiteMembership
 
 
 @pytest.mark.django_db
@@ -1356,3 +1358,282 @@ class TestDataAnalysisView:
         returned_endpoints = {item["endpoint"] for item in data["data"]}
         assert own_ep.endpoint in returned_endpoints
         assert other_ep.endpoint not in returned_endpoints
+
+
+def _export_url(**params):
+    """Build the export URL with the given query parameters."""
+    return (
+        reverse("frontend:data_analysis_export")
+        + "?"
+        + "&".join(f"{k}={v}" for k, v in params.items())
+    )
+
+
+def _wb_from_response(response):
+    """Parse an HttpResponse carrying an xlsx file into an openpyxl Workbook."""
+    return load_workbook(filename=BytesIO(response.content))
+
+
+@pytest.mark.django_db
+class TestDataAnalysisExport:
+    """Tests for the /data/export/ Excel export view."""
+
+    # ------------------------------------------------------------------
+    # Auth / permission
+    # ------------------------------------------------------------------
+
+    def test_requires_login(self, client):
+        response = client.get(_export_url(mode="values", time_range="all"))
+        assert response.status_code == 302
+
+    def test_requires_data_analysis_permission(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(user=user, site=site, can_view_data_analysis=False)
+        client.force_login(user)
+        response = client.get(_export_url(mode="values", time_range="all"))
+        assert response.status_code == 403
+
+    # ------------------------------------------------------------------
+    # Values mode
+    # ------------------------------------------------------------------
+
+    def test_values_export_returns_xlsx(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        ResourceFactory.create_batch(3, endpoint=ep, resource_type=rt)
+
+        response = client_obj.get(
+            _export_url(mode="values", endpoint=ep.endpoint, resource_type=rt.id, time_range="all")
+        )
+
+        assert response.status_code == 200
+        assert (
+            response["Content-Type"]
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        assert "attachment" in response["Content-Disposition"]
+        assert ".xlsx" in response["Content-Disposition"]
+
+    def test_values_export_single_endpoint_headers(self, client):
+        """Single endpoint: no Endpoint column."""
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        ResourceFactory.create_batch(2, endpoint=ep, resource_type=rt)
+
+        response = client_obj.get(
+            _export_url(mode="values", endpoint=ep.endpoint, resource_type=rt.id, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        assert headers == ["Time", "Resource Type", "Value"]
+        assert ws.max_row == 3  # header + 2 data rows
+
+    def test_values_export_all_devices_includes_endpoint_column(self, client):
+        """All devices: Endpoint column present."""
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep1 = EndpointFactory(site=site)
+        ep2 = EndpointFactory(site=site)
+        ResourceFactory(endpoint=ep1, resource_type=rt)
+        ResourceFactory(endpoint=ep2, resource_type=rt)
+
+        response = client_obj.get(
+            _export_url(mode="values", endpoint="all", resource_type=rt.id, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        assert headers == ["Time", "Endpoint", "Resource Type", "Value"]
+        assert ws.max_row == 3  # header + 2 data rows
+
+    def test_values_export_filtered_by_endpoint(self, client):
+        """Only rows for the selected endpoint are exported."""
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep1 = EndpointFactory(site=site)
+        ep2 = EndpointFactory(site=site)
+        ResourceFactory.create_batch(2, endpoint=ep1, resource_type=rt)
+        ResourceFactory.create_batch(3, endpoint=ep2, resource_type=rt)
+
+        response = client_obj.get(
+            _export_url(mode="values", endpoint=ep1.endpoint, resource_type=rt.id, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+
+        assert ws.max_row == 3  # header + 2 rows for ep1 only
+
+    def test_values_export_time_range_filter(self, client):
+        """Time range filter is respected in export."""
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        now = timezone.now()
+
+        recent = ResourceFactory(endpoint=ep, resource_type=rt)
+        recent.timestamp_created = now - timedelta(minutes=30)
+        recent.save()
+
+        old = ResourceFactory(endpoint=ep, resource_type=rt)
+        old.timestamp_created = now - timedelta(hours=2)
+        old.save()
+
+        response = client_obj.get(
+            _export_url(mode="values", endpoint=ep.endpoint, resource_type=rt.id, time_range="1h")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+
+        assert ws.max_row == 2  # header + 1 recent row
+
+    def test_values_export_site_isolation(self, client):
+        """Export never leaks data from another site."""
+        client_obj, _, site = _setup_data_analysis_user()
+        other_site = SiteFactory()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        own_ep = EndpointFactory(site=site)
+        other_ep = EndpointFactory(site=other_site)
+        ResourceFactory(endpoint=own_ep, resource_type=rt)
+        ResourceFactory(endpoint=other_ep, resource_type=rt)
+
+        response = client_obj.get(
+            _export_url(mode="values", endpoint="all", resource_type=rt.id, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+
+        exported_endpoints = {ws.cell(r, 2).value for r in range(2, ws.max_row + 1)}
+        assert own_ep.endpoint in exported_endpoints
+        assert other_ep.endpoint not in exported_endpoints
+
+    # ------------------------------------------------------------------
+    # Events mode
+    # ------------------------------------------------------------------
+
+    def test_events_export_returns_xlsx(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        EventFactory(endpoint=ep)
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+
+        assert response.status_code == 200
+        assert (
+            response["Content-Type"]
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    def test_events_export_fixed_headers(self, client):
+        """Events with no resource data: only fixed columns Time/Endpoint/Event Type."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        EventFactory(endpoint=ep)
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        assert headers[:3] == ["Time", "Endpoint", "Event Type"]
+        assert ws.max_row == 2  # header + 1 event
+
+    def test_events_export_wide_columns_for_resource_data(self, client):
+        """Resource key-value pairs become extra columns (flat/wide layout)."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt_temp = ResourceTypeFactory(
+            object_id=9001, resource_id=1, name="temperature", data_type="FLOAT"
+        )
+        rt_hum = ResourceTypeFactory(
+            object_id=9001, resource_id=2, name="humidity", data_type="FLOAT"
+        )
+
+        event = EventFactory(endpoint=ep)
+        res_temp = ResourceFactory(endpoint=ep, resource_type=rt_temp, float_value=22.5)
+        res_hum = ResourceFactory(endpoint=ep, resource_type=rt_hum, float_value=55.0)
+        EventResource.objects.create(event=event, resource=res_temp)
+        EventResource.objects.create(event=event, resource=res_hum)
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        assert "temperature" in headers
+        assert "humidity" in headers
+        # Data row should have the values
+        temp_col = headers.index("temperature") + 1
+        hum_col = headers.index("humidity") + 1
+        assert ws.cell(2, temp_col).value == pytest.approx(22.5)
+        assert ws.cell(2, hum_col).value == pytest.approx(55.0)
+
+    def test_events_export_empty_cell_for_missing_resource(self, client):
+        """Events that lack a resource get an empty cell for that column."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt_a = ResourceTypeFactory(object_id=9002, resource_id=1, name="alpha", data_type="FLOAT")
+        rt_b = ResourceTypeFactory(object_id=9002, resource_id=2, name="beta", data_type="FLOAT")
+
+        # event1 has only alpha
+        event1 = EventFactory(endpoint=ep)
+        res_a = ResourceFactory(endpoint=ep, resource_type=rt_a, float_value=1.0)
+        EventResource.objects.create(event=event1, resource=res_a)
+
+        # event2 has only beta
+        event2 = EventFactory(endpoint=ep)
+        res_b = ResourceFactory(endpoint=ep, resource_type=rt_b, float_value=2.0)
+        EventResource.objects.create(event=event2, resource=res_b)
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        alpha_col = headers.index("alpha") + 1
+        beta_col = headers.index("beta") + 1
+
+        # Collect (alpha, beta) pairs for all data rows
+        pairs = {
+            (ws.cell(r, alpha_col).value, ws.cell(r, beta_col).value)
+            for r in range(2, ws.max_row + 1)
+        }
+        # One row has alpha filled + beta empty; the other has beta filled + alpha empty
+        assert (1.0, None) in pairs or (None, 2.0) in pairs
+
+    # ------------------------------------------------------------------
+    # Row cap enforcement
+    # ------------------------------------------------------------------
+
+    def test_export_exceeds_row_limit_returns_400(self, client, monkeypatch):
+        """When queryset exceeds 50,000 rows the view returns HTTP 400 JSON."""
+        from frontend import views as frontend_views
+
+        monkeypatch.setattr(frontend_views, "EXPORT_ROW_LIMIT", 2)
+
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        ResourceFactory.create_batch(3, endpoint=ep, resource_type=rt)
+
+        response = client_obj.get(
+            _export_url(mode="values", endpoint=ep.endpoint, resource_type=rt.id, time_range="all")
+        )
+
+        assert response.status_code == 400
+        body = json.loads(response.content)
+        assert "error" in body
+        assert "rows" in body["error"].lower()
