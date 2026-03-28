@@ -6,12 +6,12 @@
 
 {% block extra_css %}
 <style>
-  .content-column {
-    min-height: 600px;
-  }
-  .table-responsive-scroll {
-    max-height: 600px;
+  #event-card .table-responsive-scroll {
+    max-height: calc(100vh - 300px);
     overflow-y: auto;
+  }
+  .row.g-4 {
+    padding-bottom: 1.5rem;
   }
   .sortable {
     cursor: pointer;
@@ -64,7 +64,7 @@
 
           <div class="mb-3">
             <label class="form-label">Mode</label>
-            <select class="form-select" name="mode" onchange="toggleResourceFilter(); updateData();">
+            <select class="form-select" name="mode">
               <option value="values" {% if selected_mode == 'values' %}selected{% endif %}>Sensor Values</option>
               <option value="events" {% if selected_mode == 'events' %}selected{% endif %}>Events</option>
             </select>
@@ -102,7 +102,7 @@
     </div>
   </div>
 
-  <div class="col-md-9 content-column">
+  <div class="col-md-9">
     <div class="card" id="chart-card" style="display: none;">
       <div class="card-header">
         <h3 class="card-title">Data Trends</h3>
@@ -118,7 +118,7 @@
       <div class="card-header">
         <h3 class="card-title">Data Values</h3>
       </div>
-      <div class="table-responsive table-responsive-scroll">
+      <div class="table-responsive">
         <table class="table table-vcenter card-table table-striped">
           <thead>
             <tr>
@@ -126,9 +126,7 @@
               <th>Value</th>
             </tr>
           </thead>
-          <tbody id="string-values-table-body">
-            <!-- Populated via JS -->
-          </tbody>
+          <tbody id="string-values-table-body"></tbody>
         </table>
       </div>
     </div>
@@ -148,28 +146,24 @@
               <th>Data</th>
             </tr>
           </thead>
-          <tbody id="event-table-body">
-            <!-- Populated via JS -->
-          </tbody>
+          <tbody id="event-table-body"></tbody>
         </table>
       </div>
       <div class="card-footer d-flex align-items-center">
-        <ul class="pagination m-0 ms-auto" id="pagination-controls">
-          <!-- Populated via JS -->
-        </ul>
+        <ul class="pagination m-0 ms-auto" id="pagination-controls"></ul>
       </div>
     </div>
 
     <div id="empty-state" class="card" style="display: none;">
-        <div class="card-body text-center py-5">
-            <div class="text-secondary mb-3" id="empty-state-text">No data found for the selected filters.</div>
-        </div>
+      <div class="card-body text-center py-5">
+        <div class="text-secondary" id="empty-state-text">No data found for the selected filters.</div>
+      </div>
     </div>
 
     <div id="filter-prompt" class="card">
-        <div class="card-body text-center py-5">
-            <div class="text-secondary mb-3">Please select a device and resource type to analyze sensor data.</div>
-        </div>
+      <div class="card-body text-center py-5">
+        <div class="text-secondary">Please select a device and resource type to analyze sensor data.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -183,15 +177,17 @@
 <script>
   let chart;
 
+  const el = id => document.getElementById(id);
+  const show = id => { el(id).style.display = 'block'; };
+  const hide = id => { el(id).style.display = 'none'; };
+
   function toggleResourceFilter() {
     const mode = document.querySelector('select[name="mode"]').value;
-    const resFilter = document.getElementById('resource-type-filter');
-    resFilter.style.display = mode === 'values' ? 'block' : 'none';
+    el('resource-type-filter').style.display = mode === 'values' ? 'block' : 'none';
   }
 
   function initChart() {
-    const ctx = document.getElementById('analysisChart').getContext('2d');
-    chart = new Chart(ctx, {
+    chart = new Chart(el('analysisChart').getContext('2d'), {
       type: 'line',
       data: {
         datasets: [{
@@ -210,33 +206,20 @@
         scales: {
           x: {
             type: 'time',
-            time: {
-              tooltipFormat: 'yyyy-MM-dd HH:mm:ss',
-            },
-            ticks: {
-                autoSkip: true,
-                maxRotation: 0,
-            },
-            title: {
-              display: true,
-              text: 'Time'
-            }
+            time: { tooltipFormat: 'yyyy-MM-dd HH:mm:ss' },
+            ticks: { autoSkip: true, maxRotation: 0 },
+            title: { display: true, text: 'Time' }
           },
           y: {
             beginAtZero: false,
-            title: {
-              display: true,
-              text: 'Value'
-            }
+            title: { display: true, text: 'Value' }
           }
         },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              title: function(context) {
-                return luxon.DateTime.fromISO(context[0].raw.x).toLocaleString(luxon.DateTime.DATETIME_SHORT);
-              }
+              title: ctx => luxon.DateTime.fromISO(ctx[0].raw.x).toLocaleString(luxon.DateTime.DATETIME_SHORT)
             }
           }
         }
@@ -245,7 +228,7 @@
   }
 
   async function updateData() {
-    const form = document.getElementById('filter-form');
+    const form = el('filter-form');
     const formData = new FormData(form);
     const params = new URLSearchParams(formData);
     params.set('format', 'json');
@@ -254,78 +237,56 @@
     const endpoint = formData.get('endpoint');
     const resourceType = formData.get('resource_type');
 
-    const chartCard = document.getElementById('chart-card');
-    const stringValuesCard = document.getElementById('string-values-card');
-    const eventCard = document.getElementById('event-card');
-    const emptyState = document.getElementById('empty-state');
-    const filterPrompt = document.getElementById('filter-prompt');
-
     if (mode === 'values' && (!endpoint || !resourceType)) {
-      chartCard.style.display = 'none';
-      stringValuesCard.style.display = 'none';
-      eventCard.style.display = 'none';
-      emptyState.style.display = 'none';
-      filterPrompt.style.display = 'block';
+      ['chart-card', 'string-values-card', 'event-card', 'empty-state'].forEach(hide);
+      show('filter-prompt');
       return;
     }
 
     try {
-      const response = await fetch(`?${params.toString()}`);
-      const data = await response.json();
-
-      filterPrompt.style.display = 'none';
+      const data = await fetch(`?${params.toString()}`).then(r => r.json());
+      hide('filter-prompt');
 
       if (mode === 'values') {
-        eventCard.style.display = 'none';
+        hide('event-card');
         if (data.data.length > 0) {
-          emptyState.style.display = 'none';
-
+          hide('empty-state');
           if (data.is_numeric) {
-            chartCard.style.display = 'block';
-            stringValuesCard.style.display = 'none';
-
-            // Determine best time unit based on range
+            show('chart-card');
+            hide('string-values-card');
             const timeRange = formData.get('time_range');
             let unit = 'hour';
             if (timeRange === '1h') unit = 'minute';
-            else if (timeRange === '7d' || timeRange === '30d' || timeRange === 'all') unit = 'day';
-
+            else if (['7d', '30d', 'all'].includes(timeRange)) unit = 'day';
             chart.options.scales.x.time.unit = unit;
-            chart.data.datasets[0].data = data.data.map(item => ({
-              x: item.t,
-              y: item.y
-            }));
+            chart.data.datasets[0].data = data.data.map(item => ({ x: item.t, y: item.y }));
             chart.update();
           } else {
-            chartCard.style.display = 'none';
-            stringValuesCard.style.display = 'block';
-            const tbody = document.getElementById('string-values-table-body');
-            tbody.innerHTML = '';
-            data.data.forEach(item => {
-              const row = document.createElement('tr');
+            hide('chart-card');
+            show('string-values-card');
+            const tbody = el('string-values-table-body');
+            tbody.innerHTML = data.data.map(item => {
               const time = luxon.DateTime.fromISO(item.t).toLocaleString(luxon.DateTime.DATETIME_SHORT);
-              row.innerHTML = `<td>${time}</td><td>${item.y}</td>`;
-              tbody.appendChild(row);
-            });
+              return `<tr><td>${time}</td><td>${item.y}</td></tr>`;
+            }).join('');
           }
         } else {
-          chartCard.style.display = 'none';
-          stringValuesCard.style.display = 'none';
-          emptyState.style.display = 'block';
+          hide('chart-card');
+          hide('string-values-card');
+          show('empty-state');
         }
       } else {
-        chartCard.style.display = 'none';
-        stringValuesCard.style.display = 'none';
+        hide('chart-card');
+        hide('string-values-card');
         if (data.events.length > 0) {
-          eventCard.style.display = 'block';
-          emptyState.style.display = 'none';
-
+          show('event-card');
+          hide('empty-state');
           updateEventTable(data);
           updatePagination(data);
           updateSortIcons(formData.get('sort'), formData.get('dir'));
         } else {
-          eventCard.style.display = 'none';
-          emptyState.style.display = 'block';
+          hide('event-card');
+          show('empty-state');
         }
       }
     } catch (e) {
@@ -334,101 +295,73 @@
   }
 
   function updateEventTable(data) {
-    const tbody = document.getElementById('event-table-body');
-    tbody.innerHTML = '';
-    data.events.forEach(e => {
-      const row = document.createElement('tr');
+    el('event-table-body').innerHTML = data.events.map(e => {
       const time = luxon.DateTime.fromISO(e.time).toLocaleString(luxon.DateTime.DATETIME_SHORT);
-
-      let dataHtml = '<ul class="event-data-list">';
-      for (const [key, value] of Object.entries(e.data)) {
-        dataHtml += `<li class="event-data-item"><span class="event-data-key">${key}:</span> ${value}</li>`;
-      }
-      dataHtml += '</ul>';
-
-      row.innerHTML = `
+      const dataHtml = Object.entries(e.data).map(([k, v]) =>
+        `<li class="event-data-item"><span class="event-data-key">${k}:</span> ${v}</li>`
+      ).join('');
+      return `<tr>
         <td class="text-nowrap align-top">${time}</td>
         <td class="text-nowrap align-top">${e.endpoint}</td>
         <td class="align-top"><span class="badge bg-green-lt">${e.type}</span></td>
-        <td class="w-100 align-top">${dataHtml}</td>
-      `;
-      tbody.appendChild(row);
-    });
+        <td class="w-100 align-top"><ul class="event-data-list">${dataHtml}</ul></td>
+      </tr>`;
+    }).join('');
   }
 
   function updatePagination(data) {
-    const container = document.getElementById('pagination-controls');
-    const info = document.getElementById('pagination-info');
-    container.innerHTML = '';
+    el('pagination-info').textContent = `Page ${data.number} of ${data.num_pages}`;
 
-    info.textContent = `Page ${data.number} of ${data.num_pages}`;
-
-    const prevLi = document.createElement('li');
-    prevLi.className = `page-item ${!data.has_previous ? 'disabled' : ''}`;
-    prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${data.number - 1}); return false;">prev</a>`;
-    container.appendChild(prevLi);
-
-    // Show a few pages around current
+    const pages = [];
     for (let i = Math.max(1, data.number - 2); i <= Math.min(data.num_pages, data.number + 2); i++) {
-        const li = document.createElement('li');
-        li.className = `page-item ${i === data.number ? 'active' : ''}`;
-        li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>`;
-        container.appendChild(li);
+      pages.push(`<li class="page-item ${i === data.number ? 'active' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a></li>`);
     }
-
-    const nextLi = document.createElement('li');
-    nextLi.className = `page-item ${!data.has_next ? 'disabled' : ''}`;
-    nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${data.number + 1}); return false;">next</a>`;
-    container.appendChild(nextLi);
+    el('pagination-controls').innerHTML = `
+      <li class="page-item ${!data.has_previous ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${data.number - 1}); return false;">prev</a></li>
+      ${pages.join('')}
+      <li class="page-item ${!data.has_next ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${data.number + 1}); return false;">next</a></li>`;
   }
 
   function changePage(page) {
-    const input = document.querySelector('input[name="page"]');
-    input.value = page;
+    document.querySelector('input[name="page"]').value = page;
     updateData();
   }
 
   function updateSortIcons(sort, dir) {
-    document.querySelectorAll('.sort-icon').forEach(icon => {
-        icon.className = 'sort-icon';
-    });
-    const activeIcon = document.getElementById(`sort-${sort}`);
-    if (activeIcon) {
-        activeIcon.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
-    }
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.className = 'sort-icon'; });
+    const active = el(`sort-${sort}`);
+    if (active) active.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
   }
 
   document.querySelectorAll('.sortable').forEach(th => {
     th.addEventListener('click', () => {
-        const sort = th.dataset.sort;
-        const sortInput = document.querySelector('input[name="sort"]');
-        const dirInput = document.querySelector('input[name="dir"]');
-
-        if (sortInput.value === sort) {
-            dirInput.value = dirInput.value === 'asc' ? 'desc' : 'asc';
-        } else {
-            sortInput.value = sort;
-            dirInput.value = 'asc';
-        }
-        document.querySelector('input[name="page"]').value = 1;
-        updateData();
+      const sortInput = document.querySelector('input[name="sort"]');
+      const dirInput = document.querySelector('input[name="dir"]');
+      if (sortInput.value === th.dataset.sort) {
+        dirInput.value = dirInput.value === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortInput.value = th.dataset.sort;
+        dirInput.value = 'asc';
+      }
+      document.querySelector('input[name="page"]').value = 1;
+      updateData();
     });
   });
 
-  document.getElementById('filter-form').addEventListener('submit', (e) => {
+  document.getElementById('filter-form').addEventListener('submit', e => {
     e.preventDefault();
     document.querySelector('input[name="page"]').value = 1;
     updateData();
   });
 
-  // Auto-apply filters on change
-  document.getElementById('filter-form').querySelectorAll('select').forEach(select => {
+  document.querySelectorAll('#filter-form select').forEach(select => {
     select.addEventListener('change', () => {
-      // Don't trigger if it's the mode select (handled via inline onchange to ensure toggleResourceFilter runs first)
-      if (select.name !== 'mode') {
-        document.querySelector('input[name="page"]').value = 1;
-        updateData();
-      }
+      toggleResourceFilter();
+      document.querySelector('input[name="page"]').value = 1;
+      updateData();
     });
   });
 
@@ -436,7 +369,6 @@
     initChart();
     toggleResourceFilter();
     updateData();
-    // Refresh every 10s
     setInterval(updateData, 10000);
   });
 </script>
