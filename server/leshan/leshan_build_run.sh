@@ -9,5 +9,21 @@
 set -e
 set -o pipefail
 
-mvn clean install
-exec java -jar target/leshan-svr-0.9-jar-with-dependencies.jar
+JAR_FILE="target/leshan-svr-0.9-jar-with-dependencies.jar"
+
+# If JAR already exists, skip build and run directly
+if [ -f "$JAR_FILE" ]; then
+    echo "JAR already exists, skipping build..."
+    exec java -jar "$JAR_FILE"
+fi
+
+# Try to build - clean may fail due to permissions, so try install directly
+mvn clean install || mvn install || true
+
+# Check if JAR was created
+if [ -f "$JAR_FILE" ]; then
+    exec java -jar "$JAR_FILE"
+else
+    echo "ERROR: Build failed and no JAR file found"
+    exit 1
+fi
