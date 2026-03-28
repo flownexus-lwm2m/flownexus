@@ -4,12 +4,17 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+import json
+from datetime import timedelta
+
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 
 from sensordata.factories import (
     EndpointFactory,
+    EventFactory,
     FirmwareFactory,
     ResourceFactory,
     ResourceTypeFactory,
@@ -1036,3 +1041,318 @@ class TestMultiSiteAccessControl:
         assert member.can_manage_firmware is False
         assert member.can_perform_operations is False
         assert member.can_manage_devices is False
+
+
+def _data_analysis_url(**params):
+    """Build the data_analysis JSON URL with the given query parameters."""
+    return reverse("frontend:data_analysis") + "?" + "&".join(f"{k}={v}" for k, v in params.items())
+
+
+def _setup_data_analysis_user(can_view_data_analysis=True):
+    """Return (client fixture-ready user, site, membership) for data_analysis tests."""
+    from django.test import Client
+
+    user = UserFactory()
+    site = SiteFactory()
+    SiteMembershipFactory(
+        user=user,
+        site=site,
+        can_view_data_analysis=can_view_data_analysis,
+    )
+    client = Client()
+    client.force_login(user)
+    return client, user, site
+
+
+@pytest.mark.django_db
+class TestDataAnalysisView:
+    """Tests for the /data/ data_analysis view (JSON API and page rendering)."""
+
+    # ------------------------------------------------------------------
+    # Auth / permission
+    # ------------------------------------------------------------------
+
+    def test_requires_login(self, client):
+        response = client.get(reverse("frontend:data_analysis"))
+        assert response.status_code == 302
+
+    def test_requires_data_analysis_permission(self, client):
+        user = UserFactory()
+        site = SiteFactory()
+        SiteMembershipFactory(user=user, site=site, can_view_data_analysis=False)
+        client.force_login(user)
+        response = client.get(reverse("frontend:data_analysis"))
+        assert response.status_code == 403
+
+    def test_page_renders_for_authorised_user(self, client):
+        client_obj, _, _ = _setup_data_analysis_user()
+        response = client_obj.get(reverse("frontend:data_analysis"))
+        assert response.status_code == 200
+        assert b"Data Analyzer" in response.content
+
+    # ------------------------------------------------------------------
+    # JSON: basic data return
+    # ------------------------------------------------------------------
+
+    def test_json_returns_resources_for_endpoint_and_resource_type(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        ResourceFactory.create_batch(3, endpoint=ep, resource_type=rt)
+
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint=ep.endpoint,
+                resource_type=rt.id,
+                time_range="all",
+            )
+        )
+        data = json.loads(response.content)
+        assert response.status_code == 200
+        assert data["count"] == 3
+        assert len(data["data"]) == 3
+        assert data["is_numeric"] is True
+        assert data["multi_endpoint"] is False
+
+    def test_json_all_devices_returns_multi_endpoint_flag(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep1 = EndpointFactory(site=site)
+        ep2 = EndpointFactory(site=site)
+        ResourceFactory(endpoint=ep1, resource_type=rt)
+        ResourceFactory(endpoint=ep2, resource_type=rt)
+
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint="all",
+                resource_type=rt.id,
+                time_range="all",
+            )
+        )
+        data = json.loads(response.content)
+        assert data["multi_endpoint"] is True
+        assert data["count"] == 2
+
+    def test_json_all_types_returns_is_numeric_false(self, client):
+        """When no resource_type filter is applied, is_numeric defaults to False."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        ResourceFactory(endpoint=ep)
+
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint=ep.endpoint,
+                resource_type="all",
+                time_range="all",
+            )
+        )
+        data = json.loads(response.content)
+        assert data["is_numeric"] is False
+
+    def test_json_string_resource_type_is_not_numeric(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(
+            object_id=3, resource_id=0, name="manufacturer", data_type="STRING"
+        )
+        ep = EndpointFactory(site=site)
+        ResourceFactory(endpoint=ep, resource_type=rt, str_value="Acme")
+
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint=ep.endpoint,
+                resource_type=rt.id,
+                time_range="all",
+            )
+        )
+        data = json.loads(response.content)
+        assert data["is_numeric"] is False
+
+    # ------------------------------------------------------------------
+    # JSON: time range filtering
+    # ------------------------------------------------------------------
+
+    def test_json_1h_excludes_old_readings(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        now = timezone.now()
+        # Recent reading (30 min ago) — should be included
+        recent = ResourceFactory(endpoint=ep, resource_type=rt)
+        recent.timestamp_created = now - timedelta(minutes=30)
+        recent.save()
+        # Old reading (2 hours ago) — should be excluded
+        old = ResourceFactory(endpoint=ep, resource_type=rt)
+        old.timestamp_created = now - timedelta(hours=2)
+        old.save()
+
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint=ep.endpoint,
+                resource_type=rt.id,
+                time_range="1h",
+            )
+        )
+        data = json.loads(response.content)
+        assert data["count"] == 1
+
+    def test_json_custom_range_inclusive_of_to_minute(self, client):
+        """A reading at 12:01:30 must be included when to=12:01 (minute-inclusive fix)."""
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        now = timezone.now().replace(hour=12, minute=1, second=30, microsecond=0)
+        r = ResourceFactory(endpoint=ep, resource_type=rt)
+        r.timestamp_created = now
+        r.save()
+
+        # from=12:00, to=12:01 — reading at 12:01:30 must be included
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint=ep.endpoint,
+                resource_type=rt.id,
+                time_range="custom",
+                time_from=now.strftime("%Y-%m-%dT12:00"),
+                time_to=now.strftime("%Y-%m-%dT12:01"),
+            )
+        )
+        data = json.loads(response.content)
+        assert data["count"] == 1, "Reading at 12:01:30 should be included when to=12:01"
+
+    def test_json_custom_range_excludes_reading_outside_window(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        base = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        r = ResourceFactory(endpoint=ep, resource_type=rt)
+        r.timestamp_created = base  # 10:00 — outside 11:00–12:00 window
+        r.save()
+
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint=ep.endpoint,
+                resource_type=rt.id,
+                time_range="custom",
+                time_from=base.strftime("%Y-%m-%dT11:00"),
+                time_to=base.strftime("%Y-%m-%dT12:00"),
+            )
+        )
+        data = json.loads(response.content)
+        assert data["count"] == 0
+
+    # ------------------------------------------------------------------
+    # JSON: pagination
+    # ------------------------------------------------------------------
+
+    def test_json_values_pagination_returns_correct_page(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        ep = EndpointFactory(site=site)
+        ResourceFactory.create_batch(105, endpoint=ep, resource_type=rt)
+
+        # Page 1: 100 items
+        resp1 = json.loads(
+            client_obj.get(
+                _data_analysis_url(
+                    format="json",
+                    mode="values",
+                    endpoint=ep.endpoint,
+                    resource_type=rt.id,
+                    time_range="all",
+                    page=1,
+                )
+            ).content
+        )
+        assert len(resp1["data"]) == 100
+        assert resp1["has_next"] is True
+        assert resp1["num_pages"] == 2
+
+        # Page 2: remaining 5 items
+        resp2 = json.loads(
+            client_obj.get(
+                _data_analysis_url(
+                    format="json",
+                    mode="values",
+                    endpoint=ep.endpoint,
+                    resource_type=rt.id,
+                    time_range="all",
+                    page=2,
+                )
+            ).content
+        )
+        assert len(resp2["data"]) == 5
+        assert resp2["has_next"] is False
+
+    def test_json_events_pagination(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        for _ in range(55):
+            EventFactory(endpoint=ep)
+
+        resp1 = json.loads(
+            client_obj.get(
+                _data_analysis_url(
+                    format="json",
+                    mode="events",
+                    endpoint=ep.endpoint,
+                    time_range="all",
+                    page=1,
+                )
+            ).content
+        )
+        assert len(resp1["events"]) == 50
+        assert resp1["has_next"] is True
+
+        resp2 = json.loads(
+            client_obj.get(
+                _data_analysis_url(
+                    format="json",
+                    mode="events",
+                    endpoint=ep.endpoint,
+                    time_range="all",
+                    page=2,
+                )
+            ).content
+        )
+        assert len(resp2["events"]) == 5
+        assert resp2["has_next"] is False
+
+    # ------------------------------------------------------------------
+    # Site isolation
+    # ------------------------------------------------------------------
+
+    def test_json_does_not_return_other_sites_data(self, client):
+        client_obj, _, site = _setup_data_analysis_user()
+        other_site = SiteFactory()
+        rt = ResourceTypeFactory(data_type="FLOAT")
+        own_ep = EndpointFactory(site=site)
+        other_ep = EndpointFactory(site=other_site)
+        ResourceFactory(endpoint=own_ep, resource_type=rt)
+        ResourceFactory(endpoint=other_ep, resource_type=rt)
+
+        response = client_obj.get(
+            _data_analysis_url(
+                format="json",
+                mode="values",
+                endpoint="all",
+                resource_type=rt.id,
+                time_range="all",
+            )
+        )
+        data = json.loads(response.content)
+        returned_endpoints = {item["endpoint"] for item in data["data"]}
+        assert own_ep.endpoint in returned_endpoints
+        assert other_ep.endpoint not in returned_endpoints

@@ -5,8 +5,21 @@
 {% block page_title %}Data Analyzer{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-  #event-card .table-responsive-scroll {
+  .flatpickr-confirm {
+    background: var(--tblr-primary, #206bc4);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    text-align: center;
+  }
+  .flatpickr-confirm:hover {
+    background: #1a56a0;
+  }
+  #event-card .table-responsive-scroll,
+  #string-values-card .table-responsive-scroll {
     max-height: calc(100vh - 300px);
     overflow-y: auto;
   }
@@ -72,7 +85,8 @@
           <div class="mb-3">
             <label class="form-label">Endpoint</label>
             <select class="form-select" name="endpoint">
-              <option value="">All Devices</option>
+              <option value="" {% if not selected_endpoint %}selected{% endif %} disabled>— select —</option>
+              <option value="all" {% if selected_endpoint == 'all' %}selected{% endif %}>All Devices</option>
               {% for ep in endpoints %}
               <option value="{{ ep.endpoint }}" {% if selected_endpoint == ep.endpoint %}selected{% endif %}>{{ ep.endpoint }}</option>
               {% endfor %}
@@ -81,7 +95,8 @@
           <div class="mb-3" id="resource-type-filter">
             <label class="form-label">Resource Type</label>
             <select class="form-select" name="resource_type">
-              <option value="">All Types</option>
+              <option value="" {% if not selected_resource_type %}selected{% endif %} disabled>— select —</option>
+              <option value="all" {% if selected_resource_type == 'all' %}selected{% endif %}>All Types</option>
               {% for rt in resource_types %}
               <option value="{{ rt.id }}" {% if selected_resource_type == rt.id|stringformat:"s" %}selected{% endif %}>{{ rt.name }}</option>
               {% endfor %}
@@ -89,13 +104,28 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Time Range</label>
-            <select class="form-select" name="time_range">
+            <select class="form-select" name="time_range" id="time-range-select">
               <option value="1h" {% if selected_time_range == '1h' %}selected{% endif %}>Last Hour</option>
               <option value="24h" {% if selected_time_range == '24h' %}selected{% endif %}>Last 24 Hours</option>
               <option value="7d" {% if selected_time_range == '7d' %}selected{% endif %}>Last 7 Days</option>
               <option value="30d" {% if selected_time_range == '30d' %}selected{% endif %}>Last 30 Days</option>
               <option value="all" {% if selected_time_range == 'all' %}selected{% endif %}>All</option>
+              <option value="custom" {% if selected_time_range == 'custom' %}selected{% endif %}>Custom Range</option>
             </select>
+          </div>
+          <div id="custom-range-fields" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">From</label>
+              <input type="text" class="form-control" name="time_from" id="time-from"
+                     placeholder="Select date & time"
+                     value="{{ selected_time_from|default:'' }}" readonly>
+            </div>
+            <div class="mb-3" id="time-to-field" style="display: none;">
+              <label class="form-label">To</label>
+              <input type="text" class="form-control" name="time_to" id="time-to"
+                     placeholder="Select date & time"
+                     value="{{ selected_time_to|default:'' }}" readonly>
+            </div>
           </div>
         </form>
       </div>
@@ -115,19 +145,24 @@
     </div>
 
     <div class="card" id="string-values-card" style="display: none;">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h3 class="card-title">Data Values</h3>
+        <div id="values-pagination-info" class="text-muted small"></div>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive table-responsive-scroll">
         <table class="table table-vcenter card-table table-striped">
           <thead>
             <tr>
               <th>Time</th>
+              <th id="values-endpoint-col">Endpoint</th>
               <th>Value</th>
             </tr>
           </thead>
           <tbody id="string-values-table-body"></tbody>
         </table>
+      </div>
+      <div class="card-footer d-flex align-items-center">
+        <ul class="pagination m-0 ms-auto" id="values-pagination-controls"></ul>
       </div>
     </div>
 
@@ -160,9 +195,9 @@
       </div>
     </div>
 
-    <div id="filter-prompt" class="card">
+    <div id="filter-prompt" class="card" style="display: none;">
       <div class="card-body text-center py-5">
-        <div class="text-secondary">Please select a device and resource type to analyze sensor data.</div>
+        <div class="text-secondary">Please select a From date to use a custom time range.</div>
       </div>
     </div>
   </div>
@@ -173,6 +208,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/confirmDate/confirmDate.js"></script>
 
 <script>
   let chart;
@@ -184,6 +221,19 @@
   function toggleResourceFilter() {
     const mode = document.querySelector('select[name="mode"]').value;
     el('resource-type-filter').style.display = mode === 'values' ? 'block' : 'none';
+  }
+
+  function toggleCustomRange() {
+    const isCustom = el('time-range-select').value === 'custom';
+    el('custom-range-fields').style.display = isCustom ? 'block' : 'none';
+    if (!isCustom) {
+      el('time-to-field').style.display = 'none';
+    }
+  }
+
+  function toggleToField() {
+    const fromVal = el('time-from').value;
+    el('time-to-field').style.display = fromVal ? 'block' : 'none';
   }
 
   function initChart() {
@@ -233,11 +283,37 @@
     const params = new URLSearchParams(formData);
     params.set('format', 'json');
 
+    // For custom range, override the input values with proper UTC ISO strings
+    // derived directly from Flatpickr's Date objects (input values use local time).
+    if (formData.get('time_range') === 'custom') {
+      if (fpFrom && fpFrom.selectedDates.length) {
+        params.set('time_from', fpFrom.selectedDates[0].toISOString().slice(0, 16));
+      } else {
+        params.delete('time_from');
+      }
+      if (fpTo && fpTo.selectedDates.length) {
+        params.set('time_to', fpTo.selectedDates[0].toISOString().slice(0, 16));
+      } else {
+        params.delete('time_to');
+      }
+    } else {
+      params.delete('time_from');
+      params.delete('time_to');
+    }
+
     const mode = formData.get('mode');
+    const timeRange = formData.get('time_range');
     const endpoint = formData.get('endpoint');
     const resourceType = formData.get('resource_type');
 
-    if (mode === 'values' && (!endpoint || !resourceType)) {
+    // Block fetch if any select is still on the disabled placeholder (empty string)
+    const missingSelection = !endpoint || (mode === 'values' && !resourceType);
+    if (missingSelection) {
+      ['chart-card', 'string-values-card', 'event-card', 'empty-state', 'filter-prompt'].forEach(hide);
+      return;
+    }
+
+    if (mode === 'values' && timeRange === 'custom' && !(fpFrom && fpFrom.selectedDates.length)) {
       ['chart-card', 'string-values-card', 'event-card', 'empty-state'].forEach(hide);
       show('filter-prompt');
       return;
@@ -251,24 +327,39 @@
         hide('event-card');
         if (data.data.length > 0) {
           hide('empty-state');
-          if (data.is_numeric) {
+          const endpointCol = el('values-endpoint-col');
+          if (data.is_numeric && !data.multi_endpoint) {
+            // Single endpoint + numeric: show chart
             show('chart-card');
             hide('string-values-card');
-            const timeRange = formData.get('time_range');
             let unit = 'hour';
             if (timeRange === '1h') unit = 'minute';
             else if (['7d', '30d', 'all'].includes(timeRange)) unit = 'day';
+            else if (timeRange === 'custom') {
+              const from = fpFrom && fpFrom.selectedDates.length ? fpFrom.selectedDates[0] : null;
+              const to = fpTo && fpTo.selectedDates.length ? fpTo.selectedDates[0] : new Date();
+              if (from) {
+                const diffHours = (to - from) / 3600000;
+                if (diffHours <= 2) unit = 'minute';
+                else if (diffHours <= 72) unit = 'hour';
+                else unit = 'day';
+              }
+            }
             chart.options.scales.x.time.unit = unit;
             chart.data.datasets[0].data = data.data.map(item => ({ x: item.t, y: item.y }));
             chart.update();
           } else {
+            // Multi-endpoint or non-numeric: show table
             hide('chart-card');
             show('string-values-card');
+            endpointCol.style.display = data.multi_endpoint ? '' : 'none';
             const tbody = el('string-values-table-body');
             tbody.innerHTML = data.data.map(item => {
               const time = luxon.DateTime.fromISO(item.t).toLocaleString(luxon.DateTime.DATETIME_SHORT);
-              return `<tr><td>${time}</td><td>${item.y}</td></tr>`;
+              const endpointCell = data.multi_endpoint ? `<td>${item.endpoint}</td>` : '';
+              return `<tr><td>${time}</td>${endpointCell}<td>${item.y}</td></tr>`;
             }).join('');
+            renderPagination(data, 'values-pagination-controls', 'values-pagination-info', 'changePage');
           }
         } else {
           hide('chart-card');
@@ -282,7 +373,7 @@
           show('event-card');
           hide('empty-state');
           updateEventTable(data);
-          updatePagination(data);
+          renderPagination(data, 'pagination-controls', 'pagination-info', 'changePage');
           updateSortIcons(formData.get('sort'), formData.get('dir'));
         } else {
           hide('event-card');
@@ -309,20 +400,22 @@
     }).join('');
   }
 
-  function updatePagination(data) {
-    el('pagination-info').textContent = `Page ${data.number} of ${data.num_pages}`;
-
+  function renderPagination(data, controlsId, infoId, onPage) {
+    if (infoId) {
+      const total = data.count !== undefined ? ` (${data.count} total)` : '';
+      el(infoId).textContent = `Page ${data.number} of ${data.num_pages}${total}`;
+    }
     const pages = [];
     for (let i = Math.max(1, data.number - 2); i <= Math.min(data.num_pages, data.number + 2); i++) {
       pages.push(`<li class="page-item ${i === data.number ? 'active' : ''}">
-        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a></li>`);
+        <a class="page-link" href="#" onclick="${onPage}(${i}); return false;">${i}</a></li>`);
     }
-    el('pagination-controls').innerHTML = `
+    el(controlsId).innerHTML = `
       <li class="page-item ${!data.has_previous ? 'disabled' : ''}">
-        <a class="page-link" href="#" onclick="changePage(${data.number - 1}); return false;">prev</a></li>
+        <a class="page-link" href="#" onclick="${onPage}(${data.number - 1}); return false;">prev</a></li>
       ${pages.join('')}
       <li class="page-item ${!data.has_next ? 'disabled' : ''}">
-        <a class="page-link" href="#" onclick="changePage(${data.number + 1}); return false;">next</a></li>`;
+        <a class="page-link" href="#" onclick="${onPage}(${data.number + 1}); return false;">next</a></li>`;
   }
 
   function changePage(page) {
@@ -360,14 +453,47 @@
   document.querySelectorAll('#filter-form select').forEach(select => {
     select.addEventListener('change', () => {
       toggleResourceFilter();
+      toggleCustomRange();
       document.querySelector('input[name="page"]').value = 1;
       updateData();
     });
   });
 
+  let fpFrom, fpTo;
+
+  const fpConfig = {
+    enableTime: true,
+    time_24hr: true,
+    dateFormat: 'Y-m-dTH:i',
+    altInput: true,
+    altFormat: 'd M Y  H:i',
+    allowInput: false,
+    plugins: [new confirmDatePlugin({ confirmText: 'OK', confirmIcon: '', showAlways: true })],
+  };
+
+  function makeFlatpickr(inputId, onCloseCb) {
+    return flatpickr(el(inputId), {
+      ...fpConfig,
+      onClose: onCloseCb,
+    });
+  }
+
+  fpFrom = makeFlatpickr('time-from', () => {
+    toggleToField();
+    document.querySelector('input[name="page"]').value = 1;
+    updateData();
+  });
+
+  fpTo = makeFlatpickr('time-to', () => {
+    document.querySelector('input[name="page"]').value = 1;
+    updateData();
+  });
+
   document.addEventListener('DOMContentLoaded', () => {
     initChart();
     toggleResourceFilter();
+    toggleCustomRange();
+    toggleToField();
     updateData();
     setInterval(updateData, 10000);
   });

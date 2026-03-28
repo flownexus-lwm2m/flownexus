@@ -14,6 +14,7 @@ from django.db.models import Count, Max
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from core.middleware import UNASSIGNED_SITE_KEY
 from core.permissions import get_site_filtered_endpoints, has_site_permission
@@ -524,19 +525,47 @@ def data_analysis(request):
     endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
     resource_types = ResourceType.objects.all().order_by("name")
 
-    # Filters
-    endpoint_id = request.GET.get("endpoint")
-    resource_type_id = request.GET.get("resource_type")
+    # Filters — treat "all" sentinel (from UI placeholder) as no filter
+    endpoint_id = request.GET.get("endpoint") or None
+    if endpoint_id == "all":
+        endpoint_id = None
+    resource_type_id = request.GET.get("resource_type") or None
+    if resource_type_id == "all":
+        resource_type_id = None
     time_range = request.GET.get("time_range", "24h")
     mode = request.GET.get("mode", "values")  # 'values' or 'events'
 
     now = timezone.now()
+    start_date = None
+    end_date = None
     if time_range == "1h":
         start_date = now - timedelta(hours=1)
     elif time_range == "7d":
         start_date = now - timedelta(days=7)
     elif time_range == "30d":
         start_date = now - timedelta(days=30)
+    elif time_range == "custom":
+        time_from_str = request.GET.get("time_from")
+        time_to_str = request.GET.get("time_to")
+        if time_from_str:
+            try:
+                parsed = parse_datetime(time_from_str)
+                if parsed:
+                    start_date = (
+                        timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+                    )
+            except (ValueError, TypeError):
+                pass
+        if time_to_str:
+            try:
+                parsed = parse_datetime(time_to_str)
+                if parsed:
+                    end_date = timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+                    # Flatpickr resolution is 1 minute; extend end by 1 minute so that
+                    # "12:00 – 12:01" includes readings timestamped at 12:01:xx.
+                    end_date = end_date + timedelta(minutes=1)
+            except (ValueError, TypeError):
+                pass
     elif time_range == "all":
         start_date = None
     else:  # default 24h
@@ -546,40 +575,52 @@ def data_analysis(request):
         if mode == "values":
             # Filter resources by site through endpoints
             site_endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
-            resources = Resource.objects.filter(endpoint__in=site_endpoints).order_by(
-                "timestamp_created"
+            resources = (
+                Resource.objects.filter(endpoint__in=site_endpoints)
+                .order_by("timestamp_created")
+                .select_related("endpoint")
             )
             if start_date:
                 resources = resources.filter(timestamp_created__gte=start_date)
+            if end_date:
+                resources = resources.filter(timestamp_created__lte=end_date)
             if endpoint_id:
                 resources = resources.filter(endpoint_id=endpoint_id)
             if resource_type_id:
                 resources = resources.filter(resource_type_id=resource_type_id)
 
-            # Limit to 1000 points for performance
-            resources = resources[:1000]
-
-            data = []
             resource_type_obj = None
             if resource_type_id:
                 resource_type_obj = ResourceType.objects.get(id=resource_type_id)
 
-            for r in resources:
+            paginator = Paginator(resources, 100)
+            page_number = request.GET.get("page", 1)
+            page_obj = paginator.get_page(page_number)
+
+            data = []
+            for r in page_obj:
                 val = r.get_value()
                 data.append(
                     {
                         "t": r.timestamp_created.isoformat(),
                         "y": val,
+                        "endpoint": r.endpoint.endpoint,
                     }
                 )
 
             return JsonResponse(
                 {
                     "data": data,
+                    "multi_endpoint": not bool(endpoint_id),
                     "is_numeric": resource_type_obj.data_type
                     in ["INTEGER", "FLOAT", "TIME", "BOOLEAN"]
                     if resource_type_obj
                     else False,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous(),
+                    "number": page_obj.number,
+                    "num_pages": paginator.num_pages,
+                    "count": paginator.count,
                 }
             )
 
@@ -598,6 +639,8 @@ def data_analysis(request):
             )
             if start_date:
                 events = events.filter(time__gte=start_date)
+            if end_date:
+                events = events.filter(time__lte=end_date)
             if endpoint_id:
                 events = events.filter(endpoint_id=endpoint_id)
 
@@ -635,9 +678,11 @@ def data_analysis(request):
     context = {
         "endpoints": endpoints,
         "resource_types": resource_types,
-        "selected_endpoint": endpoint_id,
-        "selected_resource_type": resource_type_id,
+        "selected_endpoint": request.GET.get("endpoint", ""),
+        "selected_resource_type": request.GET.get("resource_type", ""),
         "selected_time_range": time_range,
+        "selected_time_from": request.GET.get("time_from", ""),
+        "selected_time_to": request.GET.get("time_to", ""),
         "selected_mode": mode,
     }
 
