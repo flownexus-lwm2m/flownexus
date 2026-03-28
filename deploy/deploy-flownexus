@@ -269,9 +269,18 @@ done
 if [ "$health_ok" -eq 0 ]; then
     printf '%s\n' "ERROR: Health check failed after $max_retries attempts" >&2
     printf '%s\n' "Check service status:" >&2
-    runuser -u "$deploy_user" -- systemctl --user status flownexus-redis.service --no-pager || true
-    runuser -u "$deploy_user" -- systemctl --user status flownexus-leshan.service --no-pager || true
-    runuser -u "$deploy_user" -- systemctl --user status flownexus-django.service --no-pager || true
+    runuser -u "$deploy_user" -- env \
+        XDG_RUNTIME_DIR="/run/user/$user_uid" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_uid/bus" \
+        systemctl --user status flownexus-redis.service --no-pager || true
+    runuser -u "$deploy_user" -- env \
+        XDG_RUNTIME_DIR="/run/user/$user_uid" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_uid/bus" \
+        systemctl --user status flownexus-leshan.service --no-pager || true
+    runuser -u "$deploy_user" -- env \
+        XDG_RUNTIME_DIR="/run/user/$user_uid" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_uid/bus" \
+        systemctl --user status flownexus-django.service --no-pager || true
     exit 1
 fi
 
@@ -281,9 +290,18 @@ printf '%s\n' "Deployment successful!"
 printf '%s\n' "=========================================="
 printf '%s\n' ""
 printf '%s\n' "Service Status:"
-runuser -u "$deploy_user" -- systemctl --user is-active flownexus-redis.service
-runuser -u "$deploy_user" -- systemctl --user is-active flownexus-leshan.service
-runuser -u "$deploy_user" -- systemctl --user is-active flownexus-django.service
+runuser -u "$deploy_user" -- env \
+    XDG_RUNTIME_DIR="/run/user/$user_uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_uid/bus" \
+    systemctl --user is-active flownexus-redis.service
+runuser -u "$deploy_user" -- env \
+    XDG_RUNTIME_DIR="/run/user/$user_uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_uid/bus" \
+    systemctl --user is-active flownexus-leshan.service
+runuser -u "$deploy_user" -- env \
+    XDG_RUNTIME_DIR="/run/user/$user_uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_uid/bus" \
+    systemctl --user is-active flownexus-django.service
 printf '%s\n' ""
 printf '%s\n' "View logs with:"
 printf '%s\n' "  journalctl --user -u flownexus-django -f"
