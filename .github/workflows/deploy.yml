@@ -129,7 +129,8 @@ jobs:
           echo "Checking service health..."
           sleep 10
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "systemctl --user is-active flownexus-redis.service && \
+            "export XDG_RUNTIME_DIR=/run/user/\$(id -u) && \
+             systemctl --user is-active flownexus-redis.service && \
              systemctl --user is-active flownexus-leshan.service && \
              systemctl --user is-active flownexus-django.service"
 
