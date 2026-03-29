@@ -32,6 +32,35 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+LEGACY_VIEW_OVERVIEW_PERMISSIONS = {
+    "view_endpoint",
+    "view_event",
+    "view_resource",
+    "view_resourcetype",
+}
+LEGACY_VIEW_FIRMWARE_PERMISSIONS = {
+    "view_firmware",
+    "view_firmwareupdate",
+}
+LEGACY_MANAGE_FIRMWARE_PERMISSIONS = {
+    "add_firmware",
+    "change_firmware",
+    "delete_firmware",
+}
+LEGACY_FIRMWARE_UPDATE_PERMISSIONS = {
+    "add_firmwareupdate",
+    "change_firmwareupdate",
+    "delete_firmwareupdate",
+}
+LEGACY_OPERATION_PERMISSIONS = {
+    "add_endpointoperation",
+    "change_endpointoperation",
+    "delete_endpointoperation",
+}
+DEFAULT_SITE_NAME = "Default Site"
+DEFAULT_SITE_DESCRIPTION = "Default site for existing devices"
+
+
 def add_binary_value_if_missing(apps, schema_editor):
     """Add Resource.binary_value only when the column is not already present.
 
@@ -47,6 +76,94 @@ def add_binary_value_if_missing(apps, schema_editor):
     }
     if "binary_value" not in columns:
         schema_editor.execute("ALTER TABLE sensordata_resource ADD COLUMN binary_value BLOB NULL")
+
+
+def build_membership_fields(permission_codenames):
+    can_view_overview = bool(permission_codenames & LEGACY_VIEW_OVERVIEW_PERMISSIONS)
+    can_view_firmware = bool(
+        permission_codenames
+        & (
+            LEGACY_VIEW_FIRMWARE_PERMISSIONS
+            | LEGACY_MANAGE_FIRMWARE_PERMISSIONS
+            | LEGACY_FIRMWARE_UPDATE_PERMISSIONS
+            | LEGACY_OPERATION_PERMISSIONS
+        )
+    )
+    can_view_data_analysis = can_view_overview
+    can_manage_firmware = bool(permission_codenames & LEGACY_MANAGE_FIRMWARE_PERMISSIONS)
+    can_perform_operations = bool(
+        permission_codenames & (LEGACY_FIRMWARE_UPDATE_PERMISSIONS | LEGACY_OPERATION_PERMISSIONS)
+    )
+
+    if not any(
+        [
+            can_view_overview,
+            can_view_firmware,
+            can_view_data_analysis,
+            can_manage_firmware,
+            can_perform_operations,
+        ]
+    ):
+        return None
+
+    return {
+        "role": "ADMIN" if can_manage_firmware or can_perform_operations else "USER",
+        "can_view_overview": can_view_overview,
+        "can_view_firmware": can_view_firmware,
+        "can_view_data_analysis": can_view_data_analysis,
+        "can_manage_firmware": can_manage_firmware,
+        "can_perform_operations": can_perform_operations,
+        "can_manage_devices": False,
+    }
+
+
+def get_target_site(Site):
+    active_sites = list(Site.objects.filter(is_active=True).order_by("pk"))
+    if len(active_sites) == 1:
+        return active_sites[0]
+
+    default_site, _ = Site.objects.get_or_create(
+        name=DEFAULT_SITE_NAME,
+        defaults={
+            "description": DEFAULT_SITE_DESCRIPTION,
+            "is_active": True,
+        },
+    )
+    if not default_site.is_active:
+        default_site.is_active = True
+        default_site.save(update_fields=["is_active"])
+    if default_site.description != DEFAULT_SITE_DESCRIPTION and not default_site.description:
+        default_site.description = DEFAULT_SITE_DESCRIPTION
+        default_site.save(update_fields=["description"])
+    return default_site
+
+
+def backfill_legacy_site_memberships(apps, schema_editor):
+    User = apps.get_model("auth", "User")
+    Site = apps.get_model("sensordata", "Site")
+    SiteMembership = apps.get_model("sensordata", "SiteMembership")
+
+    eligible_users = []
+    for user in User.objects.filter(is_superuser=False).prefetch_related("user_permissions"):
+        if SiteMembership.objects.filter(user_id=user.pk).exists():
+            continue
+
+        permission_codenames = {
+            permission.codename
+            for permission in user.user_permissions.all()
+            if permission.content_type.app_label == "sensordata"
+        }
+        membership_fields = build_membership_fields(permission_codenames)
+        if membership_fields is None:
+            continue
+        eligible_users.append((user.pk, membership_fields))
+
+    if not eligible_users:
+        return
+
+    target_site = get_target_site(Site)
+    for user_id, membership_fields in eligible_users:
+        SiteMembership.objects.create(user_id=user_id, site_id=target_site.pk, **membership_fields)
 
 
 class Migration(migrations.Migration):
@@ -216,5 +333,9 @@ class Migration(migrations.Migration):
                 "ordering": ["-joined_at"],
                 "unique_together": {("user", "site")},
             },
+        ),
+        migrations.RunPython(
+            backfill_legacy_site_memberships,
+            reverse_code=migrations.RunPython.noop,
         ),
     ]

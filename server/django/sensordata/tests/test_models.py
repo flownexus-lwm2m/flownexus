@@ -4,7 +4,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+import importlib
+
 import pytest
+from django.apps import apps as django_apps
+from django.contrib.auth.models import Permission
 from django.db import IntegrityError
 
 from sensordata.factories import (
@@ -16,6 +20,11 @@ from sensordata.factories import (
     UserFactory,
 )
 from sensordata.models import ResourceType, Site, SiteMembership
+
+backfill_module = importlib.import_module("sensordata.migrations.0002_squash")
+DEFAULT_SITE_NAME = backfill_module.DEFAULT_SITE_NAME
+_build_membership_fields = backfill_module.build_membership_fields
+backfill_legacy_site_memberships = backfill_module.backfill_legacy_site_memberships
 
 
 @pytest.mark.django_db
@@ -163,3 +172,74 @@ class TestEndpointSiteAssignment:
         endpoint = EndpointFactory(site=None)
 
         assert endpoint.site is None
+
+
+@pytest.mark.django_db
+class TestLegacyMembershipBackfill:
+    def test_build_membership_fields_returns_none_without_legacy_permissions(self):
+        assert _build_membership_fields(set()) is None
+
+    def test_build_membership_fields_maps_admin_capabilities(self):
+        fields = _build_membership_fields(
+            {"view_endpoint", "change_firmware", "add_endpointoperation"}
+        )
+
+        assert fields == {
+            "role": "ADMIN",
+            "can_view_overview": True,
+            "can_view_firmware": True,
+            "can_view_data_analysis": True,
+            "can_manage_firmware": True,
+            "can_perform_operations": True,
+            "can_manage_devices": False,
+        }
+
+    def test_backfill_assigns_to_only_active_site(self):
+        site = SiteFactory(name="Only Active Site", is_active=True)
+        user = UserFactory(is_superuser=False)
+        permission = Permission.objects.get(codename="view_endpoint")
+        user.user_permissions.add(permission)
+
+        backfill_legacy_site_memberships(django_apps, None)
+
+        membership = SiteMembership.objects.get(user=user)
+        assert membership.site == site
+        assert membership.role == SiteMembership.Role.USER
+        assert membership.can_view_overview is True
+        assert membership.can_view_data_analysis is True
+        assert membership.can_view_firmware is False
+
+    def test_backfill_uses_default_site_when_multiple_active_sites(self):
+        SiteFactory(name="Alpha Site", is_active=True)
+        SiteFactory(name="Bravo Site", is_active=True)
+        user = UserFactory(is_superuser=False)
+        permission = Permission.objects.get(codename="change_firmware")
+        user.user_permissions.add(permission)
+
+        backfill_legacy_site_memberships(django_apps, None)
+
+        membership = SiteMembership.objects.get(user=user)
+        assert membership.site.name == DEFAULT_SITE_NAME
+        assert membership.role == SiteMembership.Role.ADMIN
+        assert membership.can_manage_firmware is True
+        assert membership.can_view_firmware is True
+
+    def test_backfill_skips_superusers_plain_users_and_existing_memberships(self):
+        only_site = SiteFactory(name="Only Active Site", is_active=True)
+        superuser = UserFactory(is_superuser=True, is_staff=True)
+        plain_user = UserFactory(is_superuser=False)
+        existing_user = UserFactory(is_superuser=False)
+        new_user = UserFactory(is_superuser=False)
+
+        legacy_permission = Permission.objects.get(codename="view_endpoint")
+        superuser.user_permissions.add(legacy_permission)
+        existing_user.user_permissions.add(legacy_permission)
+        new_user.user_permissions.add(legacy_permission)
+        SiteMembershipFactory(user=existing_user, site=only_site, role=SiteMembership.Role.ADMIN)
+
+        backfill_legacy_site_memberships(django_apps, None)
+
+        assert SiteMembership.objects.filter(user=superuser).count() == 0
+        assert SiteMembership.objects.filter(user=plain_user).count() == 0
+        assert SiteMembership.objects.filter(user=existing_user).count() == 1
+        assert SiteMembership.objects.filter(user=new_user, site=only_site).count() == 1
