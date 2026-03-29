@@ -110,6 +110,17 @@ class SiteMembershipUpdateForm(TablerStyledFormMixin, forms.ModelForm):
         self._apply_tabler_styles()
 
 
+class SiteCreateForm(TablerStyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = Site
+        fields = ["name", "description"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["description"].widget = forms.Textarea(attrs={"rows": 3})
+        self._apply_tabler_styles()
+
+
 class DeviceAssignmentForm(TablerStyledFormMixin, forms.Form):
     endpoint = forms.ModelChoiceField(queryset=Endpoint.objects.none(), label="Unassigned device")
     site = forms.ModelChoiceField(queryset=Site.objects.none())

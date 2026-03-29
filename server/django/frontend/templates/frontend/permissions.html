@@ -126,6 +126,16 @@
     margin-top: auto;
     padding-top: 1rem;
   }
+  .permissions-card-grid .tab-pane.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .permissions-card-grid .tab-pane.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
   @media (min-width: 1200px) {
     .permissions-card-grid {
       grid-template-columns: repeat(2, 1fr);
@@ -162,37 +172,66 @@
     <div class="permissions-card-grid">
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Create User</h3>
+          <ul class="nav nav-tabs card-header-tabs" id="createTabNav" role="tablist">
+            <li class="nav-item" role="presentation">
+              <a class="nav-link{% if not site_creation_form.errors %} active{% endif %}" id="tab-create-user-link" data-bs-toggle="tab" href="#tab-create-user" role="tab" aria-controls="tab-create-user" aria-selected="{% if not site_creation_form.errors %}true{% else %}false{% endif %}">Create User</a>
+            </li>
+            <li class="nav-item" role="presentation">
+              <a class="nav-link{% if site_creation_form.errors %} active{% endif %}" id="tab-create-site-link" data-bs-toggle="tab" href="#tab-create-site" role="tab" aria-controls="tab-create-site" aria-selected="{% if site_creation_form.errors %}true{% else %}false{% endif %}">Create Site</a>
+            </li>
+          </ul>
         </div>
-        <div class="card-body">
-          <form method="post" class="row g-3">
-            {% csrf_token %}
-            <input type="hidden" name="create_user" value="1">
-            <div class="col-12">
-              <label class="form-label">{{ user_creation_form.username.label }}</label>
-              {{ user_creation_form.username }}
-              {% for error in user_creation_form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="col-12">
-              <label class="form-label">{{ user_creation_form.email.label }}</label>
-              {{ user_creation_form.email }}
-              {% for error in user_creation_form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="col-12">
-              <label class="form-label">{{ user_creation_form.password1.label }}</label>
-              {{ user_creation_form.password1 }}
-              {% for error in user_creation_form.password1.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="col-12">
-              <label class="form-label">{{ user_creation_form.password2.label }}</label>
-              {{ user_creation_form.password2 }}
-              {% for error in user_creation_form.password2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            {% for error in user_creation_form.non_field_errors %}<div class="col-12 text-danger small">{{ error }}</div>{% endfor %}
-            <div class="col-12">
-              <button type="submit" class="btn btn-primary">Create User</button>
-            </div>
-          </form>
+        <div class="card-body tab-content">
+          <div class="tab-pane fade{% if not site_creation_form.errors %} show active{% endif %} row g-3" id="tab-create-user" role="tabpanel" aria-labelledby="tab-create-user-link">
+            <form method="post" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="create_user" value="1">
+              <div class="col-12">
+                <label class="form-label">{{ user_creation_form.username.label }}</label>
+                {{ user_creation_form.username }}
+                {% for error in user_creation_form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-12">
+                <label class="form-label">{{ user_creation_form.email.label }}</label>
+                {{ user_creation_form.email }}
+                {% for error in user_creation_form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-12">
+                <label class="form-label">{{ user_creation_form.password1.label }}</label>
+                {{ user_creation_form.password1 }}
+                {% for error in user_creation_form.password1.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-12">
+                <label class="form-label">{{ user_creation_form.password2.label }}</label>
+                {{ user_creation_form.password2 }}
+                {% for error in user_creation_form.password2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              {% for error in user_creation_form.non_field_errors %}<div class="col-12 text-danger small">{{ error }}</div>{% endfor %}
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">Create User</button>
+              </div>
+            </form>
+          </div>
+          <div class="tab-pane fade{% if site_creation_form.errors %} show active{% endif %} row g-3" id="tab-create-site" role="tabpanel" aria-labelledby="tab-create-site-link">
+            <form method="post" class="row g-3">
+              {% csrf_token %}
+              <input type="hidden" name="create_site" value="1">
+              <div class="col-12">
+                <label class="form-label">{{ site_creation_form.name.label }}</label>
+                {{ site_creation_form.name }}
+                {% for error in site_creation_form.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-12">
+                <label class="form-label">{{ site_creation_form.description.label }}</label>
+                {{ site_creation_form.description }}
+                {% for error in site_creation_form.description.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              {% for error in site_creation_form.non_field_errors %}<div class="col-12 text-danger small">{{ error }}</div>{% endfor %}
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">Create Site</button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -426,14 +465,14 @@
                  <td>
                     {{ endpoint.transfer_form.site }}
                  </td>
-                 <td>
-                   <form method="post" class="d-inline transfer-device-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="transfer_device" value="1">
-                    <input type="hidden" name="endpoint_id" value="{{ endpoint.endpoint }}">
-                    <input type="hidden" name="site" class="transfer-site-value" value="{{ endpoint.transfer_form.site.value|default:'' }}">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Transfer</button>
-                  </form>
+                  <td>
+                    <form method="post" class="d-inline transfer-device-form">
+                     {% csrf_token %}
+                     <input type="hidden" name="transfer_device" value="1">
+                     <input type="hidden" name="endpoint_id" value="{{ endpoint.endpoint }}">
+                     <input type="hidden" name="transfer-{{ endpoint.endpoint }}-site" class="transfer-site-value" value="{{ endpoint.transfer_form.site.value|default:'' }}">
+                     <button type="submit" class="btn btn-sm btn-outline-primary">Transfer</button>
+                   </form>
                  </td>
                </tr>
                {% empty %}

@@ -31,6 +31,7 @@ from .forms import (
     FirmwareUploadForm,
     GlobalAdminUserCreationForm,
     ProfilePasswordChangeForm,
+    SiteCreateForm,
     SiteMembershipCreateForm,
     SiteMembershipUpdateForm,
 )
@@ -107,6 +108,7 @@ def _enrich_endpoints_with_details(endpoints: list[Any]) -> list[Any]:
 def _build_permissions_context(
     *,
     user_creation_form: GlobalAdminUserCreationForm | None = None,
+    site_creation_form: SiteCreateForm | None = None,
     membership_create_form: SiteMembershipCreateForm | None = None,
     device_assignment_form: DeviceAssignmentForm | None = None,
     bulk_assignment_form: BulkDeviceAssignmentForm | None = None,
@@ -145,6 +147,7 @@ def _build_permissions_context(
     return {
         "user_creation_form": user_creation_form
         or GlobalAdminUserCreationForm(prefix="create-user"),
+        "site_creation_form": site_creation_form or SiteCreateForm(prefix="create-site"),
         "membership_create_form": membership_create_form
         or SiteMembershipCreateForm(prefix="create-membership"),
         "device_assignment_form": device_assignment_form
@@ -451,6 +454,13 @@ def permissions(request):
                 user_creation_form.save()
                 return redirect("frontend:permissions")
             context_overrides["user_creation_form"] = user_creation_form
+
+        elif "create_site" in request.POST:
+            site_creation_form = SiteCreateForm(request.POST, prefix="create-site")
+            if site_creation_form.is_valid():
+                site_creation_form.save()
+                return redirect("frontend:permissions")
+            context_overrides["site_creation_form"] = site_creation_form
 
         elif "create_membership" in request.POST:
             membership_create_form = SiteMembershipCreateForm(
