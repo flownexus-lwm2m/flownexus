@@ -409,9 +409,16 @@
   function updateEventTable(data) {
     el('event-table-body').innerHTML = data.events.map(e => {
       const time = luxon.DateTime.fromISO(e.time).toLocaleString(luxon.DateTime.DATETIME_SHORT);
-      const dataHtml = Object.entries(e.data).map(([k, v]) =>
-        `<li class="event-data-item"><span class="event-data-key">${k}:</span> ${v}</li>`
-      ).join('');
+      const dataHtml = Object.entries(e.data).map(([k, v]) => {
+        if (Array.isArray(v)) {
+          return `<li class="event-data-item"><span class="event-data-key">${k}:</span> <span class="badge bg-blue-lt">${v.length} elements</span></li>`;
+        }
+        const isRaw = typeof v === 'string' && v.startsWith('<raw:');
+        return `<li class="event-data-item">
+          <span class="event-data-key">${k}:</span>
+          ${isRaw ? `<span class="badge bg-yellow-lt">raw</span> ${v}` : v}
+        </li>`;
+      }).join('');
       return `<tr>
         <td class="text-nowrap align-top">${time}</td>
         <td class="text-nowrap align-top">${e.endpoint}</td>
