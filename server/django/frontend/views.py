@@ -656,10 +656,22 @@ def data_analysis(request):
 
             event_list = []
             for e in page_obj:
-                res_data = {}
+                res_data: dict[str, Any] = {}
                 for er in e.resources.all():
                     res = er.resource
-                    res_data[res.resource_type.name] = res.get_value()
+                    name = res.resource_type.name
+                    if res.resource_type.data_type == ResourceType.OPAQUE:
+                        size = res.get_binary_size()
+                        value: Any = f"<raw: {size} bytes>" if size is not None else "<raw: N/A>"
+                    else:
+                        value = res.get_value()
+                    if name in res_data:
+                        existing = res_data[name]
+                        if not isinstance(existing, list):
+                            res_data[name] = [existing]
+                        res_data[name].append(value)
+                    else:
+                        res_data[name] = value
 
                 event_list.append(
                     {
@@ -850,27 +862,63 @@ def data_analysis_export(request):
             msg = f"Export exceeds {EXPORT_ROW_LIMIT:,} rows. Narrow your filter and try again."
             return JsonResponse({"error": msg}, status=400)
 
-        # Two-pass: collect all resource names first, then write rows
+        # Two-pass: collect all column names first (with array expansion), then write rows.
+        # Array resources produce indexed columns: name[0], name[1], ...
         event_list = list(events)
-        resource_names: dict[str, None] = {}
-        for e in event_list:
-            for er in e.resources.all():
-                resource_names[er.resource.resource_type.name] = None
-        extra_cols = list(resource_names.keys())
 
+        # First pass: build res_data per event and find all column names
+        events_res_data: list[dict[str, Any]] = []
+        col_order: dict[str, None] = {}  # ordered set of column names
+
+        for e in event_list:
+            res_data_ev: dict[str, Any] = {}
+            for er in e.resources.all():
+                res = er.resource
+                name = res.resource_type.name
+                if res.resource_type.data_type == ResourceType.OPAQUE:
+                    size = res.get_binary_size()
+                    value: Any = f"<raw: {size} bytes>" if size is not None else "<raw: N/A>"
+                else:
+                    value = res.get_value()
+                if name in res_data_ev:
+                    existing = res_data_ev[name]
+                    if not isinstance(existing, list):
+                        res_data_ev[name] = [existing]
+                    res_data_ev[name].append(value)
+                else:
+                    res_data_ev[name] = value
+            events_res_data.append(res_data_ev)
+            for name, val in res_data_ev.items():
+                if isinstance(val, list):
+                    for idx in range(len(val)):
+                        col_order[f"{name}[{idx}]"] = None
+                else:
+                    col_order[name] = None
+
+        extra_cols = list(col_order.keys())
         headers = ["Time", "Endpoint", "Event Type"] + extra_cols
         ws.append(headers)
         for cell in ws[1]:
             cell.font = bold
 
-        for e in event_list:
-            res_data: dict[str, Any] = {}
-            for er in e.resources.all():
-                res = er.resource
-                res_data[res.resource_type.name] = res.get_value()
+        for e, res_data_ev in zip(event_list, events_res_data, strict=True):
             ts = e.time.strftime("%Y-%m-%d %H:%M:%S")
-            row = [ts, e.endpoint.endpoint, e.event_type]
-            row += [res_data.get(name, "") for name in extra_cols]
+            row: list[Any] = [ts, e.endpoint.endpoint, e.event_type]
+            for col in extra_cols:
+                # Check if col is an indexed name like "foo[2]"
+                bracket = col.rfind("[")
+                if bracket != -1 and col.endswith("]"):
+                    base_name = col[:bracket]
+                    idx = int(col[bracket + 1 : -1])
+                    val_list = res_data_ev.get(base_name)
+                    if isinstance(val_list, list) and idx < len(val_list):
+                        row.append(val_list[idx])
+                    else:
+                        row.append("")
+                else:
+                    cell_val = res_data_ev.get(col, "")
+                    # scalar stored as list when another event has more elements: skip index
+                    row.append("" if isinstance(cell_val, list) else cell_val)
             ws.append(row)
 
         ws.title = "Events"

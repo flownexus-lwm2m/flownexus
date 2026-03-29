@@ -148,6 +148,7 @@ class ResourceType(models.Model):
         (INTEGER, "int_value"),
         (FLOAT, "float_value"),
         (BOOLEAN, "int_value"),
+        (OPAQUE, "binary_value"),
     ]
 
     object_id = models.IntegerField()
@@ -173,6 +174,7 @@ class Resource(models.Model):
     int_value = models.IntegerField(null=True, blank=True)
     float_value = models.FloatField(null=True, blank=True)
     str_value = models.CharField(max_length=512, null=True, blank=True)
+    binary_value = models.BinaryField(null=True, blank=True)
     timestamp_created = models.DateTimeField(blank=True, null=True, db_index=True)
 
     def save(self, *args, **kwargs):
@@ -188,6 +190,12 @@ class Resource(models.Model):
         value_field = self.resource_type.get_value_field()
         if value_field:
             return getattr(self, value_field)
+        return None
+
+    def get_binary_size(self) -> int | None:
+        """Return the byte length of binary_value, or None if not set."""
+        if self.binary_value is not None:
+            return len(self.binary_value)
         return None
 
 

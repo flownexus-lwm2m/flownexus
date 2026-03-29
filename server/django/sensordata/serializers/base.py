@@ -84,12 +84,20 @@ class HandleResourceMixin:
 
         # Create the Resource instance based on value type
         logger.debug(f"Adding resource_type: {res_type}")
-        resource_data = {
-            "endpoint": ep,
-            "resource_type": res_type,
-            data_type: res["value"],
-            **({"timestamp_created": ts} if ts is not None else {}),
-        }
+        if res_type.data_type == ResourceType.OPAQUE:
+            resource_data = {
+                "endpoint": ep,
+                "resource_type": res_type,
+                "binary_value": bytes.fromhex(res["value"]),
+                **({"timestamp_created": ts} if ts is not None else {}),
+            }
+        else:
+            resource_data = {
+                "endpoint": ep,
+                "resource_type": res_type,
+                data_type: res["value"],
+                **({"timestamp_created": ts} if ts is not None else {}),
+            }
         created_res = Resource.objects.create(**resource_data)
 
         # Create EventResource linking the event and the resource

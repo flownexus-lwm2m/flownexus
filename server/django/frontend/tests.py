@@ -24,7 +24,14 @@ from sensordata.factories import (
     SiteMembershipFactory,
     UserFactory,
 )
-from sensordata.models import EventResource, Firmware, FirmwareUpdate, ResourceType, SiteMembership
+from sensordata.models import (
+    EventResource,
+    Firmware,
+    FirmwareUpdate,
+    Resource,
+    ResourceType,
+    SiteMembership,
+)
 
 
 @pytest.mark.django_db
@@ -1637,3 +1644,330 @@ class TestDataAnalysisExport:
         body = json.loads(response.content)
         assert "error" in body
         assert "rows" in body["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Array + raw (OPAQUE) resource tests
+# ---------------------------------------------------------------------------
+
+
+_rt_seq = iter(range(1000, 9999))
+
+
+def _make_rt(name: str, data_type: str) -> ResourceType:
+    """Create a ResourceType with a unique (object_id, resource_id) pair."""
+    rid = next(_rt_seq)
+    return ResourceType.objects.create(
+        object_id=19999, resource_id=rid, name=name, data_type=data_type
+    )
+
+
+def _make_opaque_resource(ep, rt: ResourceType, binary_value: bytes | None) -> Resource:
+    """Create an OPAQUE Resource, suppressing the factory's default float_value."""
+    return ResourceFactory(
+        endpoint=ep, resource_type=rt, float_value=None, binary_value=binary_value
+    )
+
+
+@pytest.mark.django_db
+class TestEventArrayAndRawElements:
+    """Verify that array resources and OPAQUE resources are handled correctly
+    in both the JSON events API and the Excel export."""
+
+    # ------------------------------------------------------------------
+    # JSON API – array resources
+    # ------------------------------------------------------------------
+
+    def test_json_array_elements_returned_as_list(self, client):
+        """Three resources with the same name under one event must be returned as a list."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("pm_press_avg", "TIME")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        for val in (10, 20, 30):
+            res = ResourceFactory(endpoint=ep, resource_type=rt, int_value=val, float_value=None)
+            EventResource.objects.create(event=event, resource=res)
+
+        response = client_obj.get(
+            _data_analysis_url(format="json", mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["events"][0]["data"]["pm_press_avg"] == [10, 20, 30]
+
+    def test_json_scalar_not_promoted_to_list(self, client):
+        """A single resource must not be wrapped in a list."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("pm_result_code", "INTEGER")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        res = ResourceFactory(endpoint=ep, resource_type=rt, int_value=42, float_value=None)
+        EventResource.objects.create(event=event, resource=res)
+
+        response = client_obj.get(
+            _data_analysis_url(format="json", mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["events"][0]["data"]["pm_result_code"] == 42
+
+    def test_json_opaque_resource_shows_raw_marker_with_size(self, client):
+        """OPAQUE resource with stored bytes must appear as '<raw: N bytes>'."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("pm_press_raw", "OPAQUE")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        EventResource.objects.create(
+            event=event, resource=_make_opaque_resource(ep, rt, b"\xde\xad\xbe\xef")
+        )
+
+        response = client_obj.get(
+            _data_analysis_url(format="json", mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["events"][0]["data"]["pm_press_raw"] == "<raw: 4 bytes>"
+
+    def test_json_opaque_null_shows_na_marker(self, client):
+        """OPAQUE resource with NULL binary_value shows '<raw: N/A>'."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("pm_press_raw", "OPAQUE")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        EventResource.objects.create(event=event, resource=_make_opaque_resource(ep, rt, None))
+
+        response = client_obj.get(
+            _data_analysis_url(format="json", mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["events"][0]["data"]["pm_press_raw"] == "<raw: N/A>"
+
+    def test_json_opaque_empty_blob_shows_zero_bytes(self, client):
+        """OPAQUE resource with an empty byte string (b'') shows '<raw: 0 bytes>'."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("pm_press_raw", "OPAQUE")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        EventResource.objects.create(event=event, resource=_make_opaque_resource(ep, rt, b""))
+
+        response = client_obj.get(
+            _data_analysis_url(format="json", mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["events"][0]["data"]["pm_press_raw"] == "<raw: 0 bytes>"
+
+    def test_json_mixed_event_all_element_types(self, client):
+        """Realistic event: scalar + array + opaque all correct in one response."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+
+        rt_code = _make_rt("pm_result_code", "INTEGER")
+        rt_str = _make_rt("pm_result_string", "STRING")
+        rt_avg = _make_rt("pm_press_avg", "TIME")
+        rt_raw = _make_rt("pm_press_raw", "OPAQUE")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        EventResource.objects.create(
+            event=event,
+            resource=ResourceFactory(
+                endpoint=ep, resource_type=rt_code, int_value=0, float_value=None
+            ),
+        )
+        EventResource.objects.create(
+            event=event,
+            resource=ResourceFactory(
+                endpoint=ep, resource_type=rt_str, str_value="OK", float_value=None
+            ),
+        )
+        for v in (100, 200):
+            EventResource.objects.create(
+                event=event,
+                resource=ResourceFactory(
+                    endpoint=ep, resource_type=rt_avg, int_value=v, float_value=None
+                ),
+            )
+        EventResource.objects.create(
+            event=event, resource=_make_opaque_resource(ep, rt_raw, b"\x01\x02")
+        )
+
+        response = client_obj.get(
+            _data_analysis_url(format="json", mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        event_data = json.loads(response.content)["events"][0]["data"]
+        assert event_data["pm_result_code"] == 0
+        assert event_data["pm_result_string"] == "OK"
+        assert event_data["pm_press_avg"] == [100, 200]
+        assert event_data["pm_press_raw"] == "<raw: 2 bytes>"
+
+    # ------------------------------------------------------------------
+    # Excel export – array resources
+    # ------------------------------------------------------------------
+
+    def test_export_array_expands_to_indexed_columns(self, client):
+        """Array resources must generate pm_press_avg[0], [1], [2] columns in the xlsx."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("pm_press_avg", "TIME")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        for val in (10, 20, 30):
+            res = ResourceFactory(endpoint=ep, resource_type=rt, int_value=val, float_value=None)
+            EventResource.objects.create(event=event, resource=res)
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        assert "pm_press_avg[0]" in headers
+        assert "pm_press_avg[1]" in headers
+        assert "pm_press_avg[2]" in headers
+        assert "pm_press_avg" not in headers  # plain name must not appear
+
+        col0 = headers.index("pm_press_avg[0]") + 1
+        col1 = headers.index("pm_press_avg[1]") + 1
+        col2 = headers.index("pm_press_avg[2]") + 1
+        assert ws.cell(2, col0).value == 10
+        assert ws.cell(2, col1).value == 20
+        assert ws.cell(2, col2).value == 30
+
+    def test_export_array_unequal_lengths_across_events(self, client):
+        """Event A has 3 array elements, event B has 2: shorter event leaves cells empty."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("val", "INTEGER")
+
+        event_a = EventFactory(endpoint=ep, event_type="DATA")
+        for v in (1, 2, 3):
+            EventResource.objects.create(
+                event=event_a,
+                resource=ResourceFactory(
+                    endpoint=ep, resource_type=rt, int_value=v, float_value=None
+                ),
+            )
+        event_b = EventFactory(endpoint=ep, event_type="DATA")
+        for v in (4, 5):
+            EventResource.objects.create(
+                event=event_b,
+                resource=ResourceFactory(
+                    endpoint=ep, resource_type=rt, int_value=v, float_value=None
+                ),
+            )
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        assert "val[2]" in headers  # column exists because event_a has 3 elements
+        col2 = headers.index("val[2]") + 1
+        # one row has a value, the other is empty — order may vary, so check the set
+        values = {ws.cell(r, col2).value for r in (2, 3)}
+        assert values == {3, None}
+
+    def test_export_opaque_cell_shows_raw_marker(self, client):
+        """OPAQUE resource with stored bytes must appear as '<raw: N bytes>' in the xlsx."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+        rt = _make_rt("pm_press_raw", "OPAQUE")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        EventResource.objects.create(
+            event=event, resource=_make_opaque_resource(ep, rt, b"\xca\xfe")
+        )
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+        raw_col = headers.index("pm_press_raw") + 1
+        assert ws.cell(2, raw_col).value == "<raw: 2 bytes>"
+
+    def test_export_mixed_event_correct_columns_and_values(self, client):
+        """Full realistic event exported to xlsx has correct headers and cell values."""
+        client_obj, _, site = _setup_data_analysis_user()
+        ep = EndpointFactory(site=site)
+
+        rt_code = _make_rt("pm_result_code", "INTEGER")
+        rt_str = _make_rt("pm_result_string", "STRING")
+        rt_avg = _make_rt("pm_press_avg", "TIME")
+        rt_raw = _make_rt("pm_press_raw", "OPAQUE")
+
+        event = EventFactory(endpoint=ep, event_type="10300")
+        EventResource.objects.create(
+            event=event,
+            resource=ResourceFactory(
+                endpoint=ep, resource_type=rt_code, int_value=7, float_value=None
+            ),
+        )
+        EventResource.objects.create(
+            event=event,
+            resource=ResourceFactory(
+                endpoint=ep, resource_type=rt_str, str_value="PASS", float_value=None
+            ),
+        )
+        for v in (111, 222):
+            EventResource.objects.create(
+                event=event,
+                resource=ResourceFactory(
+                    endpoint=ep, resource_type=rt_avg, int_value=v, float_value=None
+                ),
+            )
+        EventResource.objects.create(
+            event=event, resource=_make_opaque_resource(ep, rt_raw, b"\x00" * 5)
+        )
+
+        response = client_obj.get(
+            _export_url(mode="events", endpoint=ep.endpoint, time_range="all")
+        )
+        wb = _wb_from_response(response)
+        ws = wb.active
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+
+        assert "pm_result_code" in headers
+        assert "pm_result_string" in headers
+        assert "pm_press_avg[0]" in headers
+        assert "pm_press_avg[1]" in headers
+        assert "pm_press_raw" in headers
+
+        def col(name: str) -> int:
+            return headers.index(name) + 1
+
+        assert ws.cell(2, col("pm_result_code")).value == 7
+        assert ws.cell(2, col("pm_result_string")).value == "PASS"
+        assert ws.cell(2, col("pm_press_avg[0]")).value == 111
+        assert ws.cell(2, col("pm_press_avg[1]")).value == 222
+        assert ws.cell(2, col("pm_press_raw")).value == "<raw: 5 bytes>"
+
+    # ------------------------------------------------------------------
+    # Serializer ingestion – OPAQUE data from device
+    # ------------------------------------------------------------------
+
+    def test_serializer_ingests_opaque_hex_into_binary_value(self, client):
+        """POST of an OPAQUE resource with a hex-encoded value stores bytes in binary_value."""
+        ResourceTypeFactory(
+            object_id=19000, resource_id=0, name="raw_payload", data_type=ResourceType.OPAQUE
+        )
+        payload = {
+            "ep": "test-device",
+            "obj_id": 19000,
+            "val": {"kind": "singleResource", "id": 0, "type": "OPAQUE", "value": "deadbeef"},
+        }
+        response = client.post(
+            reverse("post-single-resource"), payload, content_type="application/json"
+        )
+        assert response.status_code == 201
+        resource = Resource.objects.get(
+            endpoint__endpoint="test-device",
+            resource_type__object_id=19000,
+            resource_type__resource_id=0,
+        )
+        assert resource.binary_value == b"\xde\xad\xbe\xef"
