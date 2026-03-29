@@ -11,7 +11,8 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Max
+from django.db.models import Count, Max, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce, Length
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -21,7 +22,15 @@ from openpyxl.styles import Font
 
 from core.middleware import UNASSIGNED_SITE_KEY
 from core.permissions import get_site_filtered_endpoints, has_site_permission
-from sensordata.models import Endpoint, Event, Firmware, Resource, ResourceType, SiteMembership
+from sensordata.models import (
+    Endpoint,
+    Event,
+    EventResource,
+    Firmware,
+    Resource,
+    ResourceType,
+    SiteMembership,
+)
 
 from .forms import (
     BulkDeviceAssignmentForm,
@@ -912,7 +921,7 @@ def data_analysis_export(request):
             cell.font = bold
 
         for e, res_data_ev in zip(event_list, events_res_data, strict=True):
-            ts = e.time.strftime("%Y-%m-%d %H:%M:%S")
+            ts = e.time.strftime("%d.%m.%Y %H:%M:%S")
             row: list[Any] = [ts, e.endpoint.endpoint, e.event_type]
             for col in extra_cols:
                 # Check if col is an indexed name like "foo[2]"
@@ -942,6 +951,324 @@ def data_analysis_export(request):
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     response["Content-Disposition"] = 'attachment; filename="flownexus_export.xlsx"'
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Pump Monitor
+# ---------------------------------------------------------------------------
+
+PUMP_EVENT_TYPE = "10300"
+PM_PRESS_RAW_NAME = "pm_press_raw"
+PM_SAMPLE_RATE_HZ = 50
+
+
+def _decode_raw_samples(binary_value: bytes | None) -> list[int]:
+    """Decode OPAQUE binary_value into a list of unsigned 8-bit pressure samples."""
+    if not binary_value:
+        return []
+    return list(binary_value)
+
+
+def _get_pm_press_raw_resource(event: Event) -> Resource | None:
+    """Return the pm_press_raw Resource linked to *event*, or None."""
+    er = (
+        EventResource.objects.filter(
+            event=event,
+            resource__resource_type__name=PM_PRESS_RAW_NAME,
+        )
+        .select_related("resource")
+        .first()
+    )
+    return er.resource if er else None
+
+
+def _pm_sample_count(event: Event, prefetched_resources: Any = None) -> int:
+    """Return the number of 8-bit samples in pm_press_raw for *event*.
+
+    When *prefetched_resources* (event.resources.all()) is provided the lookup
+    is done in-memory to avoid N+1 queries.
+    """
+    resources_iter = (
+        prefetched_resources if prefetched_resources is not None else event.resources.all()
+    )  # noqa: E501
+    for er in resources_iter:
+        res = er.resource
+        if res.resource_type.name == PM_PRESS_RAW_NAME:
+            if res.binary_value is not None:
+                return len(res.binary_value)
+            return 0
+    return 0
+
+
+def _parse_pm_time_filters(request: Any) -> tuple[Any, Any]:
+    """Parse time range parameters and return (start_date, end_date)."""
+    time_range = request.GET.get("time_range", "24h")
+    now = timezone.now()
+    start_date = None
+    end_date = None
+    if time_range == "1h":
+        start_date = now - timedelta(hours=1)
+    elif time_range == "7d":
+        start_date = now - timedelta(days=7)
+    elif time_range == "30d":
+        start_date = now - timedelta(days=30)
+    elif time_range == "custom":
+        time_from_str = request.GET.get("time_from")
+        time_to_str = request.GET.get("time_to")
+        if time_from_str:
+            try:
+                parsed = parse_datetime(time_from_str)
+                if parsed:
+                    start_date = (
+                        timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+                    )
+            except (ValueError, TypeError):
+                pass
+        if time_to_str:
+            try:
+                parsed = parse_datetime(time_to_str)
+                if parsed:
+                    end_date = timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
+                    end_date = end_date + timedelta(minutes=1)
+            except (ValueError, TypeError):
+                pass
+    elif time_range == "all":
+        start_date = None
+    else:  # default 24h
+        start_date = now - timedelta(hours=24)
+    return start_date, end_date
+
+
+PM_SORT_WHITELIST = {"time", "endpoint", "sample_count"}
+
+
+def _build_pm_queryset(
+    site_endpoints: Any,
+    endpoint_id: str | None,
+    start_date: Any,
+    end_date: Any,
+    sort_col: str = "time",
+    sort_dir: str = "desc",
+) -> Any:
+    """Return a filtered queryset of pump-monitoring events (10300).
+
+    Annotates each event with ``sample_count`` (the byte-length of the
+    associated ``pm_press_raw`` OPAQUE resource, defaulting to 0).
+    """
+    # Subquery: length of binary_value for the pm_press_raw resource linked to each event
+    raw_length_sq = Subquery(
+        EventResource.objects.filter(
+            event_id__exact=OuterRef("pk"),
+            resource__resource_type__name=PM_PRESS_RAW_NAME,
+        )
+        .annotate(blen=Coalesce(Length("resource__binary_value"), Value(0)))
+        .values("blen")[:1]
+    )
+
+    events = (
+        Event.objects.filter(
+            endpoint__in=site_endpoints,
+            event_type=PUMP_EVENT_TYPE,
+        )
+        .select_related("endpoint__site")
+        .prefetch_related("resources__resource__resource_type")
+        .annotate(sample_count=Coalesce(raw_length_sq, Value(0)))
+    )
+    if start_date:
+        events = events.filter(time__gte=start_date)
+    if end_date:
+        events = events.filter(time__lte=end_date)
+    if endpoint_id:
+        events = events.filter(endpoint_id=endpoint_id)
+
+    # Apply sort (whitelist to prevent injection)
+    if sort_col not in PM_SORT_WHITELIST:
+        sort_col = "time"
+    order_string = f"{'' if sort_dir == 'asc' else '-'}{sort_col}"
+    events = events.order_by(order_string)
+
+    return events
+
+
+@login_required
+def pump_monitor(request):
+    """Pump Monitor page — lists pump-monitoring events (10300) and provides
+    a detail view with a pressure-gradient chart."""
+    if not _check_site_permission(request, "can_view_data_analysis"):
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
+    endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
+    endpoint_id = request.GET.get("endpoint") or None
+    if endpoint_id == "all":
+        endpoint_id = None
+    time_range = request.GET.get("time_range", "24h")
+
+    start_date, end_date = _parse_pm_time_filters(request)
+
+    fmt = request.GET.get("format")
+
+    if fmt == "json":
+        sort_col = request.GET.get("sort", "time")
+        sort_dir = request.GET.get("dir", "desc")
+        events = _build_pm_queryset(
+            endpoints, endpoint_id, start_date, end_date, sort_col, sort_dir
+        )
+        paginator = Paginator(events, 50)
+        page_number = request.GET.get("page", 1)
+        page_obj = paginator.get_page(page_number)
+
+        event_list = []
+        for e in page_obj:
+            prefetched = e.resources.all()
+            sample_count = _pm_sample_count(e, prefetched_resources=prefetched)
+            event_list.append(
+                {
+                    "id": e.id,
+                    "endpoint": e.endpoint.endpoint,
+                    "site": e.endpoint.site.name if e.endpoint.site else "",
+                    "time": e.time.isoformat(),
+                    "sample_count": sample_count,
+                }
+            )
+
+        return JsonResponse(
+            {
+                "events": event_list,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+                "number": page_obj.number,
+                "num_pages": paginator.num_pages,
+            }
+        )
+
+    if fmt == "detail":
+        event_id = request.GET.get("event_id")
+        if not event_id:
+            return JsonResponse({"error": "event_id required"}, status=400)
+        event = (
+            Event.objects.filter(
+                id=event_id,
+                endpoint__in=endpoints,
+                event_type=PUMP_EVENT_TYPE,
+            )
+            .select_related("endpoint__site")
+            .first()
+        )
+        if not event:
+            return JsonResponse({"error": "Event not found"}, status=404)
+
+        raw_resource = _get_pm_press_raw_resource(event)
+        samples = _decode_raw_samples(raw_resource.binary_value if raw_resource else None)
+        chart_data = [{"x": round(i / PM_SAMPLE_RATE_HZ, 4), "y": s} for i, s in enumerate(samples)]
+
+        return JsonResponse(
+            {
+                "id": event.id,
+                "endpoint": event.endpoint.endpoint,
+                "site": event.endpoint.site.name if event.endpoint.site else "",
+                "time": event.time.isoformat(),
+                "sample_count": len(samples),
+                "chart_data": chart_data,
+            }
+        )
+
+    context = {
+        "endpoints": endpoints,
+        "selected_endpoint": request.GET.get("endpoint", ""),
+        "selected_time_range": time_range,
+        "selected_time_from": request.GET.get("time_from", ""),
+        "selected_time_to": request.GET.get("time_to", ""),
+    }
+    return render(request, "frontend/pump_monitor.html", context)
+
+
+PUMP_EXPORT_ROW_LIMIT = 500_000
+
+
+@login_required
+def pump_monitor_export(request):
+    """Export pump-monitoring events as an Excel workbook with two sheets:
+    1. Events — one row per event (time, endpoint, sample_count)
+    2. Samples — long-format rows (event_time, endpoint, sample_index, seconds, pressure_kpa)
+    """
+    if not _check_site_permission(request, "can_view_data_analysis"):
+        return HttpResponseForbidden("You don't have permission to view this page.")
+
+    endpoints = get_site_filtered_endpoints(request, "can_view_data_analysis")
+    endpoint_id = request.GET.get("endpoint") or None
+    if endpoint_id == "all":
+        endpoint_id = None
+
+    start_date, end_date = _parse_pm_time_filters(request)
+    events = _build_pm_queryset(endpoints, endpoint_id, start_date, end_date)
+
+    event_list = list(events)
+
+    # Pre-compute total sample rows for limit check
+    total_sample_rows = 0
+    event_rows: list[tuple[Any, int, list[int]]] = []
+    for e in event_list:
+        prefetched = e.resources.all()
+        raw_res = None
+        for er in prefetched:
+            if er.resource.resource_type.name == PM_PRESS_RAW_NAME:
+                raw_res = er.resource
+                break
+        samples = _decode_raw_samples(raw_res.binary_value if raw_res else None)
+        event_rows.append((e, len(samples), samples))
+        total_sample_rows += max(len(samples), 0)
+
+    if total_sample_rows > PUMP_EXPORT_ROW_LIMIT:
+        msg = (
+            f"Export exceeds {PUMP_EXPORT_ROW_LIMIT:,} sample rows. "
+            "Narrow your filter and try again."
+        )
+        return JsonResponse({"error": msg}, status=400)
+
+    wb = Workbook()
+    bold = Font(bold=True)
+
+    # --- Events sheet ---
+    ws_events = wb.active
+    ws_events.title = "Events"
+    ws_events.append(["Time", "Site", "Endpoint", "Samples"])
+    for cell in ws_events[1]:
+        cell.font = bold
+    for e, count, _ in event_rows:
+        site_name = e.endpoint.site.name if e.endpoint.site else ""
+        ws_events.append(
+            [e.time.strftime("%d.%m.%Y %H:%M:%S"), site_name, e.endpoint.endpoint, count]
+        )
+
+    # --- Samples sheet ---
+    ws_samples = wb.create_sheet("Samples")
+    ws_samples.append(["Event Time", "Endpoint", "Sample Index", "Seconds", "Pressure (kPa)"])
+    for cell in ws_samples[1]:
+        cell.font = bold
+    for e, _, samples in event_rows:
+        ts = e.time.strftime("%d.%m.%Y %H:%M:%S")
+        ep_name = e.endpoint.endpoint
+        for idx, pressure in enumerate(samples):
+            ws_samples.append(
+                [
+                    ts,
+                    ep_name,
+                    idx,
+                    round(idx / PM_SAMPLE_RATE_HZ, 4),
+                    pressure,
+                ]
+            )
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="pump_monitor_export.xlsx"'
     return response
 
 

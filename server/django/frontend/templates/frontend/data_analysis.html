@@ -289,7 +289,7 @@
           legend: { display: false },
           tooltip: {
             callbacks: {
-              title: ctx => luxon.DateTime.fromISO(ctx[0].raw.x).toLocaleString(luxon.DateTime.DATETIME_SHORT)
+              title: ctx => luxon.DateTime.fromISO(ctx[0].raw.x).toFormat('dd.MM.yyyy HH:mm:ss')
             }
           }
         }
@@ -375,7 +375,7 @@
             endpointCol.style.display = data.multi_endpoint ? '' : 'none';
             const tbody = el('string-values-table-body');
             tbody.innerHTML = data.data.map(item => {
-              const time = luxon.DateTime.fromISO(item.t).toLocaleString(luxon.DateTime.DATETIME_SHORT);
+              const time = luxon.DateTime.fromISO(item.t).toFormat('dd.MM.yyyy HH:mm:ss');
               const endpointCell = data.multi_endpoint ? `<td>${item.endpoint}</td>` : '';
               return `<tr><td>${time}</td>${endpointCell}<td>${item.y}</td></tr>`;
             }).join('');
@@ -408,7 +408,7 @@
 
   function updateEventTable(data) {
     el('event-table-body').innerHTML = data.events.map(e => {
-      const time = luxon.DateTime.fromISO(e.time).toLocaleString(luxon.DateTime.DATETIME_SHORT);
+      const time = luxon.DateTime.fromISO(e.time).toFormat('dd.MM.yyyy HH:mm:ss');
       const dataHtml = Object.entries(e.data).map(([k, v]) => {
         if (Array.isArray(v)) {
           return `<li class="event-data-item"><span class="event-data-key">${k}:</span> <span class="badge bg-blue-lt">${v.length} elements</span></li>`;

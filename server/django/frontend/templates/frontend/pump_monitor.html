@@ -1,0 +1,512 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Pump Monitor{% endblock %}
+
+{% block page_title %}Pump Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  .flatpickr-confirm {
+    background: var(--tblr-primary, #206bc4);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    text-align: center;
+  }
+  .flatpickr-confirm:hover {
+    background: #1a56a0;
+  }
+  .row.g-4 {
+    padding-bottom: 1.5rem;
+  }
+  #event-table-card .table-responsive-scroll {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .pm-row {
+    cursor: pointer;
+  }
+  .pm-row.is-selected {
+    background: rgba(32, 107, 196, 0.08);
+  }
+  .sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+  .sortable:hover {
+    background-color: rgba(0,0,0,0.05);
+  }
+  .sort-icon::after {
+    content: ' \2195';
+    opacity: 0.3;
+  }
+  .sort-asc::after {
+    content: ' \2191';
+    opacity: 1;
+  }
+  .sort-desc::after {
+    content: ' \2193';
+    opacity: 1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Filters -->
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Filters</h3>
+      </div>
+      <div class="card-body">
+        <form id="filter-form">
+          <input type="hidden" name="page" value="1">
+          <input type="hidden" name="sort" value="time">
+          <input type="hidden" name="dir" value="desc">
+          <div class="mb-3">
+            <label class="form-label">Endpoint</label>
+            <select class="form-select" name="endpoint">
+              <option value="" {% if not selected_endpoint %}selected{% endif %} disabled>— select —</option>
+              <option value="all" {% if selected_endpoint == 'all' %}selected{% endif %}>All Devices</option>
+              {% for ep in endpoints %}
+              <option value="{{ ep.endpoint }}" {% if selected_endpoint == ep.endpoint %}selected{% endif %}>{{ ep.endpoint }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Time Range</label>
+            <select class="form-select" name="time_range" id="time-range-select">
+              <option value="1h" {% if selected_time_range == '1h' %}selected{% endif %}>Last Hour</option>
+              <option value="24h" {% if selected_time_range == '24h' %}selected{% endif %}>Last 24 Hours</option>
+              <option value="7d" {% if selected_time_range == '7d' %}selected{% endif %}>Last 7 Days</option>
+              <option value="30d" {% if selected_time_range == '30d' %}selected{% endif %}>Last 30 Days</option>
+              <option value="all" {% if selected_time_range == 'all' %}selected{% endif %}>All</option>
+              <option value="custom" {% if selected_time_range == 'custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+          </div>
+          <div id="custom-range-fields" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">From</label>
+              <input type="text" class="form-control" name="time_from" id="time-from"
+                     placeholder="Select date & time"
+                     value="{{ selected_time_from|default:'' }}" readonly>
+            </div>
+            <div class="mb-3" id="time-to-field" style="display: none;">
+              <label class="form-label">To</label>
+              <input type="text" class="form-control" name="time_to" id="time-to"
+                     placeholder="Select date & time"
+                     value="{{ selected_time_to|default:'' }}" readonly>
+            </div>
+          </div>
+        </form>
+        <div class="mt-3">
+          <a id="export-excel-btn" href="#" class="btn btn-success w-100">
+            Export Excel
+          </a>
+          <div id="export-error" class="text-danger small mt-1" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="col-md-9">
+    <!-- Events table -->
+    <div class="card" id="event-table-card" style="display: none;">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">Pump Events</h3>
+        <div id="pagination-info" class="text-muted small"></div>
+      </div>
+      <div class="table-responsive table-responsive-scroll">
+        <table class="table table-vcenter card-table table-striped">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="time">Time <span class="sort-icon" id="sort-time"></span></th>
+              <th>Site</th>
+              <th class="sortable" data-sort="endpoint">Endpoint <span class="sort-icon" id="sort-endpoint"></span></th>
+              <th class="sortable" data-sort="sample_count">Samples <span class="sort-icon" id="sort-sample_count"></span></th>
+            </tr>
+          </thead>
+          <tbody id="event-table-body"></tbody>
+        </table>
+      </div>
+      <div class="card-footer d-flex align-items-center">
+        <ul class="pagination m-0 ms-auto" id="pagination-controls"></ul>
+      </div>
+    </div>
+
+    <!-- Detail view -->
+    <div class="card mt-4" id="detail-card" style="display: none;">
+      <div class="card-header">
+        <h3 class="card-title">Event Details</h3>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="text-secondary small">Time</div>
+            <div id="detail-time">-</div>
+          </div>
+          <div class="col-6">
+            <div class="text-secondary small">Site</div>
+            <div id="detail-site">-</div>
+          </div>
+          <div class="col-6">
+            <div class="text-secondary small">Endpoint</div>
+            <div id="detail-endpoint">-</div>
+          </div>
+          <div class="col-6">
+            <div class="text-secondary small">Samples</div>
+            <div id="detail-samples">-</div>
+          </div>
+        </div>
+        <div id="chart-container" style="height: 300px;">
+          <canvas id="pressureChart"></canvas>
+        </div>
+        <div id="detail-empty" class="text-center text-secondary py-4" style="display: none;">
+          No pressure data available for this event.
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="card" style="display: none;">
+      <div class="card-body text-center py-5">
+        <div class="text-secondary">No pump events found for the selected filters.</div>
+      </div>
+    </div>
+
+    <!-- Filter prompt -->
+    <div id="filter-prompt" class="card" style="display: none;">
+      <div class="card-body text-center py-5">
+        <div class="text-secondary">Please select a From date to use a custom time range.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/confirmDate/confirmDate.js"></script>
+
+<script>
+  let chart;
+  let selectedEventId = null;
+
+  const el = id => document.getElementById(id);
+  const show = id => { el(id).style.display = 'block'; };
+  const hide = id => { el(id).style.display = 'none'; };
+
+  function updateSortIcons(sort, dir) {
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.className = 'sort-icon'; });
+    const active = el(`sort-${sort}`);
+    if (active) active.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+  }
+
+  function toggleCustomRange() {
+    const isCustom = el('time-range-select').value === 'custom';
+    el('custom-range-fields').style.display = isCustom ? 'block' : 'none';
+    if (!isCustom) {
+      el('time-to-field').style.display = 'none';
+    }
+  }
+
+  function toggleToField() {
+    const fromVal = el('time-from').value;
+    el('time-to-field').style.display = fromVal ? 'block' : 'none';
+  }
+
+  function initChart() {
+    chart = new Chart(el('pressureChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Pressure',
+          data: [],
+          borderColor: 'rgba(32, 107, 196, 1)',
+          backgroundColor: 'rgba(32, 107, 196, 0.1)',
+          fill: true,
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 1.5
+        }]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'linear',
+            title: { display: true, text: 's' },
+            ticks: { autoSkip: true, maxRotation: 0 }
+          },
+          y: {
+            beginAtZero: false,
+            title: { display: true, text: 'kPa' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.parsed.y} kPa @ ${ctx.parsed.x.toFixed(3)}s`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function buildFilterParams() {
+    const form = el('filter-form');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+
+    if (formData.get('time_range') === 'custom') {
+      if (fpFrom && fpFrom.selectedDates.length) {
+        params.set('time_from', fpFrom.selectedDates[0].toISOString().slice(0, 16));
+      } else {
+        params.delete('time_from');
+      }
+      if (fpTo && fpTo.selectedDates.length) {
+        params.set('time_to', fpTo.selectedDates[0].toISOString().slice(0, 16));
+      } else {
+        params.delete('time_to');
+      }
+    } else {
+      params.delete('time_from');
+      params.delete('time_to');
+    }
+    return params;
+  }
+
+  async function updateData() {
+    const form = el('filter-form');
+    const formData = new FormData(form);
+    const endpoint = formData.get('endpoint');
+    const timeRange = formData.get('time_range');
+
+    if (!endpoint) {
+      ['event-table-card', 'detail-card', 'empty-state', 'filter-prompt'].forEach(hide);
+      return;
+    }
+
+    if (timeRange === 'custom' && !(fpFrom && fpFrom.selectedDates.length)) {
+      ['event-table-card', 'detail-card', 'empty-state'].forEach(hide);
+      show('filter-prompt');
+      return;
+    }
+
+    const params = buildFilterParams();
+    params.set('format', 'json');
+
+    try {
+      const data = await fetch(`?${params.toString()}`).then(r => r.json());
+      hide('filter-prompt');
+
+      if (data.events.length > 0) {
+        show('event-table-card');
+        hide('empty-state');
+        renderEventTable(data);
+        renderPagination(data);
+        updateSortIcons(formData.get('sort'), formData.get('dir'));
+      } else {
+        hide('event-table-card');
+        hide('detail-card');
+        show('empty-state');
+        selectedEventId = null;
+      }
+    } catch (e) {
+      console.error("Fetch failed", e);
+    }
+    updateExportLink();
+  }
+
+  function renderEventTable(data) {
+    const tbody = el('event-table-body');
+    tbody.innerHTML = data.events.map(e => {
+      const time = luxon.DateTime.fromISO(e.time).toFormat('dd.MM.yyyy HH:mm:ss');
+      const selected = selectedEventId == e.id ? ' is-selected' : '';
+      return `<tr class="pm-row${selected}" data-event-id="${e.id}">
+        <td class="text-nowrap">${time}</td>
+        <td class="text-nowrap">${e.site}</td>
+        <td class="text-nowrap">${e.endpoint}</td>
+        <td>${e.sample_count}</td>
+      </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('.pm-row').forEach(row => {
+      row.addEventListener('click', () => selectEvent(row.dataset.eventId));
+    });
+  }
+
+  async function selectEvent(eventId) {
+    selectedEventId = eventId;
+
+    // Highlight row
+    document.querySelectorAll('.pm-row').forEach(r =>
+      r.classList.toggle('is-selected', r.dataset.eventId == eventId)
+    );
+
+    const params = buildFilterParams();
+    params.set('format', 'detail');
+    params.set('event_id', eventId);
+    params.delete('page');
+
+    try {
+      const data = await fetch(`?${params.toString()}`).then(r => r.json());
+      show('detail-card');
+
+      const time = luxon.DateTime.fromISO(data.time).toFormat('dd.MM.yyyy HH:mm:ss');
+      el('detail-time').textContent = time;
+      el('detail-site').textContent = data.site;
+      el('detail-endpoint').textContent = data.endpoint;
+      el('detail-samples').textContent = data.sample_count;
+
+      if (data.chart_data.length > 0) {
+        el('chart-container').style.display = 'block';
+        hide('detail-empty');
+        chart.data.datasets[0].data = data.chart_data.map(p => ({ x: p.x, y: p.y }));
+        chart.update();
+      } else {
+        el('chart-container').style.display = 'none';
+        show('detail-empty');
+      }
+    } catch (e) {
+      console.error("Detail fetch failed", e);
+    }
+  }
+
+  function renderPagination(data) {
+    el('pagination-info').textContent = `Page ${data.number} of ${data.num_pages}`;
+    const pages = [];
+    for (let i = Math.max(1, data.number - 2); i <= Math.min(data.num_pages, data.number + 2); i++) {
+      pages.push(`<li class="page-item ${i === data.number ? 'active' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a></li>`);
+    }
+    el('pagination-controls').innerHTML = `
+      <li class="page-item ${!data.has_previous ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${data.number - 1}); return false;">prev</a></li>
+      ${pages.join('')}
+      <li class="page-item ${!data.has_next ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${data.number + 1}); return false;">next</a></li>`;
+  }
+
+  function changePage(page) {
+    document.querySelector('input[name="page"]').value = page;
+    updateData();
+  }
+
+  function buildExportParams() {
+    const params = buildFilterParams();
+    params.set('format', 'xlsx');
+    params.delete('page');
+    params.delete('sort');
+    params.delete('dir');
+    return params;
+  }
+
+  function updateExportLink() {
+    el('export-excel-btn').dataset.exportParams = buildExportParams().toString();
+  }
+
+  el('export-excel-btn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const errorEl = el('export-error');
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+
+    const params = buildExportParams();
+    const url = `{% url 'frontend:pump_monitor_export' %}?${params.toString()}`;
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        const body = await resp.json();
+        errorEl.textContent = body.error || 'Export failed. Please try again.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      window.location.href = url;
+    } catch {
+      errorEl.textContent = 'Export failed. Please check your connection and try again.';
+      errorEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('filter-form').addEventListener('submit', e => {
+    e.preventDefault();
+    document.querySelector('input[name="page"]').value = 1;
+    updateData();
+  });
+
+  document.querySelectorAll('#filter-form select').forEach(select => {
+    select.addEventListener('change', () => {
+      toggleCustomRange();
+      document.querySelector('input[name="page"]').value = 1;
+      selectedEventId = null;
+      hide('detail-card');
+      updateData();
+    });
+  });
+
+  document.querySelectorAll('.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const sortInput = document.querySelector('input[name="sort"]');
+      const dirInput = document.querySelector('input[name="dir"]');
+      if (sortInput.value === th.dataset.sort) {
+        dirInput.value = dirInput.value === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortInput.value = th.dataset.sort;
+        dirInput.value = 'asc';
+      }
+      document.querySelector('input[name="page"]').value = 1;
+      updateData();
+    });
+  });
+
+  let fpFrom, fpTo;
+
+  const fpConfig = {
+    enableTime: true,
+    time_24hr: true,
+    dateFormat: 'Y-m-dTH:i',
+    altInput: true,
+    altFormat: 'd M Y  H:i',
+    allowInput: false,
+    plugins: [new confirmDatePlugin({ confirmText: 'OK', confirmIcon: '', showAlways: true })],
+  };
+
+  fpFrom = flatpickr(el('time-from'), {
+    ...fpConfig,
+    onClose: () => {
+      toggleToField();
+      document.querySelector('input[name="page"]').value = 1;
+      updateData();
+    },
+  });
+
+  fpTo = flatpickr(el('time-to'), {
+    ...fpConfig,
+    onClose: () => {
+      document.querySelector('input[name="page"]').value = 1;
+      updateData();
+    },
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initChart();
+    toggleCustomRange();
+    toggleToField();
+    updateData();
+    updateExportLink();
+    setInterval(updateData, 10000);
+  });
+</script>
+{% endblock %}

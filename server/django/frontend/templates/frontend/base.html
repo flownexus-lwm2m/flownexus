@@ -233,6 +233,13 @@
                      </span>
                     </a>
                   </li>
+                 <li class="nav-item {% if request.resolver_match.url_name == 'pump_monitor' %}active{% endif %}">
+                    <a class="nav-link" href="{% url 'frontend:pump_monitor' %}">
+                      <span class="nav-link-title">
+                        Pump Monitor
+                     </span>
+                    </a>
+                  </li>
                  {% endif %}
                  {% if is_global_admin %}
                  <li class="nav-item {% if request.resolver_match.url_name == 'permissions' %}active{% endif %}">

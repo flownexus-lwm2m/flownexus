@@ -1971,3 +1971,479 @@ class TestEventArrayAndRawElements:
             resource_type__resource_id=0,
         )
         assert resource.binary_value == b"\xde\xad\xbe\xef"
+
+
+# ======================================================================
+# Pump Monitor tests
+# ======================================================================
+
+
+def _pm_url(**params):
+    """Build the pump_monitor URL with the given query parameters."""
+    return reverse("frontend:pump_monitor") + "?" + "&".join(f"{k}={v}" for k, v in params.items())
+
+
+def _pm_export_url(**params):
+    """Build the pump_monitor_export URL with the given query parameters."""
+    return (
+        reverse("frontend:pump_monitor_export")
+        + "?"
+        + "&".join(f"{k}={v}" for k, v in params.items())
+    )
+
+
+def _setup_pm_user(can_view_data_analysis=True):
+    """Return (client, user, site) for pump monitor tests."""
+    from django.test import Client
+
+    user = UserFactory()
+    site = SiteFactory()
+    SiteMembershipFactory(user=user, site=site, can_view_data_analysis=can_view_data_analysis)
+    client = Client()
+    client.force_login(user)
+    return client, user, site
+
+
+def _create_pm_event(ep, raw_bytes=None, attach_raw=True):
+    """Create a 10300 event with an optional pm_press_raw OPAQUE resource."""
+    event = EventFactory(endpoint=ep, event_type="10300")
+    if attach_raw:
+        rt = ResourceType.objects.filter(name="pm_press_raw").first()
+        if not rt:
+            rt = ResourceTypeFactory(
+                object_id=10300, resource_id=99, name="pm_press_raw", data_type="OPAQUE"
+            )
+        res = ResourceFactory(
+            endpoint=ep, resource_type=rt, float_value=None, binary_value=raw_bytes
+        )
+        EventResource.objects.create(event=event, resource=res)
+    return event
+
+
+@pytest.mark.django_db
+class TestPumpMonitorView:
+    """Tests for the /pump-monitor/ view (page rendering and JSON API)."""
+
+    # ------------------------------------------------------------------
+    # Auth / permission
+    # ------------------------------------------------------------------
+
+    def test_requires_login(self, client):
+        response = client.get(reverse("frontend:pump_monitor"))
+        assert response.status_code == 302
+
+    def test_requires_data_analysis_permission(self, client):
+        client_obj, _, _ = _setup_pm_user(can_view_data_analysis=False)
+        response = client_obj.get(reverse("frontend:pump_monitor"))
+        assert response.status_code == 403
+
+    def test_page_renders_for_authorised_user(self, client):
+        client_obj, _, _ = _setup_pm_user()
+        response = client_obj.get(reverse("frontend:pump_monitor"))
+        assert response.status_code == 200
+        assert b"Pump Monitor" in response.content
+
+    # ------------------------------------------------------------------
+    # Nav visibility
+    # ------------------------------------------------------------------
+
+    def test_nav_tab_visible_for_data_analysis_permission(self, client):
+        client_obj, _, _ = _setup_pm_user()
+        response = client_obj.get(reverse("frontend:pump_monitor"))
+        assert reverse("frontend:pump_monitor").encode() in response.content
+
+    # ------------------------------------------------------------------
+    # JSON: event listing
+    # ------------------------------------------------------------------
+
+    def test_json_returns_pump_events(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x0a\x14\x1e")
+
+        response = client_obj.get(_pm_url(format="json", endpoint=ep.endpoint, time_range="all"))
+        data = json.loads(response.content)
+        assert len(data["events"]) == 1
+        assert data["events"][0]["sample_count"] == 3
+
+    def test_json_event_without_raw_resource_shows_zero_samples(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, attach_raw=False)
+
+        response = client_obj.get(_pm_url(format="json", endpoint=ep.endpoint, time_range="all"))
+        data = json.loads(response.content)
+        assert data["events"][0]["sample_count"] == 0
+
+    def test_json_event_with_null_binary_shows_zero_samples(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=None)
+
+        response = client_obj.get(_pm_url(format="json", endpoint=ep.endpoint, time_range="all"))
+        data = json.loads(response.content)
+        assert data["events"][0]["sample_count"] == 0
+
+    def test_json_event_with_empty_binary_shows_zero_samples(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"")
+
+        response = client_obj.get(_pm_url(format="json", endpoint=ep.endpoint, time_range="all"))
+        data = json.loads(response.content)
+        assert data["events"][0]["sample_count"] == 0
+
+    def test_json_filters_by_endpoint(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep1 = EndpointFactory(site=site)
+        ep2 = EndpointFactory(site=site)
+        _create_pm_event(ep1, raw_bytes=b"\x01")
+        _create_pm_event(ep2, raw_bytes=b"\x02\x03")
+
+        response = client_obj.get(_pm_url(format="json", endpoint=ep1.endpoint, time_range="all"))
+        data = json.loads(response.content)
+        assert len(data["events"]) == 1
+        assert data["events"][0]["endpoint"] == ep1.endpoint
+
+    def test_json_all_endpoints_returns_all(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep1 = EndpointFactory(site=site)
+        ep2 = EndpointFactory(site=site)
+        _create_pm_event(ep1, raw_bytes=b"\x01")
+        _create_pm_event(ep2, raw_bytes=b"\x02")
+
+        response = client_obj.get(_pm_url(format="json", endpoint="all", time_range="all"))
+        data = json.loads(response.content)
+        assert len(data["events"]) == 2
+
+    def test_json_excludes_non_pump_events(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x01")
+        EventFactory(endpoint=ep, event_type="9999")  # not a pump event
+
+        response = client_obj.get(_pm_url(format="json", endpoint=ep.endpoint, time_range="all"))
+        data = json.loads(response.content)
+        assert len(data["events"]) == 1
+
+    # ------------------------------------------------------------------
+    # JSON: detail endpoint
+    # ------------------------------------------------------------------
+
+    def test_detail_returns_chart_data(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        event = _create_pm_event(ep, raw_bytes=b"\x64\xc8")  # 100, 200
+
+        response = client_obj.get(
+            _pm_url(format="detail", event_id=event.id, endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["sample_count"] == 2
+        assert len(data["chart_data"]) == 2
+        assert data["chart_data"][0]["x"] == 0.0
+        assert data["chart_data"][0]["y"] == 100
+        assert data["chart_data"][1]["x"] == 0.02  # 1/50
+        assert data["chart_data"][1]["y"] == 200
+
+    def test_detail_empty_raw_returns_empty_chart(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        event = _create_pm_event(ep, raw_bytes=b"")
+
+        response = client_obj.get(
+            _pm_url(format="detail", event_id=event.id, endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["sample_count"] == 0
+        assert data["chart_data"] == []
+
+    def test_detail_no_raw_resource_returns_empty_chart(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        event = _create_pm_event(ep, attach_raw=False)
+
+        response = client_obj.get(
+            _pm_url(format="detail", event_id=event.id, endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["sample_count"] == 0
+        assert data["chart_data"] == []
+
+    def test_detail_missing_event_id_returns_400(self, client):
+        client_obj, _, _ = _setup_pm_user()
+        response = client_obj.get(_pm_url(format="detail", endpoint="all", time_range="all"))
+        assert response.status_code == 400
+
+    def test_detail_nonexistent_event_returns_404(self, client):
+        client_obj, _, _ = _setup_pm_user()
+        response = client_obj.get(
+            _pm_url(format="detail", event_id=99999, endpoint="all", time_range="all")
+        )
+        assert response.status_code == 404
+
+    def test_detail_includes_time_and_endpoint(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        event = _create_pm_event(ep, raw_bytes=b"\x0a")
+
+        response = client_obj.get(
+            _pm_url(format="detail", event_id=event.id, endpoint=ep.endpoint, time_range="all")
+        )
+        data = json.loads(response.content)
+        assert data["endpoint"] == ep.endpoint
+        assert "time" in data
+
+
+@pytest.mark.django_db
+class TestPumpMonitorExport:
+    """Tests for the /pump-monitor/export/ Excel export view."""
+
+    # ------------------------------------------------------------------
+    # Auth / permission
+    # ------------------------------------------------------------------
+
+    def test_requires_login(self, client):
+        response = client.get(_pm_export_url(time_range="all"))
+        assert response.status_code == 302
+
+    def test_requires_data_analysis_permission(self, client):
+        client_obj, _, _ = _setup_pm_user(can_view_data_analysis=False)
+        response = client_obj.get(_pm_export_url(time_range="all"))
+        assert response.status_code == 403
+
+    # ------------------------------------------------------------------
+    # Export structure
+    # ------------------------------------------------------------------
+
+    def test_export_returns_xlsx(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x0a\x14")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        assert response.status_code == 200
+        assert (
+            response["Content-Type"]
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        assert "pump_monitor_export.xlsx" in response["Content-Disposition"]
+
+    def test_export_has_events_and_samples_sheets(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x0a\x14")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        sheet_names = wb.sheetnames
+        assert "Events" in sheet_names
+        assert "Samples" in sheet_names
+
+    def test_events_sheet_headers(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x0a")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Events"]
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+        assert headers == ["Time", "Site", "Endpoint", "Samples"]
+
+    def test_events_sheet_sample_count(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x0a\x14\x1e")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Events"]
+        assert ws.cell(2, 4).value == 3  # Samples column
+
+    def test_events_sheet_zero_samples_for_no_raw(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, attach_raw=False)
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Events"]
+        assert ws.cell(2, 4).value == 0
+
+    def test_samples_sheet_headers(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x0a")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Samples"]
+        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+        assert headers == ["Event Time", "Endpoint", "Sample Index", "Seconds", "Pressure (kPa)"]
+
+    def test_samples_sheet_data_rows(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x64\xc8")  # 100, 200
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Samples"]
+
+        # Row 2: first sample
+        assert ws.cell(2, 3).value == 0  # sample_index
+        assert ws.cell(2, 4).value == 0.0  # seconds
+        assert ws.cell(2, 5).value == 100  # pressure
+
+        # Row 3: second sample
+        assert ws.cell(3, 3).value == 1
+        assert ws.cell(3, 4).value == 0.02  # 1/50
+        assert ws.cell(3, 5).value == 200
+
+    def test_samples_sheet_empty_for_no_raw(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, attach_raw=False)
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Samples"]
+        assert ws.max_row == 1  # headers only
+
+    def test_export_filters_by_endpoint(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep1 = EndpointFactory(site=site)
+        ep2 = EndpointFactory(site=site)
+        _create_pm_event(ep1, raw_bytes=b"\x01")
+        _create_pm_event(ep2, raw_bytes=b"\x02\x03")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep1.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Events"]
+        assert ws.max_row == 2  # header + 1 event
+
+
+@pytest.mark.django_db
+class TestPumpMonitorSorting:
+    """Tests for pump monitor JSON API sorting via sort/dir query params."""
+
+    def test_default_sort_is_time_desc(self, client):
+        """Without sort/dir params, events are ordered by time descending."""
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        # Create two events; second one will have a later timestamp
+        _create_pm_event(ep, raw_bytes=b"\x01")
+        _create_pm_event(ep, raw_bytes=b"\x02\x03")
+
+        response = client_obj.get(_pm_url(endpoint=ep.endpoint, time_range="all", format="json"))
+        data = response.json()
+        assert len(data["events"]) == 2
+        # Default desc: latest event first
+        assert data["events"][0]["sample_count"] == 2
+        assert data["events"][1]["sample_count"] == 1
+
+    def test_sort_time_asc(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x01")
+        _create_pm_event(ep, raw_bytes=b"\x02\x03")
+
+        response = client_obj.get(
+            _pm_url(endpoint=ep.endpoint, time_range="all", format="json", sort="time", dir="asc")
+        )
+        data = response.json()
+        assert len(data["events"]) == 2
+        # Ascending: oldest event first
+        assert data["events"][0]["sample_count"] == 1
+        assert data["events"][1]["sample_count"] == 2
+
+    def test_sort_sample_count_asc(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x01\x02\x03")  # 3 samples
+        _create_pm_event(ep, raw_bytes=b"\x0a")  # 1 sample
+        _create_pm_event(ep, attach_raw=False)  # 0 samples
+
+        response = client_obj.get(
+            _pm_url(
+                endpoint=ep.endpoint,
+                time_range="all",
+                format="json",
+                sort="sample_count",
+                dir="asc",
+            )
+        )
+        data = response.json()
+        counts = [e["sample_count"] for e in data["events"]]
+        assert counts == [0, 1, 3]
+
+    def test_sort_sample_count_desc(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x01\x02\x03")  # 3 samples
+        _create_pm_event(ep, raw_bytes=b"\x0a")  # 1 sample
+        _create_pm_event(ep, attach_raw=False)  # 0 samples
+
+        response = client_obj.get(
+            _pm_url(
+                endpoint=ep.endpoint,
+                time_range="all",
+                format="json",
+                sort="sample_count",
+                dir="desc",
+            )
+        )
+        data = response.json()
+        counts = [e["sample_count"] for e in data["events"]]
+        assert counts == [3, 1, 0]
+
+    def test_sort_endpoint_asc(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep_a = EndpointFactory(site=site, endpoint="urn:imei:aaa")
+        ep_z = EndpointFactory(site=site, endpoint="urn:imei:zzz")
+        _create_pm_event(ep_z, raw_bytes=b"\x01")
+        _create_pm_event(ep_a, raw_bytes=b"\x02")
+
+        response = client_obj.get(
+            _pm_url(endpoint="all", time_range="all", format="json", sort="endpoint", dir="asc")
+        )
+        data = response.json()
+        endpoints = [e["endpoint"] for e in data["events"]]
+        assert endpoints == ["urn:imei:aaa", "urn:imei:zzz"]
+
+    def test_sort_endpoint_desc(self, client):
+        client_obj, _, site = _setup_pm_user()
+        ep_a = EndpointFactory(site=site, endpoint="urn:imei:aaa")
+        ep_z = EndpointFactory(site=site, endpoint="urn:imei:zzz")
+        _create_pm_event(ep_z, raw_bytes=b"\x01")
+        _create_pm_event(ep_a, raw_bytes=b"\x02")
+
+        response = client_obj.get(
+            _pm_url(endpoint="all", time_range="all", format="json", sort="endpoint", dir="desc")
+        )
+        data = response.json()
+        endpoints = [e["endpoint"] for e in data["events"]]
+        assert endpoints == ["urn:imei:zzz", "urn:imei:aaa"]
+
+    def test_invalid_sort_col_falls_back_to_time(self, client):
+        """An unrecognized sort column should fall back to time ordering."""
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x01")
+        _create_pm_event(ep, raw_bytes=b"\x02\x03")
+
+        response = client_obj.get(
+            _pm_url(
+                endpoint=ep.endpoint,
+                time_range="all",
+                format="json",
+                sort="malicious_field",
+                dir="desc",
+            )
+        )
+        data = response.json()
+        assert len(data["events"]) == 2
+        # Falls back to time desc — latest first (2 samples)
+        assert data["events"][0]["sample_count"] == 2
+        assert data["events"][1]["sample_count"] == 1
