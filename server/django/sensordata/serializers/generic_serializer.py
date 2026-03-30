@@ -73,7 +73,5 @@ class ResourceDataSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=KIND_CHOICES)
     id = serializers.IntegerField(help_text="Resource ID")
     type = serializers.ChoiceField(choices=ResourceType.TYPE_CHOICES)
-    value = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    values = serializers.DictField(
-        child=serializers.CharField(max_length=255), required=False, allow_empty=True
-    )
+    value = serializers.CharField(required=False, allow_blank=True)
+    values = serializers.DictField(child=serializers.CharField(), required=False, allow_empty=True)
