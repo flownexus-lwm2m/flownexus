@@ -2229,49 +2229,18 @@ class TestPumpMonitorExport:
         )
         assert "pump_monitor_export.xlsx" in response["Content-Disposition"]
 
-    def test_export_has_events_and_samples_sheets(self, client):
+    def test_export_has_single_samples_sheet(self, client):
+        """Only a single 'Samples' sheet is produced."""
         client_obj, _, site = _setup_pm_user()
         ep = EndpointFactory(site=site)
         _create_pm_event(ep, raw_bytes=b"\x0a\x14")
 
         response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
         wb = _wb_from_response(response)
-        sheet_names = wb.sheetnames
-        assert "Events" in sheet_names
-        assert "Samples" in sheet_names
+        assert wb.sheetnames == ["Samples"]
 
-    def test_events_sheet_headers(self, client):
-        client_obj, _, site = _setup_pm_user()
-        ep = EndpointFactory(site=site)
-        _create_pm_event(ep, raw_bytes=b"\x0a")
-
-        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
-        wb = _wb_from_response(response)
-        ws = wb["Events"]
-        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
-        assert headers == ["Time", "Site", "Endpoint", "Samples"]
-
-    def test_events_sheet_sample_count(self, client):
-        client_obj, _, site = _setup_pm_user()
-        ep = EndpointFactory(site=site)
-        _create_pm_event(ep, raw_bytes=b"\x0a\x14\x1e")
-
-        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
-        wb = _wb_from_response(response)
-        ws = wb["Events"]
-        assert ws.cell(2, 4).value == 3  # Samples column
-
-    def test_events_sheet_zero_samples_for_no_raw(self, client):
-        client_obj, _, site = _setup_pm_user()
-        ep = EndpointFactory(site=site)
-        _create_pm_event(ep, attach_raw=False)
-
-        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
-        wb = _wb_from_response(response)
-        ws = wb["Events"]
-        assert ws.cell(2, 4).value == 0
-
-    def test_samples_sheet_headers(self, client):
+    def test_samples_sheet_fixed_headers(self, client):
+        """First two header columns are sample_index and seconds."""
         client_obj, _, site = _setup_pm_user()
         ep = EndpointFactory(site=site)
         _create_pm_event(ep, raw_bytes=b"\x0a")
@@ -2279,10 +2248,22 @@ class TestPumpMonitorExport:
         response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
         wb = _wb_from_response(response)
         ws = wb["Samples"]
-        headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
-        assert headers == ["Event Time", "Endpoint", "Sample Index", "Seconds", "Pressure (kPa)"]
+        assert ws.cell(1, 1).value == "sample_index"
+        assert ws.cell(1, 2).value == "seconds"
+
+    def test_samples_sheet_event_column_header_contains_endpoint(self, client):
+        """Third column header contains the event timestamp and endpoint name."""
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x0a")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Samples"]
+        assert ep.endpoint in ws.cell(1, 3).value
 
     def test_samples_sheet_data_rows(self, client):
+        """Data rows: sample_index in col 1, seconds in col 2, pressure in col 3."""
         client_obj, _, site = _setup_pm_user()
         ep = EndpointFactory(site=site)
         _create_pm_event(ep, raw_bytes=b"\x64\xc8")  # 100, 200
@@ -2292,16 +2273,17 @@ class TestPumpMonitorExport:
         ws = wb["Samples"]
 
         # Row 2: first sample
-        assert ws.cell(2, 3).value == 0  # sample_index
-        assert ws.cell(2, 4).value == 0.0  # seconds
-        assert ws.cell(2, 5).value == 100  # pressure
+        assert ws.cell(2, 1).value == 0  # sample_index
+        assert ws.cell(2, 2).value == 0.0  # seconds
+        assert ws.cell(2, 3).value == 100  # pressure
 
         # Row 3: second sample
-        assert ws.cell(3, 3).value == 1
-        assert ws.cell(3, 4).value == 0.02  # 1/50
-        assert ws.cell(3, 5).value == 200
+        assert ws.cell(3, 1).value == 1
+        assert ws.cell(3, 2).value == 0.02  # 1/50
+        assert ws.cell(3, 3).value == 200
 
     def test_samples_sheet_empty_for_no_raw(self, client):
+        """When no raw resource exists, only the header row is written."""
         client_obj, _, site = _setup_pm_user()
         ep = EndpointFactory(site=site)
         _create_pm_event(ep, attach_raw=False)
@@ -2309,9 +2291,10 @@ class TestPumpMonitorExport:
         response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
         wb = _wb_from_response(response)
         ws = wb["Samples"]
-        assert ws.max_row == 1  # headers only
+        assert ws.max_row == 1  # header only
 
     def test_export_filters_by_endpoint(self, client):
+        """Filtering by one endpoint produces exactly one event column."""
         client_obj, _, site = _setup_pm_user()
         ep1 = EndpointFactory(site=site)
         ep2 = EndpointFactory(site=site)
@@ -2320,8 +2303,37 @@ class TestPumpMonitorExport:
 
         response = client_obj.get(_pm_export_url(endpoint=ep1.endpoint, time_range="all"))
         wb = _wb_from_response(response)
-        ws = wb["Events"]
-        assert ws.max_row == 2  # header + 1 event
+        ws = wb["Samples"]
+        # 2 fixed cols (sample_index, seconds) + 1 event col = 3 total
+        assert ws.max_column == 3
+
+    def test_multiple_events_produce_multiple_columns(self, client):
+        """Two events for the same endpoint produce two event columns."""
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x01\x02")
+        _create_pm_event(ep, raw_bytes=b"\x03\x04\x05")
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Samples"]
+        # 2 fixed cols + 2 event cols = 4 total; rows = max(2, 3) + 1 header = 4
+        assert ws.max_column == 4
+        assert ws.max_row == 4
+
+    def test_shorter_event_column_padded_with_empty(self, client):
+        """Shorter event columns are padded with empty strings beyond their sample count."""
+        client_obj, _, site = _setup_pm_user()
+        ep = EndpointFactory(site=site)
+        _create_pm_event(ep, raw_bytes=b"\x01")  # 1 sample
+        _create_pm_event(ep, raw_bytes=b"\x02\x03")  # 2 samples
+
+        response = client_obj.get(_pm_export_url(endpoint=ep.endpoint, time_range="all"))
+        wb = _wb_from_response(response)
+        ws = wb["Samples"]
+        # Row 3 (sample index 1): the 1-sample event column is None (openpyxl reads "" as None)
+        values = [ws.cell(3, c).value for c in range(3, ws.max_column + 1)]
+        assert None in values
 
 
 @pytest.mark.django_db

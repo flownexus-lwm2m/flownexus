@@ -18,6 +18,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from openpyxl import Workbook
+from openpyxl.cell import WriteOnlyCell
 from openpyxl.styles import Font
 
 from core.middleware import UNASSIGNED_SITE_KEY
@@ -1183,14 +1184,19 @@ def pump_monitor(request):
     return render(request, "frontend/pump_monitor.html", context)
 
 
-PUMP_EXPORT_ROW_LIMIT = 500_000
+PUMP_EXPORT_ROW_LIMIT = 20_000  # max samples per event (= max Excel rows in output)
+PUMP_EXPORT_EVENT_LIMIT = 500  # max events (= max event columns in output)
 
 
 @login_required
 def pump_monitor_export(request):
-    """Export pump-monitoring events as an Excel workbook with two sheets:
-    1. Events — one row per event (time, endpoint, sample_count)
-    2. Samples — long-format rows (event_time, endpoint, sample_index, seconds, pressure_kpa)
+    """Export pump-monitoring events as a single Excel sheet in wide format.
+
+    Columns: sample_index | seconds | <time endpoint> | <time endpoint> | ...
+    Rows:    one row per sample position; events grow to the right.
+
+    Memory-efficient: uses openpyxl write-only mode (cells are never held in
+    RAM as a grid) and keeps raw sample data as bytes (no Python int conversion).
     """
     if not _check_site_permission(request, "can_view_data_analysis"):
         return HttpResponseForbidden("You don't have permission to view this page.")
@@ -1203,62 +1209,54 @@ def pump_monitor_export(request):
     start_date, end_date = _parse_pm_time_filters(request)
     events = _build_pm_queryset(endpoints, endpoint_id, start_date, end_date)
 
-    event_list = list(events)
+    event_list = list(events[: PUMP_EXPORT_EVENT_LIMIT + 1])
 
-    # Pre-compute total sample rows for limit check
-    total_sample_rows = 0
-    event_rows: list[tuple[Any, int, list[int]]] = []
-    for e in event_list:
-        prefetched = e.resources.all()
-        raw_res = None
-        for er in prefetched:
-            if er.resource.resource_type.name == PM_PRESS_RAW_NAME:
-                raw_res = er.resource
-                break
-        samples = _decode_raw_samples(raw_res.binary_value if raw_res else None)
-        event_rows.append((e, len(samples), samples))
-        total_sample_rows += max(len(samples), 0)
-
-    if total_sample_rows > PUMP_EXPORT_ROW_LIMIT:
+    if len(event_list) > PUMP_EXPORT_EVENT_LIMIT:
         msg = (
-            f"Export exceeds {PUMP_EXPORT_ROW_LIMIT:,} sample rows. "
+            f"Export exceeds {PUMP_EXPORT_EVENT_LIMIT:,} events. Narrow your filter and try again."
+        )
+        return JsonResponse({"error": msg}, status=400)
+
+    # Collect raw sample bytes per event — keep as bytes to avoid per-byte Python int overhead.
+    event_rows: list[tuple[Any, bytes]] = []
+    for e in event_list:
+        raw_bytes: bytes = b""
+        for er in e.resources.all():
+            if er.resource.resource_type.name == PM_PRESS_RAW_NAME:
+                raw_bytes = er.resource.binary_value or b""
+                break
+        event_rows.append((e, raw_bytes))
+
+    max_samples = max((len(s) for _, s in event_rows), default=0)
+
+    if max_samples > PUMP_EXPORT_ROW_LIMIT:
+        msg = (
+            f"Export exceeds {PUMP_EXPORT_ROW_LIMIT:,} samples per event. "
             "Narrow your filter and try again."
         )
         return JsonResponse({"error": msg}, status=400)
 
-    wb = Workbook()
+    # write_only=True: openpyxl streams rows directly to the file — no full grid kept in RAM.
+    wb = Workbook(write_only=True)
     bold = Font(bold=True)
+    ws = wb.create_sheet(title="Samples")
 
-    # --- Events sheet ---
-    ws_events = wb.active
-    ws_events.title = "Events"
-    ws_events.append(["Time", "Site", "Endpoint", "Samples"])
-    for cell in ws_events[1]:
+    # Header row — use WriteOnlyCell to apply bold formatting in write-only mode.
+    header_values = ["sample_index", "seconds"] + [
+        f"{e.time.strftime('%d.%m.%Y %H:%M:%S')} {e.endpoint.endpoint}" for e, _ in event_rows
+    ]
+    header_cells = [WriteOnlyCell(ws, value=v) for v in header_values]
+    for cell in header_cells:
         cell.font = bold
-    for e, count, _ in event_rows:
-        site_name = e.endpoint.site.name if e.endpoint.site else ""
-        ws_events.append(
-            [e.time.strftime("%d.%m.%Y %H:%M:%S"), site_name, e.endpoint.endpoint, count]
-        )
+    ws.append(header_cells)
 
-    # --- Samples sheet ---
-    ws_samples = wb.create_sheet("Samples")
-    ws_samples.append(["Event Time", "Endpoint", "Sample Index", "Seconds", "Pressure (kPa)"])
-    for cell in ws_samples[1]:
-        cell.font = bold
-    for e, _, samples in event_rows:
-        ts = e.time.strftime("%d.%m.%Y %H:%M:%S")
-        ep_name = e.endpoint.endpoint
-        for idx, pressure in enumerate(samples):
-            ws_samples.append(
-                [
-                    ts,
-                    ep_name,
-                    idx,
-                    round(idx / PM_SAMPLE_RATE_HZ, 4),
-                    pressure,
-                ]
-            )
+    # Data rows: one row per sample position; bytes[idx] returns an int directly in Python 3.
+    for idx in range(max_samples):
+        seconds = round(idx / PM_SAMPLE_RATE_HZ, 4)
+        row: list[Any] = [idx, seconds]
+        for _, raw_bytes in event_rows:
+            row.append(raw_bytes[idx] if idx < len(raw_bytes) else None)
+        ws.append(row)
 
     buffer = BytesIO()
     wb.save(buffer)
