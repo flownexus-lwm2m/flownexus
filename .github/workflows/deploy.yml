@@ -18,7 +18,7 @@ on:
 
 env:
   DEPLOY_USER: flownexus
-  SERVER_HOST: tech22.de
+  SERVER_HOST: 85.215.45.193
 
 jobs:
   build-and-deploy:

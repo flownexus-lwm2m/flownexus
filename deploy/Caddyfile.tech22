@@ -1,0 +1,110 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Flownexus Caddy Configuration — tech22.de
+# This file should be placed at /etc/caddy/Caddyfile on the tech22.de server.
+#
+# Serves:
+#   db.tech22.de   — Django dashboard (reverse proxy to uvicorn on port 8000)
+#   fw.tech22.de   — Firmware binaries (direct file links only, no directory listing)
+#
+# IMPORTANT: Caddy handles HTTP/HTTPS traffic only.
+# UDP traffic for LwM2M (CoAP) is handled separately in server/compose.yml.
+
+{
+    email webmaster@tech22.de
+}
+
+db.tech22.de {
+    reverse_proxy localhost:8000 {
+        health_uri /admin/login/
+        health_interval 30s
+        health_timeout 5s
+
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+    }
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://rsms.me; img-src 'self' data: blob: https:; font-src 'self' https://rsms.me; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    @hidden {
+        path */.*
+    }
+    respond @hidden 404
+
+    encode gzip zstd
+
+    @websocket {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket localhost:8000
+
+    log {
+        output file /var/log/caddy/db.tech22.de-access.log
+        format json
+    }
+}
+
+fw.tech22.de {
+    root * /var/www/flownexus
+    # No browse — directory listings are disabled.
+    # Files are served only via direct paths: /binaries/<filename>
+    file_server
+
+    # Block hidden files and dotfiles
+    @hidden {
+        path */.*
+    }
+    respond @hidden 404
+
+    # Block root and any directory path — only concrete file paths are valid
+    @not_a_file {
+        not file
+    }
+    respond @not_a_file 404
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-Download-Options "noopen"
+        -Server
+    }
+
+    encode gzip zstd
+
+    log {
+        output file /var/log/caddy/fw.tech22.de-access.log
+        format json
+    }
+}
+
+http://localhost, http://127.0.0.1 {
+    reverse_proxy localhost:8000 {
+        health_uri /admin/login/
+        health_interval 30s
+        health_timeout 5s
+
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+    }
+
+    encode gzip zstd
+}
