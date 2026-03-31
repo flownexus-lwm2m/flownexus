@@ -100,6 +100,10 @@ fw.tech22.de {
     }
 }
 
+# Local overrides — files here are server-specific and not tracked in the repo.
+# Example: /etc/caddy/conf.d/mattermost.caddy
+import /etc/caddy/conf.d/*.caddy
+
 http://localhost, http://127.0.0.1 {
     reverse_proxy localhost:8000 {
         health_uri /admin/login/
