@@ -13,22 +13,36 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
+# Security settings - configurable via environment variables.
+# Defaults are for local development; production MUST override via env vars.
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-ttm_sr56l7mv#4smgm*+tffm*$q%!qqp@#q7*_*y38^^#9%@7*"
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-ttm_sr56l7mv#4smgm*+tffm*$q%!qqp@#q7*_*y38^^#9%@7*",
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+
+if not DEBUG and SECRET_KEY.startswith("django-insecure-"):
+    raise ImproperlyConfigured(
+        "Production (DEBUG=False) requires a proper DJANGO_SECRET_KEY. Generate one with: "
+        'python -c "from django.core.management.utils import get_random_secret_key; '
+        'print(get_random_secret_key())"'
+    )
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://flownexus.org",
-    "https://www.flownexus.org",
-    "https://dashboard.flownexus.org",
+    origin.strip()
+    for origin in os.getenv(
+        "DJANGO_CSRF_ORIGINS",
+        "https://flownexus.org,https://www.flownexus.org,https://dashboard.flownexus.org",
+    ).split(",")
+    if origin.strip()
 ]
 
 LOGGING = {
@@ -89,7 +103,9 @@ LOGGING = {
     },
 }
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if host.strip()
+]
 
 
 # Application definition
@@ -220,7 +236,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static_collect"
 STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
-WHITENOISE_USE_FINDERS = True
+WHITENOISE_USE_FINDERS = DEBUG
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_REDIRECT_URL = "/"

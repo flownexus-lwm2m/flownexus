@@ -172,7 +172,23 @@ if ! loginctl show-user "$deploy_user" --property=Linger --value | grep -q "yes"
 fi
 
 # ==========================================
-# 4. BACKUP DATABASE
+# 4. GENERATE DJANGO SECRET KEY (if missing)
+# ==========================================
+
+secret_env="/home/$deploy_user/.config/flownexus/env"
+if [ ! -f "$secret_env" ]; then
+    printf '%s\n' "Generating Django secret key..."
+    install -d -o "$deploy_user" -g "$deploy_user" -m 0700 "/home/$deploy_user/.config/flownexus"
+    secret_key=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
+    printf 'DJANGO_SECRET_KEY=%s\n' "$secret_key" > "$secret_env"
+    chown "$deploy_user:$deploy_user" "$secret_env"
+    chmod 0600 "$secret_env"
+else
+    printf '%s\n' "Django secret key already exists at $secret_env"
+fi
+
+# ==========================================
+# 5. BACKUP DATABASE
 # ==========================================
 
 db_file="$db_path/db.sqlite3"
@@ -186,7 +202,7 @@ if [ -f "$db_file" ]; then
 fi
 
 # ==========================================
-# 5. DEPLOY CONTAINERS VIA SYSTEMD QUADLET
+# 6. DEPLOY CONTAINERS VIA SYSTEMD QUADLET
 # ==========================================
 
 printf '%s\n' "Deploying containers via systemd Quadlet..."
@@ -243,7 +259,7 @@ runuser -u "$deploy_user" -- env \
     sh -c "$deploy_script"
 
 # ==========================================
-# 6. VERIFY DEPLOYMENT
+# 7. VERIFY DEPLOYMENT
 # ==========================================
 
 printf '%s\n' "Waiting for services to start..."

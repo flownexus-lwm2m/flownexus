@@ -74,11 +74,6 @@ The following diagram shows the Container Environment. The file
 ``Dockerfile.leshan`` defines the Leshan container and the file
 ``Dockerfile.django`` defines the Django container.
 
-.. warning::
-
-  Make sure to change the password to the admin console as well as other
-  settings like SECRET_KEY, DEBUG flag in a production environment!
-
 The container can be built and started with the following commands:
 
 .. code-block:: console
@@ -93,7 +88,8 @@ Production Deployment
 ---------------------
 
 flownexus can be deployed to a virtual server using Caddy as a reverse proxy.
-This deployment supports four subdomains:
+The default configuration supports four subdomains (using ``flownexus.org`` as
+the example domain -- substitute your own throughout):
 
 * **flownexus.org** - Main landing page (static HTML)
 * **docs.flownexus.org** - Documentation (Sphinx HTML)
@@ -112,15 +108,15 @@ The deployment uses a split traffic routing approach:
 
    Internet
        │
-       ├──→ Caddy (Ports 80/443)
-       │     ├──→ flownexus.org (static)
-       │     ├──→ docs.flownexus.org (static)
-       │     ├──→ fw.flownexus.org (static + browse)
-       │     └──→ dashboard.flownexus.org (reverse proxy → localhost:8000)
+       ├── Caddy (Ports 80/443)
+       │    ├── <domain> (static)
+       │    ├── docs.<domain> (static)
+       │    ├── fw.<domain> (static)
+       │    └── dashboard.<domain> (reverse proxy → localhost:8000)
        │
-       └──→ LwM2M UDP (Ports 5683/5684) → Direct to Leshan container
-             ├──→ 5683/udp - CoAP (unencrypted)
-             └──→ 5684/udp - DTLS/CoAPS (encrypted)
+       └── LwM2M UDP (Ports 5683/5684) → Direct to Leshan container
+            ├── 5683/udp - CoAP (unencrypted)
+            └── 5684/udp - DTLS/CoAPS (encrypted)
 
 This architecture provides:
 
@@ -149,16 +145,12 @@ Quadlet files are located in ``deploy/quadlet/`` and define three services:
 * **flownexus-django** - Django application with Celery worker
 
 Each service is defined as a ``.container`` file that systemd converts to a service unit.
-Logs are captured by systemd journal instead of files, viewable with:
+Logs are captured by systemd journal, viewable with ``journalctl --user -u flownexus-<service> -f``
+(see `Troubleshooting`_ for details).
 
-.. code-block:: console
-
-   vserver:~$ journalctl --user -u flownexus-django -f
-   vserver:~$ journalctl --user -u flownexus-redis -f
-   vserver:~$ journalctl --user -u flownexus-leshan -f
-
-For local development and testing, use ``podman-compose -f server/compose.yml up``
-which provides the same container configuration but without systemd integration.
+For local development and testing, use ``make run-mock`` or
+``podman-compose -f server/compose.yml up`` which provides the same container
+configuration but without systemd integration.
 
 Server Requirements
 ...................
@@ -276,6 +268,128 @@ Before setting up GitHub Actions, generate a dedicated SSH key pair:
    vserver:~$ sudo ufw allow 5683/udp  # LwM2M CoAP (unencrypted)
    vserver:~$ sudo ufw allow 5684/udp  # LwM2M DTLS/CoAPS (encrypted)
 
+Environment Variables
+.....................
+
+Django reads its configuration from environment variables at runtime. This
+separates deployment-specific settings from the application code, so the same
+container image runs in development (with safe defaults) or production (with
+hardened settings) without rebuilding.
+
+**The Django secret key**
+
+Django uses a secret key to cryptographically sign sessions, CSRF tokens, and
+password reset links. If an attacker obtains the key, they can forge session
+cookies and impersonate any user. The development default key (prefixed
+``django-insecure-``) is public knowledge because it lives in the repository
+-- it must never be used on an internet-facing server.
+
+The deploy script handles this automatically. On first run it:
+
+1. Generates a cryptographically random 50-character key using Python's
+   ``secrets`` module
+2. Writes it to ``~flownexus/.config/flownexus/env`` with permissions ``0600``
+   (readable only by the deploy user)
+3. Skips generation on all subsequent deploys so the key is stable across
+   redeploys
+
+The file is never committed to the repository or passed through GitHub Actions.
+Verify it was created after the first deploy:
+
+.. code-block:: console
+
+   vserver:~$ cat ~flownexus/.config/flownexus/env
+   DJANGO_SECRET_KEY=<your-generated-key>
+
+.. warning::
+
+   Never copy, share, or log this key. If it leaks, delete the file and
+   redeploy to rotate it. All existing sessions will be invalidated.
+
+**Other production environment variables**
+
+The remaining variables are set inline in
+``deploy/quadlet/flownexus-django.container``. These are deployment config,
+not secrets, so keeping them in version control is fine:
+
+.. list-table::
+   :widths: 40 35 25
+   :header-rows: 1
+
+   * - Variable
+     - Production value
+     - Purpose
+   * - ``DJANGO_DEBUG``
+     - ``False``
+     - Disables debug mode and detailed error pages
+   * - ``DJANGO_ALLOWED_HOSTS``
+     - ``dashboard.flownexus.org,localhost,127.0.0.1``
+     - Restricts ``Host`` headers Django will respond to
+   * - ``DJANGO_CSRF_ORIGINS``
+     - ``https://dashboard.flownexus.org``
+     - Trusted origins for CSRF checks
+
+For local development (``make run-mock``, tests), no environment variables are
+needed -- ``settings.py`` defaults are used automatically.
+
+When deploying to a different domain, update these values in the quadlet file
+on the relevant deployment branch.
+
+New Server Deployment Checklist
+................................
+
+Use this as a reference when setting up a server from scratch.
+
+**Server preparation**
+
+- Install required packages: ``podman``, ``podman-compose``, ``caddy``,
+  ``git``, ``curl``, ``rsync``, ``ufw``
+- Create the ``flownexus`` deploy user
+- Add your personal SSH public key to ``~flownexus/.ssh/authorized_keys``
+- Generate a dedicated SSH key pair for GitHub Actions (no passphrase):
+  ``ssh-keygen -t ed25519 -C "github-actions-deploy"``
+- Add the Actions public key to ``~flownexus/.ssh/authorized_keys``
+- Add the Actions private key to GitHub: Settings → Secrets → ``SSH_PRIVATE_KEY``
+- Configure passwordless sudo for the deploy script in
+  ``/etc/sudoers.d/flownexus-deploy`` and validate with ``visudo -cf``
+- Open firewall: ports 22/tcp, 80/tcp, 443/tcp, 5683/udp, 5684/udp
+- Clone the repository into ``~flownexus/flownexus``
+
+**DNS**
+
+- Create an A record for ``dashboard.<yourdomain>`` pointing to the server IP
+- Create an A record for ``fw.<yourdomain>`` (if serving firmware downloads)
+- Wait for DNS propagation before triggering the first deploy (Caddy needs
+  valid DNS to issue a TLS certificate)
+
+**First deployment**
+
+- Run the deploy script: ``sudo ~flownexus/flownexus/deploy/deploy-flownexus``
+  (or push to the tracked branch to trigger GitHub Actions)
+- Confirm the secret key file was created:
+
+  .. code-block:: console
+
+     vserver:~$ ls -la ~flownexus/.config/flownexus/env
+     # Must show: -rw------- 1 flownexus flownexus
+
+- Confirm all three services are running:
+
+  .. code-block:: console
+
+     vserver:~$ systemctl --user status flownexus-django flownexus-redis flownexus-leshan
+
+- Confirm the health check passes:
+
+  .. code-block:: console
+
+     vserver:~$ curl -sf http://127.0.0.1:8000/admin/login/ > /dev/null && echo OK
+
+- Open the dashboard in a browser and verify HTTPS (no certificate warning)
+- **Change the default admin password** in the Django admin interface
+- Verify debug mode is off: the ``/`` page must not show a Django debug toolbar
+  or stack traces on errors
+
 Automated CI/CD
 ................
 
@@ -285,10 +399,6 @@ code is pushed to the main branch:
 1. **Build static assets locally** (landing page, Sphinx documentation)
 2. **Deploy static files via rsync** to ``/var/www/flownexus/``
 3. **Update the backend checkout and run ``deploy/deploy-flownexus``** to refresh code, Caddy, and containers
-
-If you are switching an existing server to this new flow, run a one-time
-``git pull`` in ``~flownexus/flownexus`` first so the server has the current
-``deploy/deploy-flownexus`` script.
 
 The workflow updates the backend checkout, then runs the deploy script on the
 server. The script creates the required directories, installs the Caddyfile,
@@ -305,21 +415,6 @@ That script performs the privileged server setup and restart steps in one place.
 
 To deploy to a different domain or server layout, update ``deploy/Caddyfile``
 and the environment values in ``.github/workflows/deploy.yml``.
-
-If you switch an existing server to this flow, run ``git pull`` once in
-``~flownexus/flownexus`` so the server has the current deploy script.
-
-Optional Certificate Maintenance
-................................
-
-Caddy automatically manages Let's Encrypt certificates. No manual intervention
-is required. Certificates are stored in ``/var/lib/caddy/``.
-
-Use the following only if you need to troubleshoot or force a renewal:
-
-.. code-block:: console
-
-   vserver:~$ sudo caddy reload --config /etc/caddy/Caddyfile
 
 Troubleshooting
 .................
@@ -341,12 +436,6 @@ Caddy Issues
 .. code-block:: console
 
    vserver:~$ sudo caddy validate --config /etc/caddy/Caddyfile
-
-**Test Caddy locally:**
-
-.. code-block:: console
-
-   vserver:~$ sudo caddy run --config /etc/caddy/Caddyfile
 
 Container Issues
 ~~~~~~~~~~~~~~~~
@@ -382,92 +471,29 @@ Container Issues
 SSL Certificate Issues
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Caddy handles SSL automatically. If certificates fail:
+Caddy handles SSL automatically. If certificates fail, check Caddy logs for
+ACME errors and ensure DNS is resolving correctly before reloading:
 
 .. code-block:: console
 
-   # Force certificate renewal
+   vserver:~$ sudo journalctl -u caddy | grep -i "acme\|tls\|cert"
    vserver:~$ sudo caddy reload --config /etc/caddy/Caddyfile
-
-   # Check certificate status
-   vserver:~$ sudo caddy list-modules | grep tls
 
 Security Considerations
 .......................
 
-This section is guidance to review before exposing the stack publicly. It is
-not an extra deployment procedure, but these items still matter for a real
-internet-facing setup.
-
-Required open ports:
-
-* **Port 22, TCP**: SSH access
-* **Port 80, TCP**: HTTP (redirects to HTTPS)
-* **Port 443, TCP**: HTTPS
-* **Port 5683, UDP**: LwM2M CoAP (unencrypted)
-* **Port 5684, UDP**: LwM2M DTLS/CoAPS (encrypted)
-
-Security Best Practices:
-
-1. **SSH Keys**: Use ed25519 keys for deployment: ``ssh-keygen -t ed25519 -a 100``
-2. **File Permissions**: Ensure ``/var/www/flownexus`` stays writable by ``flownexus`` and readable by Caddy
-3. **Firewall**: Only open required ports (22, 80, 443, 5683/udp, 5684/udp)
-4. **Updates**: Regularly update Caddy and container base images
-5. **Secrets**: Never commit secrets to the repository
-
-Before deploying to production:
-
-1. Change the Django ``SECRET_KEY`` in production settings
-2. Disable Django ``DEBUG`` mode
-3. Use strong passwords for admin accounts
-4. Configure firewall rules
-5. Set up automated backups
+* Use ed25519 SSH keys: ``ssh-keygen -t ed25519 -a 100``
+* Keep ``/var/www/flownexus`` writable by ``flownexus`` and readable by Caddy
+* Regularly update Caddy and container base images
+* Never commit secrets to the repository
 
 Customizing for Your Deployment
 ................................
 
-This section is only needed if you want to change the default domains, server
-paths, or deploy user.
-
-To deploy on a different server or domain, update these files:
-
-``deploy/Caddyfile``
-~~~~~~~~~~~~~~~~~~~~
-
-Change the configured domains and the Let's Encrypt email address:
-
-.. code-block:: text
-
-   webmaster@flownexus.org
-   flownexus.org
-   docs.flownexus.org
-   fw.flownexus.org
-   dashboard.flownexus.org
-
-``.github/workflows/deploy.yml``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Adjust the deployment environment values near the top of the file:
-
-.. code-block:: yaml
-
-   env:
-     DEPLOY_USER: flownexus
-     SERVER_HOST: flownexus.org
-     APP_ROOT: ~flownexus/flownexus
-     DJANGO_DB_HOST_PATH: ~flownexus/flownexus/server/data
-     FIRMWARE_STORAGE_HOST_PATH: /var/www/flownexus/binaries
-
-Also update any username or home-directory references in the server setup
-commands throughout this chapter.
-
-When following the server setup instructions, replace:
-
-* ``flownexus`` with your desired username
-* ``~flownexus`` with your user's home directory
-* Server IP addresses in SSH commands
-
-After making these changes, commit and push to trigger deployment.
+To deploy on a different domain, update the domain names and Let's Encrypt
+email in ``deploy/Caddyfile``, the environment variables (``DJANGO_ALLOWED_HOSTS``,
+``DJANGO_CSRF_ORIGINS``) in ``deploy/quadlet/flownexus-django.container``, and
+the target server in ``.github/workflows/deploy.yml``.
 
 File Locations
 ....................
@@ -485,13 +511,13 @@ File Locations
 +------------------+----------------------------------------------------------+---------------------------+
 | Database backups | ``~flownexus/backups/``                                  | Automatic DB backups      |
 +------------------+----------------------------------------------------------+---------------------------+
+| Django env file  | ``~flownexus/.config/flownexus/env``                     | Secret key (auto-created) |
++------------------+----------------------------------------------------------+---------------------------+
 | Caddy config     | ``/etc/caddy/Caddyfile``                                 | Reverse proxy             |
 +------------------+----------------------------------------------------------+---------------------------+
 | Caddy data       | ``/var/lib/caddy/``                                      | SSL certificates          |
 +------------------+----------------------------------------------------------+---------------------------+
 | Quadlet configs  | ``~flownexus/.config/containers/systemd/``               | Container systemd units   |
-+------------------+----------------------------------------------------------+---------------------------+
-| Container config | ``~flownexus/flownexus/server/compose.yml``              | Local dev (compose)       |
 +------------------+----------------------------------------------------------+---------------------------+
 | Quadlet source   | ``~flownexus/flownexus/deploy/quadlet/``                 | Quadlet definitions       |
 +------------------+----------------------------------------------------------+---------------------------+
@@ -528,7 +554,8 @@ This will:
    vserver:~flownexus/flownexus$ git pull
    vserver:~flownexus/flownexus$ sudo deploy/deploy-flownexus
 
-To deploy only the container changes without updating static assets:
+To create directories and reload Caddy without rebuilding containers
+(useful after a Caddyfile change):
 
 .. code-block:: console
 
@@ -552,9 +579,3 @@ Use these commands only for manual housekeeping.
 
    # Clean up volumes
    vserver:~$ podman volume prune
-
-.. warning::
-
-  flownexus is not production ready. This server setup is only intended for
-  testing purposes. Review and harden the configuration before using in
-  production.

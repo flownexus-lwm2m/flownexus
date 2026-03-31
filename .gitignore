@@ -52,6 +52,10 @@ firmware/
 # Database files
 *.sqlite3
 
+# Environment files (may contain secrets)
+.env
+.env.*
+
 # Media files
 server/django/media/
 
