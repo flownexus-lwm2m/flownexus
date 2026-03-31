@@ -67,10 +67,22 @@ docs.flownexus.org {
 }
 
 fw.flownexus.org {
-    root * /var/www/flownexus/binaries
-    file_server {
-        browse
+    root * /var/www/flownexus
+    # No browse — directory listings are disabled.
+    # Files are served only via direct paths: /binaries/<filename>
+    file_server
+
+    # Block hidden files and dotfiles
+    @hidden {
+        path */.*
     }
+    respond @hidden 404
+
+    # Block root and any directory path — only concrete file paths are valid
+    @not_a_file {
+        not file
+    }
+    respond @not_a_file 404
 
     header {
         X-Frame-Options "SAMEORIGIN"
@@ -79,17 +91,7 @@ fw.flownexus.org {
         -Server
     }
 
-    @hidden {
-        path */.*
-    }
-    respond @hidden 404
-
     encode gzip zstd
-
-    @http {
-        protocol http
-    }
-    redir @http https://{host}{uri} permanent
 
     log {
         output file /var/log/caddy/fw.flownexus.org-access.log
