@@ -460,6 +460,7 @@ dependencies = [
     { name = "redis" },
     { name = "requests" },
     { name = "urllib3" },
+    { name = "uvicorn" },
     { name = "whitenoise" },
 ]
 
@@ -518,6 +519,7 @@ requires-dist = [
     { name = "redis", specifier = ">=6.4.0,<7.0" },
     { name = "requests", specifier = ">=2.32.3,<3.0" },
     { name = "urllib3", specifier = ">=2.0.0,<3.0" },
+    { name = "uvicorn", specifier = ">=0.34.0" },
     { name = "whitenoise", specifier = ">=6.11.0,<7.0" },
 ]
 provides-extras = ["test"]

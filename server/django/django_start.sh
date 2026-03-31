@@ -29,4 +29,4 @@ echo "Starting the Celery worker..."
 celery -A core worker --loglevel=info -P gevent -c 100 &
 
 echo "Starting the server..."
-exec python manage.py runserver 0.0.0.0:8000
+exec uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --workers "${DJANGO_WORKERS:-2}"
