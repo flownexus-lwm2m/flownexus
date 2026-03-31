@@ -4,21 +4,21 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-name: Deploy
+name: Deploy (tech22.de)
+
+# NOTE: The server's /home/flownexus/flownexus repo must be cloned from
+# git@github.com:jonas-rem/flownexus_tech22.git so that git fetch origin
+# resolves the commit SHA pushed to this repository.
 
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:  # Allow manual triggering
+      - prod
+  workflow_dispatch:
 
 env:
   DEPLOY_USER: flownexus
-  SERVER_HOST: flownexus.org
-  LANDING_PAGE_LOCAL_PATH: utils/landing_page
-  DOC_BUILD_LOCAL_PATH: doc/build/html
-  LANDING_PAGE_REMOTE_PATH: /var/www/flownexus/landing
-  DOCS_REMOTE_PATH: /var/www/flownexus/docs
+  SERVER_HOST: tech22.de
 
 jobs:
   build-and-deploy:
@@ -26,7 +26,7 @@ jobs:
 
     steps:
       # ==========================================
-      # 1. CHECKOUT AND SETUP
+      # 1. CHECKOUT
       # ==========================================
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,60 +34,18 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
       # ==========================================
-      # 2. BUILD STATIC ASSETS
-      # ==========================================
-
-      # 2.1 Build Sphinx Documentation
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            default-jre \
-            plantuml \
-            graphviz \
-            texlive-latex-extra \
-            texlive-xetex \
-            latexmk \
-            imagemagick \
-            librsvg2-bin
-
-      - name: Build documentation (HTML)
-        run: make doc-html
-
-      - name: Build documentation (PDF)
-        run: make doc-pdf
-
-      - name: Copy PDF to downloads
-        run: |
-          mkdir -p doc/build/html/_downloads
-          cp doc/build/pdf/latex/*.pdf doc/build/html/_downloads/ || true
-
-      # 2.2 Prepare Landing Page
-      - name: Prepare landing page assets
-        run: |
-          # Landing page is already static HTML in utils/landing_page
-          # Just verify it exists
-          ls -la utils/landing_page/
-          ls -la utils/landing_page/assets/
-
-      # ==========================================
-      # 3. DEPLOY STATIC ASSETS VIA RSYNC
+      # 2. DEPLOY TO TECH22.DE
       # ==========================================
 
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.SSH_PRIVATE_KEY_TECH22 }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      # 3.1 Update backend code first (so deploy script exists)
+      # 2.1 Update backend code first (so deploy script exists)
       - name: Update backend code
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
@@ -96,29 +54,13 @@ jobs:
              git checkout ${{ github.sha }} && \
              git submodule update --init --recursive"
 
-      # 3.2 Ensure directories exist with proper permissions
+      # 2.2 Ensure directories exist with proper permissions
       - name: Setup deployment directories
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
             "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus --setup-only"
 
-      # 3.3 Deploy Main Website
-      - name: Deploy landing page
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./${{ env.LANDING_PAGE_LOCAL_PATH }}/ \
-            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.LANDING_PAGE_REMOTE_PATH }}/
-
-      # 3.4 Deploy Documentation
-      - name: Deploy documentation
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./${{ env.DOC_BUILD_LOCAL_PATH }}/ \
-            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.DOCS_REMOTE_PATH }}/
-
-      # 3.5 Deploy containers (re-runs deploy script, but it's idempotent)
+      # 2.3 Deploy containers
       - name: Deploy dashboard stack
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
@@ -135,9 +77,8 @@ jobs:
              systemctl --user is-active flownexus-django.service"
 
       # ==========================================
-      # 6. CLEANUP
+      # 3. CLEANUP
       # ==========================================
-
       - name: Cleanup SSH keys
         if: always()
         run: |

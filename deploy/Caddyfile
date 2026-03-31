@@ -4,102 +4,21 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# Flownexus Caddy Configuration
-# This file should be placed at /etc/caddy/Caddyfile on the server.
+# Flownexus Caddy Configuration — tech22.de
+# This file should be placed at /etc/caddy/Caddyfile on the tech22.de server.
+#
+# Serves:
+#   db.tech22.de   — Django dashboard (reverse proxy to uvicorn on port 8000)
+#   fw.tech22.de   — Firmware binaries (direct file links only, no directory listing)
 #
 # IMPORTANT: Caddy handles HTTP/HTTPS traffic only.
 # UDP traffic for LwM2M (CoAP) is handled separately in server/compose.yml.
 
 {
-    email webmaster@flownexus.org
+    email webmaster@tech22.de
 }
 
-flownexus.org {
-    root * /var/www/flownexus/landing
-    file_server
-
-    header {
-        X-Frame-Options "SAMEORIGIN"
-        X-XSS-Protection "1; mode=block"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
-        -Server
-    }
-
-    @hidden {
-        path */.*
-    }
-    respond @hidden 404
-
-    encode gzip zstd
-
-    log {
-        output file /var/log/caddy/flownexus.org-access.log
-        format json
-    }
-}
-
-docs.flownexus.org {
-    root * /var/www/flownexus/docs
-    file_server
-
-    header {
-        X-Frame-Options "SAMEORIGIN"
-        X-XSS-Protection "1; mode=block"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
-
-    @hidden {
-        path */.*
-    }
-    respond @hidden 404
-
-    encode gzip zstd
-    try_files {path} {path}.html {path}/index.html =404
-
-    log {
-        output file /var/log/caddy/docs.flownexus.org-access.log
-        format json
-    }
-}
-
-fw.flownexus.org {
-    root * /var/www/flownexus
-    # No browse — directory listings are disabled.
-    # Files are served only via direct paths: /binaries/<filename>
-    file_server
-
-    # Block hidden files and dotfiles
-    @hidden {
-        path */.*
-    }
-    respond @hidden 404
-
-    # Block root and any directory path — only concrete file paths are valid
-    @not_a_file {
-        not file
-    }
-    respond @not_a_file 404
-
-    header {
-        X-Frame-Options "SAMEORIGIN"
-        X-Content-Type-Options "nosniff"
-        X-Download-Options "noopen"
-        -Server
-    }
-
-    encode gzip zstd
-
-    log {
-        output file /var/log/caddy/fw.flownexus.org-access.log
-        format json
-    }
-}
-
-dashboard.flownexus.org {
+db.tech22.de {
     reverse_proxy localhost:8000 {
         health_uri /admin/login/
         health_interval 30s
@@ -136,7 +55,47 @@ dashboard.flownexus.org {
     reverse_proxy @websocket localhost:8000
 
     log {
-        output file /var/log/caddy/dashboard.flownexus.org-access.log
+        output file /var/log/caddy/db.tech22.de-access.log
+        format json
+    }
+}
+
+fw.tech22.de {
+    # Manual TLS certificate — not issued by Let's Encrypt.
+    # Copy certificate files to the server before deploying:
+    #   sudo install -d -m 755 /etc/caddy/ssl
+    #   sudo install -m 644 fw_tech22_de.crt /etc/caddy/ssl/
+    #   sudo install -m 640 -o root -g caddy fw_tech22_de.key /etc/caddy/ssl/
+    tls /etc/caddy/ssl/fw_tech22_de.crt /etc/caddy/ssl/fw_tech22_de.key
+
+    root * /var/www/flownexus
+    # No browse — directory listings are disabled.
+    # Files are served only via direct paths: /binaries/<filename>
+    file_server
+
+    # Block hidden files and dotfiles
+    @hidden {
+        path */.*
+    }
+    respond @hidden 404
+
+    # Block root and any directory path — only concrete file paths are valid
+    @not_a_file {
+        not file
+    }
+    respond @not_a_file 404
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-Download-Options "noopen"
+        -Server
+    }
+
+    encode gzip zstd
+
+    log {
+        output file /var/log/caddy/fw.tech22.de-access.log
         format json
     }
 }
