@@ -27,7 +27,7 @@ Environment=DJANGO_SETTINGS_MODULE=core.settings
 Environment=DJANGO_DB_PATH=/data/db.sqlite3
 Environment=MEDIA_ROOT=/var/www/flownexus/binaries
 Environment=DJANGO_DEBUG=False
-Environment=DJANGO_ALLOWED_HOSTS=dashboard.flownexus.org,localhost,127.0.0.1
+Environment=DJANGO_ALLOWED_HOSTS=dashboard.flownexus.org,localhost,127.0.0.1,flownexus-django
 Environment=DJANGO_CSRF_ORIGINS=https://dashboard.flownexus.org
 # Relative base URL for firmware files, Firmware hard-codes domain for security reasons
 Environment=MEDIA_URL=/binaries/
