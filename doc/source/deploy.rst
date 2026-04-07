@@ -87,13 +87,14 @@ The container can be built and started with the following commands:
 Production Deployment
 ---------------------
 
-flownexus can be deployed to a virtual server using Caddy as a reverse proxy.
-The default configuration supports four subdomains (using ``flownexus.org`` as
-the example domain -- substitute your own throughout):
+flownexus can be deployed to a virtual server using nginx as a reverse proxy
+with certbot for automatic TLS certificates. The default configuration supports
+four subdomains (using ``flownexus.org`` as the example domain -- substitute
+your own throughout):
 
 * **flownexus.org** - Main landing page (static HTML)
 * **docs.flownexus.org** - Documentation (Sphinx HTML)
-* **fw.flownexus.org** - Firmware download server
+* **fw.flownexus.org** - Firmware download server (IoT-safe TLS)
 * **dashboard.flownexus.org** - Dynamic dashboard (Django application)
 
 Architecture Overview
@@ -101,17 +102,17 @@ Architecture Overview
 
 The deployment uses a split traffic routing approach:
 
-* **HTTP/HTTPS (Ports 80/443)**: Handled by Caddy reverse proxy
-* **UDP Traffic (Ports 5683/5684)**: Directly bound to host, bypassing Caddy for LwM2M
+* **HTTP/HTTPS (Ports 80/443)**: Handled by nginx reverse proxy
+* **UDP Traffic (Ports 5683/5684)**: Directly bound to host, bypassing nginx for LwM2M
 
 .. code-block:: text
 
    Internet
        │
-       ├── Caddy (Ports 80/443)
+       ├── nginx (Ports 80/443)
        │    ├── <domain> (static)
        │    ├── docs.<domain> (static)
-       │    ├── fw.<domain> (static)
+       │    ├── fw.<domain> (static, IoT-safe TLS)
        │    └── dashboard.<domain> (reverse proxy → localhost:8000)
        │
        └── LwM2M UDP (Ports 5683/5684) → Direct to Leshan container
@@ -120,10 +121,31 @@ The deployment uses a split traffic routing approach:
 
 This architecture provides:
 
-* **Caddy** - Reverse proxy with automatic HTTPS
+* **nginx** - Reverse proxy with IoT-compatible TLS record sizing
+* **certbot** - Automatic HTTPS via Let's Encrypt
 * **Podman** - Container runtime (rootless)
 * **systemd Quadlet** - Container orchestration via systemd units
 * **GitHub Actions** - CI/CD pipeline
+
+IoT Firmware Downloads (TLS Record Sizing)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The firmware download server (``fw.<domain>``) is configured with
+``ssl_buffer_size 1370`` in nginx. This limits TLS record sizes to fit within a
+single TCP segment (1500 byte MTU - IP/TCP headers - TLS overhead), which is
+the industry standard for IoT-compatible HTTPS.
+
+Constrained devices like the **Nordic nRF9160** have a modem-offloaded TLS
+engine with a maximum receive buffer of **2048 bytes** for TLS records. Standard
+web servers (including Go-based servers like Caddy) use dynamic TLS record
+sizing that can send records up to 16KB, causing the modem to reject the
+download with ``NRF_EMSGSIZE`` (errno 122). The ``ssl_buffer_size`` directive
+in nginx is the server-side fix for this limitation.
+
+HTTP/2 is intentionally disabled on the firmware server block because HTTP/2
+framing adds overhead that can push effective TLS record sizes above device
+limits. Gzip compression is also disabled since firmware binaries are not
+compressible.
 
 Container Management with systemd Quadlet
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -171,7 +193,7 @@ server. After that, normal deployments are handled by GitHub Actions via
 .. code-block:: console
 
    vserver:~$ sudo apt update && sudo apt upgrade -y
-   vserver:~$ sudo apt install -y podman podman-compose caddy git curl rsync ufw
+   vserver:~$ sudo apt install -y podman podman-compose nginx python3-certbot-nginx git curl rsync ufw
 
 2. Create a non-root user:
 
@@ -268,6 +290,63 @@ Before setting up GitHub Actions, generate a dedicated SSH key pair:
    vserver:~$ sudo ufw allow 5683/udp  # LwM2M CoAP (unencrypted)
    vserver:~$ sudo ufw allow 5684/udp  # LwM2M DTLS/CoAPS (encrypted)
 
+5. Configure nginx and obtain TLS certificates:
+
+Remove the default nginx site that would otherwise conflict with the flownexus
+configuration:
+
+.. code-block:: console
+
+   vserver:~$ sudo rm -f /etc/nginx/sites-enabled/default
+
+Obtain a single SAN certificate covering all domains. Certbot will temporarily
+use nginx to complete the ACME challenge, so nginx must be running and DNS must
+already resolve to this server:
+
+.. code-block:: console
+
+   vserver:~$ sudo certbot certonly --nginx --cert-name flownexus.org \
+        -d flownexus.org \
+        -d docs.flownexus.org \
+        -d fw.flownexus.org \
+        -d dashboard.flownexus.org
+
+This creates one certificate lineage at
+``/etc/letsencrypt/live/flownexus.org/`` with all four domains as SANs. The
+deployment script renders nginx against that lineage path by default. Certbot
+installs a systemd timer that renews it automatically before expiry.
+
+.. important::
+
+   Pass ``--cert-name flownexus.org`` exactly as shown above. Without an
+   explicit lineage name, certbot may reuse a different existing certificate
+   name such as ``dashboard.flownexus.org``, which leaves the certificate valid
+   but causes deployment to fail because nginx is rendered against the expected
+   lineage path.
+
+.. note::
+
+   If any domain uses a **manually provisioned certificate** (e.g. a private
+   CA for IoT device trust), skip it from the certbot invocation above and
+   instead copy the certificate files to ``/etc/nginx/ssl/`` before deploying:
+
+   .. code-block:: console
+
+      vserver:~$ sudo install -d -m 755 /etc/nginx/ssl
+      vserver:~$ sudo install -m 644 fw.crt /etc/nginx/ssl/
+      vserver:~$ sudo install -m 640 -o root -g www-data fw.key /etc/nginx/ssl/
+
+   The ``deploy/nginx.conf`` for that server block must then reference
+   ``/etc/nginx/ssl/fw.crt`` and ``/etc/nginx/ssl/fw.key`` directly instead
+   of the Let's Encrypt paths. This is done in the deployment-specific branch.
+
+Add the deploy user to the ``www-data`` group so it can write files that nginx
+serves:
+
+.. code-block:: console
+
+   vserver:~$ sudo usermod -aG www-data flownexus
+
 Environment Variables
 .....................
 
@@ -342,9 +421,10 @@ Use this as a reference when setting up a server from scratch.
 
 **Server preparation**
 
-- Install required packages: ``podman``, ``podman-compose``, ``caddy``,
-  ``git``, ``curl``, ``rsync``, ``ufw``
+- Install required packages: ``podman``, ``podman-compose``, ``nginx``,
+  ``python3-certbot-nginx``, ``git``, ``curl``, ``rsync``, ``ufw``
 - Create the ``flownexus`` deploy user
+- Add deploy user to ``www-data`` group: ``sudo usermod -aG www-data flownexus``
 - Add your personal SSH public key to ``~flownexus/.ssh/authorized_keys``
 - Generate a dedicated SSH key pair for GitHub Actions (no passphrase):
   ``ssh-keygen -t ed25519 -C "github-actions-deploy"``
@@ -354,13 +434,22 @@ Use this as a reference when setting up a server from scratch.
   ``/etc/sudoers.d/flownexus-deploy`` and validate with ``visudo -cf``
 - Open firewall: ports 22/tcp, 80/tcp, 443/tcp, 5683/udp, 5684/udp
 - Clone the repository into ``~flownexus/flownexus``
+- Remove the default nginx site: ``sudo rm -f /etc/nginx/sites-enabled/default``
 
 **DNS**
 
-- Create an A record for ``dashboard.<yourdomain>`` pointing to the server IP
-- Create an A record for ``fw.<yourdomain>`` (if serving firmware downloads)
-- Wait for DNS propagation before triggering the first deploy (Caddy needs
-  valid DNS to issue a TLS certificate)
+- Create an A record for each subdomain (``dashboard``, ``fw``, ``docs``,
+  ``<root domain>``) pointing to the server IP
+- Wait for DNS propagation before running certbot (ACME challenge requires
+  valid DNS)
+
+**TLS certificates**
+
+- Run certbot for a single SAN cert covering all domains and pin the lineage
+  name:
+  ``sudo certbot certonly --nginx --cert-name <domain> -d <domain> -d docs.<domain> -d fw.<domain> -d dashboard.<domain>``
+- For manually provisioned certs (e.g. private CA for IoT), copy them to
+  ``/etc/nginx/ssl/`` and reference them in the deployment-specific nginx config
 
 **First deployment**
 
@@ -398,13 +487,13 @@ code is pushed to the main branch:
 
 1. **Build static assets locally** (landing page, Sphinx documentation)
 2. **Deploy static files via rsync** to ``/var/www/flownexus/``
-3. **Update the backend checkout and run ``deploy/deploy-flownexus``** to refresh code, Caddy, and containers
+3. **Update the backend checkout and run ``deploy/deploy-flownexus``** to refresh code, nginx, and containers
 
 The workflow updates the backend checkout, then runs the deploy script on the
-server. The script creates the required directories, installs the Caddyfile,
-and restarts the stack. The Django container stores its SQLite database in
-``~flownexus/flownexus/server/data/db.sqlite3`` and stores uploaded firmware in
-``/var/www/flownexus/binaries``.
+server. The script creates the required directories, installs the nginx
+configuration, and restarts the stack. The Django container stores its SQLite
+database in ``~flownexus/flownexus/server/data/db.sqlite3`` and stores uploaded
+firmware in ``/var/www/flownexus/binaries``.
 
 Required GitHub Secrets:
 
@@ -413,7 +502,7 @@ Required GitHub Secrets:
 The workflow uses ``sudo -n`` only to invoke ``deploy/deploy-flownexus``.
 That script performs the privileged server setup and restart steps in one place.
 
-To deploy to a different domain or server layout, update ``deploy/Caddyfile``
+To deploy to a different domain or server layout, update ``deploy/nginx.conf``
 and the environment values in ``.github/workflows/deploy.yml``.
 
 Troubleshooting
@@ -422,20 +511,21 @@ Troubleshooting
 Everything in this section is optional and only needed for debugging a broken
 deployment or validating a suspicious state.
 
-Caddy Issues
+nginx Issues
 ~~~~~~~~~~~~
 
-**Check Caddy logs:**
+**Check nginx logs:**
 
 .. code-block:: console
 
-   vserver:~$ sudo journalctl -u caddy -f
+   vserver:~$ sudo journalctl -u nginx -f
+   vserver:~$ sudo tail -f /var/log/nginx/error.log
 
 **Validate configuration:**
 
 .. code-block:: console
 
-   vserver:~$ sudo caddy validate --config /etc/caddy/Caddyfile
+   vserver:~$ sudo nginx -t
 
 Container Issues
 ~~~~~~~~~~~~~~~~
@@ -471,27 +561,28 @@ Container Issues
 SSL Certificate Issues
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Caddy handles SSL automatically. If certificates fail, check Caddy logs for
-ACME errors and ensure DNS is resolving correctly before reloading:
+Certificates are managed by certbot (Let's Encrypt). If certificates fail,
+check certbot logs and ensure DNS is resolving correctly:
 
 .. code-block:: console
 
-   vserver:~$ sudo journalctl -u caddy | grep -i "acme\|tls\|cert"
-   vserver:~$ sudo caddy reload --config /etc/caddy/Caddyfile
+   vserver:~$ sudo certbot certificates
+   vserver:~$ sudo certbot renew --dry-run
+   vserver:~$ sudo journalctl -u nginx | grep -i "ssl\|tls\|cert"
 
 Security Considerations
 .......................
 
 * Use ed25519 SSH keys: ``ssh-keygen -t ed25519 -a 100``
-* Keep ``/var/www/flownexus`` writable by ``flownexus`` and readable by Caddy
-* Regularly update Caddy and container base images
+* Keep ``/var/www/flownexus`` writable by ``flownexus`` and readable by nginx
+* Regularly update nginx and container base images
 * Never commit secrets to the repository
 
 Customizing for Your Deployment
 ................................
 
-To deploy on a different domain, update the domain names and Let's Encrypt
-email in ``deploy/Caddyfile``, the environment variables (``DJANGO_ALLOWED_HOSTS``,
+To deploy on a different domain, update the domain names in
+``deploy/nginx.conf``, the environment variables (``DJANGO_ALLOWED_HOSTS``,
 ``DJANGO_CSRF_ORIGINS``) in ``deploy/quadlet/flownexus-django.container``, and
 the target server in ``.github/workflows/deploy.yml``.
 
@@ -513,9 +604,9 @@ File Locations
 +------------------+----------------------------------------------------------+---------------------------+
 | Django env file  | ``~flownexus/.config/flownexus/env``                     | Secret key (auto-created) |
 +------------------+----------------------------------------------------------+---------------------------+
-| Caddy config     | ``/etc/caddy/Caddyfile``                                 | Reverse proxy             |
+| nginx config     | ``/etc/nginx/sites-enabled/flownexus.conf``              | Reverse proxy             |
 +------------------+----------------------------------------------------------+---------------------------+
-| Caddy data       | ``/var/lib/caddy/``                                      | SSL certificates          |
+| Let's Encrypt    | ``/etc/letsencrypt/``                                    | SSL certificates          |
 +------------------+----------------------------------------------------------+---------------------------+
 | Quadlet configs  | ``~flownexus/.config/containers/systemd/``               | Container systemd units   |
 +------------------+----------------------------------------------------------+---------------------------+
@@ -554,8 +645,8 @@ This will:
    vserver:~flownexus/flownexus$ git pull
    vserver:~flownexus/flownexus$ sudo deploy/deploy-flownexus
 
-To create directories and reload Caddy without rebuilding containers
-(useful after a Caddyfile change):
+To create directories and reload nginx without rebuilding containers
+(useful after an nginx config change):
 
 .. code-block:: console
 

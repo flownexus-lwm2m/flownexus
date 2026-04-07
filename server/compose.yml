@@ -36,7 +36,7 @@ services:
       - ${FIRMWARE_STORAGE_HOST_PATH:-./firmware}:/var/www/flownexus/binaries:rw,z
       # Named volume to shadow host's .venv with container's built venv
       - django-venv:/django/.venv
-    # Only bind to localhost - Caddy will reverse proxy
+    # Only bind to localhost - nginx will reverse proxy
     ports:
       - "127.0.0.1:8000:8000"
     networks:
@@ -96,7 +96,7 @@ services:
       - ./logs:/leshan/logs:rw,z
       # Certificates for DTLS
       - ./leshan/certs:/leshan/certs:ro,Z
-    # CRITICAL: UDP port bound directly to host (0.0.0.0) - bypasses Caddy
+    # CRITICAL: UDP port bound directly to host (0.0.0.0) - bypasses nginx
     # This is required for LwM2M CoAP communication
     ports:
       - "0.0.0.0:5683:5683/udp"      # LwM2M CoAP UDP

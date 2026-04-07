@@ -15,14 +15,15 @@ Deploy Flownexus using systemd Quadlet containers (rootless Podman).
 
 Optional:
   --local-test      Run containers locally using podman-compose (for testing)
-  --setup-only      Only create directories and reload caddy, skip container deployment
+  --setup-only      Only create directories and reload nginx, skip container deployment
   --deploy-user     User that owns the repository and runs containers (default: flownexus)
   --app-root        Repository root (default: script parent directory)
   --web-root        Web root (default: /var/www/flownexus)
   --db-path         SQLite database directory (default: <app-root>/server/data)
   --firmware-path   Firmware download directory (default: /var/www/flownexus/binaries)
-  --caddyfile       Path to the Caddyfile (default: <app-root>/deploy/Caddyfile)
-  --caddyfile-target Final Caddyfile path (default: /etc/caddy/Caddyfile)
+  --nginx-conf      Path to the nginx config (default: <app-root>/deploy/nginx.conf)
+  --nginx-conf-target Final nginx config path (default: /etc/nginx/sites-enabled/flownexus.conf)
+  --tls-cert-name   Let's Encrypt certificate lineage name (default: flownexus.org)
   --health-url      Local health check URL (default: http://127.0.0.1:8000/admin/login/)
   -h, --help        Show this help message
 
@@ -33,7 +34,7 @@ Examples:
   # Local testing with podman-compose
   deploy-flownexus --local-test
 
-  # Setup only (directories + caddy)
+  # Setup only (directories + nginx)
   sudo deploy-flownexus --setup-only
 EOF
 }
@@ -43,9 +44,10 @@ app_root="/home/flownexus/flownexus"
 web_root="/var/www/flownexus"
 db_path=""
 firmware_path="/var/www/flownexus/binaries"
-caddyfile_target="/etc/caddy/Caddyfile"
+nginx_conf_target="/etc/nginx/sites-enabled/flownexus.conf"
 health_url="http://127.0.0.1:8000/admin/login/"
-caddyfile_source="/home/flownexus/flownexus/deploy/Caddyfile"
+nginx_conf_source="/home/flownexus/flownexus/deploy/nginx.conf"
+tls_cert_name="flownexus.org"
 setup_only=0
 local_test=0
 
@@ -59,8 +61,8 @@ while [ "$#" -gt 0 ]; do
             setup_only=1
             shift
             ;;
-        --caddyfile)
-            caddyfile_source="${2:-}"
+        --nginx-conf)
+            nginx_conf_source="${2:-}"
             shift 2
             ;;
         --deploy-user)
@@ -83,8 +85,12 @@ while [ "$#" -gt 0 ]; do
             firmware_path="${2:-}"
             shift 2
             ;;
-        --caddyfile-target)
-            caddyfile_target="${2:-}"
+        --nginx-conf-target)
+            nginx_conf_target="${2:-}"
+            shift 2
+            ;;
+        --tls-cert-name)
+            tls_cert_name="${2:-}"
             shift 2
             ;;
         --health-url)
@@ -103,7 +109,12 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-if [ -z "$caddyfile_source" ]; then
+if [ -z "$nginx_conf_source" ]; then
+    usage >&2
+    exit 2
+fi
+
+if [ -z "$tls_cert_name" ]; then
     usage >&2
     exit 2
 fi
@@ -128,7 +139,7 @@ if [ "$local_test" -eq 1 ]; then
     exit 0
 fi
 
-# Production mode - require root for systemd/caddy operations
+# Production mode - require root for systemd/nginx operations
 if [ "$(id -u)" -ne 0 ]; then
     printf '%s\n' "deploy-flownexus must run as root via sudo for production deployment" >&2
     exit 1
@@ -142,23 +153,38 @@ fi
 # 1. SETUP DIRECTORIES AND PERMISSIONS
 # ==========================================
 
-install -d -o "$deploy_user" -g caddy -m 2775 "$web_root"
-install -d -o "$deploy_user" -g caddy -m 2775 "$web_root/landing"
-install -d -o "$deploy_user" -g caddy -m 2775 "$web_root/docs"
-install -d -o "$deploy_user" -g caddy -m 2775 "$firmware_path"
+install -d -o "$deploy_user" -g www-data -m 2775 "$web_root"
+install -d -o "$deploy_user" -g www-data -m 2775 "$web_root/landing"
+install -d -o "$deploy_user" -g www-data -m 2775 "$web_root/docs"
+install -d -o "$deploy_user" -g www-data -m 2775 "$firmware_path"
 install -d -o "$deploy_user" -g "$deploy_user" -m 2775 "$db_path"
 install -d -o "$deploy_user" -g "$deploy_user" -m 2775 "/home/$deploy_user/backups"
 
 # ==========================================
-# 2. CONFIGURE CADDY
+# 2. CONFIGURE NGINX
 # ==========================================
 
-caddy validate --config "$caddyfile_source"
-install -m 0644 "$caddyfile_source" "$caddyfile_target"
-systemctl reload caddy || systemctl restart caddy
+tls_cert_dir="/etc/letsencrypt/live/$tls_cert_name"
+
+if [ ! -f "$tls_cert_dir/fullchain.pem" ] || [ ! -f "$tls_cert_dir/privkey.pem" ]; then
+    printf '%s\n' "Missing TLS certificate files in $tls_cert_dir" >&2
+    printf '%s\n' "Issue or rename the certificate lineage before deploying, for example:" >&2
+    printf '%s\n' "  sudo certbot certonly --nginx --cert-name $tls_cert_name -d flownexus.org -d docs.flownexus.org -d fw.flownexus.org -d dashboard.flownexus.org" >&2
+    exit 1
+fi
+
+rendered_nginx_conf=$(mktemp)
+trap 'rm -f "$rendered_nginx_conf"' EXIT
+
+sed "s|__TLS_CERT_DIR__|$tls_cert_dir|g" "$nginx_conf_source" > "$rendered_nginx_conf"
+
+nginx -t
+install -m 0644 "$rendered_nginx_conf" "$nginx_conf_target"
+nginx -t
+systemctl reload nginx || systemctl restart nginx
 
 if [ "$setup_only" -eq 1 ]; then
-    printf '%s\n' "Setup complete: directories created and caddy reloaded"
+    printf '%s\n' "Setup complete: directories created and nginx reloaded"
     exit 0
 fi
 
