@@ -254,14 +254,14 @@ class TestFirmwareUpdateFlow:
         assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE
 
     @patch("sensordata.tasks.requests")
-    def test_version_check_deferred_during_update(self, mock_requests, client, settings):
-        """If the device reports its firmware version while the update is still
-        in progress (e.g. re-registration during DOWNLOADING), the version
-        mismatch should NOT immediately mark the update as failed."""
+    def test_mid_download_reboot_marks_update_failed(self, mock_requests, client, settings):
+        """If the device reboots mid-download and reports its old firmware
+        version, the update should be marked as FAILED (simplified design --
+        no deferred re-send logic)."""
         settings.CELERY_TASK_ALWAYS_EAGER = True
 
-        site = SiteFactory(name="Defer Site")
-        user = UserFactory(username="defer_user")
+        site = SiteFactory(name="Reboot Site")
+        user = UserFactory(username="reboot_user")
         from sensordata.models import SiteMembership
 
         SiteMembershipFactory(
@@ -271,7 +271,7 @@ class TestFirmwareUpdateFlow:
             can_manage_firmware=True,
             can_view_firmware=True,
         )
-        endpoint = EndpointFactory(endpoint="defer-device", site=site)
+        endpoint = EndpointFactory(endpoint="reboot-device", site=site)
         firmware = FirmwareFactory(version="v2.0.0")
 
         mock_requests.put.return_value.status_code = 200
@@ -310,7 +310,7 @@ class TestFirmwareUpdateFlow:
         firmware_update.refresh_from_db()
         assert firmware_update.state == FirmwareUpdate.State.STATE_DOWNLOADING
 
-        # Device re-registers mid-download and reports OLD firmware version
+        # Device reboots mid-download and reports OLD firmware version
         payload_old_version = {
             "ep": endpoint.endpoint,
             "obj_id": 3,
@@ -327,45 +327,149 @@ class TestFirmwareUpdateFlow:
             content_type="application/json",
         )
 
-        # Should NOT be marked as failed -- update still in progress
+        # Should be marked as FAILED -- simplified design treats any
+        # version mismatch after reboot as a failure.
         firmware_update.refresh_from_db()
-        assert firmware_update.result == FirmwareUpdate.Result.RESULT_DEFAULT
-        assert firmware_update.state == FirmwareUpdate.State.STATE_DOWNLOADING
+        assert firmware_update.result == FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+        assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE
 
-        # Now simulate the update completing successfully
-        for state_val in [
-            FirmwareUpdate.State.STATE_DOWNLOADED,
-            FirmwareUpdate.State.STATE_UPDATING,
-        ]:
-            payload = {
-                "ep": endpoint.endpoint,
-                "obj_id": 5,
-                "val": {
-                    "kind": "singleResource",
-                    "id": 3,
-                    "type": "INTEGER",
-                    "value": str(state_val),
-                },
-            }
-            client.post(reverse("post-single-resource"), payload, content_type="application/json")
+    @patch("sensordata.tasks.requests")
+    def test_send_uri_failure_propagates_to_firmware_update(self, mock_requests, client, settings):
+        """When the send_operation task fails after 3 retries, the parent
+        FirmwareUpdate should be marked as FAILED automatically."""
+        settings.CELERY_TASK_ALWAYS_EAGER = True
 
-        # Device reboots with new version
-        payload_new_version = {
+        site = SiteFactory(name="Propagate Site")
+        user = UserFactory(username="prop_user")
+        from sensordata.models import SiteMembership
+
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.ADMIN,
+            can_manage_firmware=True,
+            can_view_firmware=True,
+        )
+        endpoint = EndpointFactory(endpoint="prop-device", site=site)
+        firmware = FirmwareFactory(version="v2.0.0")
+
+        # Simulate Leshan API returning errors (device offline)
+        mock_requests.put.return_value.status_code = 504
+        mock_requests.put.return_value.json.return_value = {"error": "timeout"}
+
+        # Start update -- the send_uri_operation will be created and dispatched
+        # eagerly, but the first attempt only bumps transmit_counter to 1.
+        client.force_login(user)
+        url = reverse("frontend:firmware_list")
+        data = {
+            "start_update": "1",
+            "endpoint": endpoint.endpoint,
+            "firmware": firmware.id,
+        }
+        response = client.post(url, data)
+        assert response.status_code == 302
+
+        firmware_update = FirmwareUpdate.objects.get(endpoint=endpoint, firmware=firmware)
+
+        # After the first eager dispatch the operation should be re-queued
+        # (transmit_counter == 1, threshold is 3).
+        firmware_update.send_uri_operation.refresh_from_db()
+        assert firmware_update.send_uri_operation.status == EndpointOperation.Status.QUEUED
+        assert firmware_update.send_uri_operation.transmit_counter == 1
+
+        # Manually invoke send_operation two more times to hit the 3-retry limit
+        from sensordata.tasks import send_operation
+
+        send_operation(firmware_update.send_uri_operation.id)
+        firmware_update.send_uri_operation.refresh_from_db()
+        assert firmware_update.send_uri_operation.transmit_counter == 2
+        assert firmware_update.send_uri_operation.status == EndpointOperation.Status.QUEUED
+
+        send_operation(firmware_update.send_uri_operation.id)
+        firmware_update.send_uri_operation.refresh_from_db()
+        assert firmware_update.send_uri_operation.transmit_counter == 3
+        assert firmware_update.send_uri_operation.status == EndpointOperation.Status.FAILED
+
+        # The failure should have propagated to the FirmwareUpdate
+        firmware_update.refresh_from_db()
+        assert firmware_update.result == FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+        assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE
+
+    @patch("sensordata.tasks.requests")
+    def test_multiple_active_updates_auto_cleanup(self, mock_requests, client, settings):
+        """When multiple FirmwareUpdate objects exist with RESULT_DEFAULT for the
+        same endpoint, the older ones should be auto-cleaned (marked FAILED) and
+        only the newest one should be kept active."""
+        settings.CELERY_TASK_ALWAYS_EAGER = True
+
+        site = SiteFactory(name="Cleanup Site")
+        user = UserFactory(username="cleanup_user")
+        from sensordata.models import SiteMembership
+
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.ADMIN,
+            can_manage_firmware=True,
+            can_view_firmware=True,
+        )
+        endpoint = EndpointFactory(endpoint="cleanup-device", site=site)
+        firmware_v1 = FirmwareFactory(version="v1.0.0")
+        firmware_v2 = FirmwareFactory(version="v2.0.0")
+
+        mock_requests.put.return_value.status_code = 200
+        mock_requests.put.return_value.json.return_value = {"status": "success"}
+        mock_requests.post.return_value.status_code = 200
+        mock_requests.post.return_value.json.return_value = {"status": "success"}
+
+        # Start first update
+        client.force_login(user)
+        url = reverse("frontend:firmware_list")
+        data = {
+            "start_update": "1",
+            "endpoint": endpoint.endpoint,
+            "firmware": firmware_v1.id,
+        }
+        response = client.post(url, data)
+        assert response.status_code == 302
+
+        fw_update_1 = FirmwareUpdate.objects.get(endpoint=endpoint, firmware=firmware_v1)
+        assert fw_update_1.result == FirmwareUpdate.Result.RESULT_DEFAULT
+
+        # Start second update (bypassing the form-level clean() validation
+        # to simulate the race condition that happens in practice)
+        fw_update_2 = FirmwareUpdate(endpoint=endpoint, firmware=firmware_v2)
+        fw_update_2.save()
+        assert fw_update_2.result == FirmwareUpdate.Result.RESULT_DEFAULT
+
+        # Both are active (RESULT_DEFAULT)
+        active_count = FirmwareUpdate.objects.filter(
+            endpoint=endpoint, result=FirmwareUpdate.Result.RESULT_DEFAULT
+        ).count()
+        assert active_count == 2
+
+        # Trigger handle_fota by sending a state update -- this should
+        # auto-cleanup the older duplicate.
+        payload_downloading = {
             "ep": endpoint.endpoint,
-            "obj_id": 3,
+            "obj_id": 5,
             "val": {
                 "kind": "singleResource",
                 "id": 3,
-                "type": "STRING",
-                "value": "v2.0.0",
+                "type": "INTEGER",
+                "value": str(FirmwareUpdate.State.STATE_DOWNLOADING),
             },
         }
         client.post(
-            reverse("post-single-resource"),
-            payload_new_version,
-            content_type="application/json",
+            reverse("post-single-resource"), payload_downloading, content_type="application/json"
         )
 
-        firmware_update.refresh_from_db()
-        assert firmware_update.result == FirmwareUpdate.Result.RESULT_SUCCESS
-        assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE
+        # The older update (fw_update_1) should now be marked as FAILED
+        fw_update_1.refresh_from_db()
+        assert fw_update_1.result == FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+        assert fw_update_1.state == FirmwareUpdate.State.STATE_IDLE
+
+        # The newer update (fw_update_2) should still be active
+        fw_update_2.refresh_from_db()
+        assert fw_update_2.result == FirmwareUpdate.Result.RESULT_DEFAULT
+        assert fw_update_2.state == FirmwareUpdate.State.STATE_DOWNLOADING

@@ -130,62 +130,59 @@ class HandleResourceMixin:
             endpoint=ep, result=FirmwareUpdate.Result.RESULT_DEFAULT
         )
 
-        # Check for exactly one FirmwareUpdate object
-        if fw_query.count() == 0:
+        # Check for active FirmwareUpdate objects
+        count = fw_query.count()
+        if count == 0:
             if res_type.object_id == 3 and res_type.resource_id == 3:
                 # Just a regular reboot, no FOTA update
                 return
-            err = "No FirmwareUpdate object found for endpoint"
-            raise serializers.ValidationError
-        if fw_query.count() != 1:
-            err = "Multiple active FirmwareUpdate objects found for endpoint"
-            logger.info(fw_query)
-            raise serializers.ValidationError(err)
+            raise serializers.ValidationError("No FirmwareUpdate object found for endpoint")
+        if count > 1:
+            # Multiple active updates found -- keep the most recent one and
+            # mark older duplicates as failed so the device can proceed.
+            logger.warning(
+                f"Found {count} active FirmwareUpdate objects for {ep}. "
+                f"Marking older duplicates as failed."
+            )
+            latest = fw_query.order_by("-timestamp_created").first()
+            for stale_fw in fw_query.exclude(pk=latest.pk):
+                stale_fw.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+                stale_fw.state = FirmwareUpdate.State.STATE_IDLE
+                self.abort_pending_fota_comms(stale_fw)
+                stale_fw.save()
 
-        # Exactly one FirmwareUpdate object found
+        # Exactly one active FirmwareUpdate object remains
         fw_obj = fw_query.get()
 
-        # Device Rebooted
+        # Device rebooted -- check firmware version (Object 3, Resource 3)
         if res_type.object_id == 3 and res_type.resource_id == 3:
             if (
                 fw_obj.state == FirmwareUpdate.State.STATE_IDLE
                 and fw_obj.result == FirmwareUpdate.Result.RESULT_DEFAULT
             ):
-                # Update hasn't been started yet
+                # Update hasn't been started yet (Package URI not sent or still queued)
                 return
+
             expected_version = self._normalize_version(fw_obj.firmware.version)
             reported_version = self._normalize_version(value)
             if expected_version == reported_version:
                 logger.info(f"FOTA Success: Version match for {ep}: {value}")
                 fw_obj.result = FirmwareUpdate.Result.RESULT_SUCCESS
-                fw_obj.state = FirmwareUpdate.State.STATE_IDLE
-                self.abort_pending_fota_comms(fw_obj)
-                fw_obj.save()
             else:
-                # Version mismatch - only mark as failed if update is complete
-                # (state is IDLE, meaning device finished UPDATING and rebooted)
-                # If update is still in progress (DOWNLOADING/DOWNLOADED/UPDATING),
-                # the version check will happen again after the device reboots
-                # with the new firmware
-                if fw_obj.state == FirmwareUpdate.State.STATE_IDLE:
-                    logger.error(
-                        f"FOTA Failed: Version mismatch for {ep}. "
-                        f"Expected: '{expected_version}', Reported: '{reported_version}'"
-                    )
-                    fw_obj.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
-                    fw_obj.state = FirmwareUpdate.State.STATE_IDLE
-                    self.abort_pending_fota_comms(fw_obj)
-                    fw_obj.save()
-                else:
-                    # Update still in progress, device may have rebooted during
-                    # DOWNLOADING/DOWNLOADED/UPDATING. Don't mark as failed yet.
-                    logger.debug(
-                        f"FOTA: Device {ep} reported version '{reported_version}' "
-                        f"during update (state={fw_obj.state}), expected '{expected_version}'"
-                    )
+                # Version mismatch after reboot -- update failed regardless of
+                # whether the device was mid-download or post-update.
+                logger.error(
+                    f"FOTA Failed: Version mismatch for {ep}. "
+                    f"Expected: '{expected_version}', Reported: '{reported_version}'"
+                )
+                fw_obj.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+
+            fw_obj.state = FirmwareUpdate.State.STATE_IDLE
+            self.abort_pending_fota_comms(fw_obj)
+            fw_obj.save()
             return
 
-        # Update state changed
+        # Update state changed (Object 5, Resource 3)
         if res_type.resource_id == 3:
             fw_obj.state = value
             if int(value) == FirmwareUpdate.State.STATE_DOWNLOADED:
@@ -195,10 +192,9 @@ class HandleResourceMixin:
                 exec_operation = EndpointOperation.objects.create(resource=exec_res)
                 fw_obj.execute_operation = exec_operation
                 process_pending_operations.delay(ep.endpoint)
-        # Update Result changed (Success/Failure)
+        # Update Result changed (Object 5, Resource 5)
         elif res_type.resource_id == 5:
             fw_obj.result = value
-            # In cases (success/failure), the update process is finished.
             fw_obj.state = FirmwareUpdate.State.STATE_IDLE
             self.abort_pending_fota_comms(fw_obj)
         else:
@@ -224,8 +220,10 @@ class HandleResourceMixin:
             status = fw_obj.execute_operation.status
             if status in (EndpointOperation.Status.QUEUED, EndpointOperation.Status.SENDING):
                 fw_obj.execute_operation.status = EndpointOperation.Status.FAILED
+                fw_obj.execute_operation.save()
 
         if fw_obj.send_uri_operation:
             status = fw_obj.send_uri_operation.status
             if status in (EndpointOperation.Status.QUEUED, EndpointOperation.Status.SENDING):
                 fw_obj.send_uri_operation.status = EndpointOperation.Status.FAILED
+                fw_obj.send_uri_operation.save()

@@ -11,7 +11,7 @@ import requests
 from celery import shared_task
 from django.utils import timezone
 
-from .models import Endpoint, EndpointOperation
+from .models import Endpoint, EndpointOperation, FirmwareUpdate
 
 # Check if we run in a container or locally
 LESHAN_URI = os.getenv("LESHAN_URI", "http://0.0.0.0:8080") + "/api"
@@ -69,6 +69,24 @@ def send_operation(endpointOperation_id: int) -> None:
             e_ops.status = e_ops.Status.QUEUED
 
     e_ops.save()
+
+    if e_ops.status == EndpointOperation.Status.FAILED:
+        _propagate_failure_to_firmware_update(e_ops)
+
+
+def _propagate_failure_to_firmware_update(e_ops: EndpointOperation) -> None:
+    """If a failed operation belongs to a FirmwareUpdate, mark the update as failed."""
+    fw_update = (
+        FirmwareUpdate.objects.filter(send_uri_operation=e_ops)
+        | FirmwareUpdate.objects.filter(execute_operation=e_ops)
+    ).first()
+    if fw_update and fw_update.result == FirmwareUpdate.Result.RESULT_DEFAULT:
+        logger.warning(
+            f"Operation {e_ops.id} failed -- marking FirmwareUpdate {fw_update.id} as failed."
+        )
+        fw_update.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+        fw_update.state = FirmwareUpdate.State.STATE_IDLE
+        fw_update.save()
 
 
 @shared_task
