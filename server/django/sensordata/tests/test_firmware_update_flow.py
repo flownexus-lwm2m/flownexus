@@ -176,3 +176,196 @@ class TestFirmwareUpdateFlow:
         firmware_update.refresh_from_db()
         assert firmware_update.result == FirmwareUpdate.Result.RESULT_SUCCESS
         assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE
+
+    @patch("sensordata.tasks.requests")
+    def test_version_normalization_underscore_vs_hyphen(self, mock_requests, client, settings):
+        """Zephyr devices may report versions with underscores where the server
+        stores them with hyphens. Verify that normalization handles this."""
+        settings.CELERY_TASK_ALWAYS_EAGER = True
+
+        site = SiteFactory(name="Normalize Site")
+        user = UserFactory(username="norm_user")
+        from sensordata.models import SiteMembership
+
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.ADMIN,
+            can_manage_firmware=True,
+            can_view_firmware=True,
+        )
+        endpoint = EndpointFactory(endpoint="norm-device", site=site)
+        # Server stores version with hyphen
+        firmware = FirmwareFactory(version="v0.9.13-dev1")
+
+        mock_requests.put.return_value.status_code = 200
+        mock_requests.put.return_value.json.return_value = {"status": "success"}
+        mock_requests.post.return_value.status_code = 200
+        mock_requests.post.return_value.json.return_value = {"status": "success"}
+
+        # Start update
+        client.force_login(user)
+        url = reverse("frontend:firmware_list")
+        data = {
+            "start_update": "1",
+            "endpoint": endpoint.endpoint,
+            "firmware": firmware.id,
+        }
+        response = client.post(url, data)
+        assert response.status_code == 302
+
+        firmware_update = FirmwareUpdate.objects.get(endpoint=endpoint, firmware=firmware)
+
+        # Simulate full update cycle: DOWNLOADING -> DOWNLOADED -> UPDATING
+        for state_val in [
+            FirmwareUpdate.State.STATE_DOWNLOADING,
+            FirmwareUpdate.State.STATE_DOWNLOADED,
+            FirmwareUpdate.State.STATE_UPDATING,
+        ]:
+            payload = {
+                "ep": endpoint.endpoint,
+                "obj_id": 5,
+                "val": {
+                    "kind": "singleResource",
+                    "id": 3,
+                    "type": "INTEGER",
+                    "value": str(state_val),
+                },
+            }
+            client.post(reverse("post-single-resource"), payload, content_type="application/json")
+
+        # Device reboots and reports version with underscore instead of hyphen
+        payload_version = {
+            "ep": endpoint.endpoint,
+            "obj_id": 3,
+            "val": {
+                "kind": "singleResource",
+                "id": 3,
+                "type": "STRING",
+                "value": "v0.9.13_dev1",
+            },
+        }
+        client.post(
+            reverse("post-single-resource"), payload_version, content_type="application/json"
+        )
+
+        firmware_update.refresh_from_db()
+        assert firmware_update.result == FirmwareUpdate.Result.RESULT_SUCCESS
+        assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE
+
+    @patch("sensordata.tasks.requests")
+    def test_version_check_deferred_during_update(self, mock_requests, client, settings):
+        """If the device reports its firmware version while the update is still
+        in progress (e.g. re-registration during DOWNLOADING), the version
+        mismatch should NOT immediately mark the update as failed."""
+        settings.CELERY_TASK_ALWAYS_EAGER = True
+
+        site = SiteFactory(name="Defer Site")
+        user = UserFactory(username="defer_user")
+        from sensordata.models import SiteMembership
+
+        SiteMembershipFactory(
+            user=user,
+            site=site,
+            role=SiteMembership.Role.ADMIN,
+            can_manage_firmware=True,
+            can_view_firmware=True,
+        )
+        endpoint = EndpointFactory(endpoint="defer-device", site=site)
+        firmware = FirmwareFactory(version="v2.0.0")
+
+        mock_requests.put.return_value.status_code = 200
+        mock_requests.put.return_value.json.return_value = {"status": "success"}
+        mock_requests.post.return_value.status_code = 200
+        mock_requests.post.return_value.json.return_value = {"status": "success"}
+
+        # Start update
+        client.force_login(user)
+        url = reverse("frontend:firmware_list")
+        data = {
+            "start_update": "1",
+            "endpoint": endpoint.endpoint,
+            "firmware": firmware.id,
+        }
+        response = client.post(url, data)
+        assert response.status_code == 302
+
+        firmware_update = FirmwareUpdate.objects.get(endpoint=endpoint, firmware=firmware)
+
+        # Simulate DOWNLOADING state
+        payload_downloading = {
+            "ep": endpoint.endpoint,
+            "obj_id": 5,
+            "val": {
+                "kind": "singleResource",
+                "id": 3,
+                "type": "INTEGER",
+                "value": str(FirmwareUpdate.State.STATE_DOWNLOADING),
+            },
+        }
+        client.post(
+            reverse("post-single-resource"), payload_downloading, content_type="application/json"
+        )
+
+        firmware_update.refresh_from_db()
+        assert firmware_update.state == FirmwareUpdate.State.STATE_DOWNLOADING
+
+        # Device re-registers mid-download and reports OLD firmware version
+        payload_old_version = {
+            "ep": endpoint.endpoint,
+            "obj_id": 3,
+            "val": {
+                "kind": "singleResource",
+                "id": 3,
+                "type": "STRING",
+                "value": "v1.0.0",
+            },
+        }
+        client.post(
+            reverse("post-single-resource"),
+            payload_old_version,
+            content_type="application/json",
+        )
+
+        # Should NOT be marked as failed -- update still in progress
+        firmware_update.refresh_from_db()
+        assert firmware_update.result == FirmwareUpdate.Result.RESULT_DEFAULT
+        assert firmware_update.state == FirmwareUpdate.State.STATE_DOWNLOADING
+
+        # Now simulate the update completing successfully
+        for state_val in [
+            FirmwareUpdate.State.STATE_DOWNLOADED,
+            FirmwareUpdate.State.STATE_UPDATING,
+        ]:
+            payload = {
+                "ep": endpoint.endpoint,
+                "obj_id": 5,
+                "val": {
+                    "kind": "singleResource",
+                    "id": 3,
+                    "type": "INTEGER",
+                    "value": str(state_val),
+                },
+            }
+            client.post(reverse("post-single-resource"), payload, content_type="application/json")
+
+        # Device reboots with new version
+        payload_new_version = {
+            "ep": endpoint.endpoint,
+            "obj_id": 3,
+            "val": {
+                "kind": "singleResource",
+                "id": 3,
+                "type": "STRING",
+                "value": "v2.0.0",
+            },
+        }
+        client.post(
+            reverse("post-single-resource"),
+            payload_new_version,
+            content_type="application/json",
+        )
+
+        firmware_update.refresh_from_db()
+        assert firmware_update.result == FirmwareUpdate.Result.RESULT_SUCCESS
+        assert firmware_update.state == FirmwareUpdate.State.STATE_IDLE

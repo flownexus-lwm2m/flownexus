@@ -153,20 +153,36 @@ class HandleResourceMixin:
             ):
                 # Update hasn't been started yet
                 return
-            expected_version = fw_obj.firmware.version
-            reported_version = value
+            expected_version = self._normalize_version(fw_obj.firmware.version)
+            reported_version = self._normalize_version(value)
             if expected_version == reported_version:
                 logger.info(f"FOTA Success: Version match for {ep}: {value}")
                 fw_obj.result = FirmwareUpdate.Result.RESULT_SUCCESS
+                fw_obj.state = FirmwareUpdate.State.STATE_IDLE
+                self.abort_pending_fota_comms(fw_obj)
+                fw_obj.save()
             else:
-                logger.error(
-                    f"FOTA Failed: Version mismatch for {ep}. "
-                    f"Expected: '{expected_version}', Reported: '{reported_version}'"
-                )
-                fw_obj.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
-            fw_obj.state = FirmwareUpdate.State.STATE_IDLE
-            self.abort_pending_fota_comms(fw_obj)
-            fw_obj.save()
+                # Version mismatch - only mark as failed if update is complete
+                # (state is IDLE, meaning device finished UPDATING and rebooted)
+                # If update is still in progress (DOWNLOADING/DOWNLOADED/UPDATING),
+                # the version check will happen again after the device reboots
+                # with the new firmware
+                if fw_obj.state == FirmwareUpdate.State.STATE_IDLE:
+                    logger.error(
+                        f"FOTA Failed: Version mismatch for {ep}. "
+                        f"Expected: '{expected_version}', Reported: '{reported_version}'"
+                    )
+                    fw_obj.result = FirmwareUpdate.Result.RESULT_UPDATE_FAILED
+                    fw_obj.state = FirmwareUpdate.State.STATE_IDLE
+                    self.abort_pending_fota_comms(fw_obj)
+                    fw_obj.save()
+                else:
+                    # Update still in progress, device may have rebooted during
+                    # DOWNLOADING/DOWNLOADED/UPDATING. Don't mark as failed yet.
+                    logger.debug(
+                        f"FOTA: Device {ep} reported version '{reported_version}' "
+                        f"during update (state={fw_obj.state}), expected '{expected_version}'"
+                    )
             return
 
         # Update state changed
@@ -188,6 +204,16 @@ class HandleResourceMixin:
         else:
             return
         fw_obj.save()
+
+    @staticmethod
+    def _normalize_version(version: str) -> str:
+        """Normalize firmware version string for comparison.
+
+        Zephyr firmware may report versions with underscores where the server
+        stores them with hyphens (e.g. 'v0.9.13_dev1' vs 'v0.9.13-dev1').
+        Normalize both to a canonical form for reliable comparison.
+        """
+        return version.strip().replace("_", "-").lower()
 
     # In case an update is finished (success/failure), abort any pending
     # operations (send URI, execute update). All communications should usually
