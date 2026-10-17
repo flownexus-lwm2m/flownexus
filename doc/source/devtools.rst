@@ -11,6 +11,11 @@ Run code formatting, linting, and git validation::
 
   host:~/flownexus$ make compliance
 
+Run Zephyr checkpatch on the native_sim client (needs the Zephyr tree in
+``../zephyr``)::
+
+  host:~/flownexus$ make checkpatch
+
 Unit Tests
 ..........
 
@@ -25,11 +30,19 @@ Or directly with pytest::
 End-to-End Tests
 ................
 
-Run full E2E test suite with Zephyr simulation::
+Run the local Zephyr E2E suite (native_sim plus isolated Django, Redis,
+Celery, and Leshan)::
 
   host:~/flownexus$ make test-e2e
 
-Requires Podman and Zephyr toolchain.
+Requires a container runtime (Podman or Docker), a built Leshan image, and
+the Zephyr toolchain. Fast harness tests run without ``FLOWNEXUS_RUN_E2E``;
+the three stack workflows need that flag, which ``make test-e2e`` sets.
+
+Run the native_sim twister tests (shell test and overlay builds) without the
+server stack::
+
+  host:~/flownexus$ make test-sim
 
 Development Tools
 -----------------
@@ -59,28 +72,18 @@ Scenario files are in ``devtools/mock/scenarios/``.
 Zephyr Simulation
 ..................
 
-High-fidelity simulation using actual Zephyr OS firmware binaries.
-
-Prerequisites::
-
-   host:~$ apt install podman podman-compose
-   host:~$ uv sync --group zephyr
-
-**Usage:**
+The LwM2M client in ``devtools/zephyr/client`` runs as a ``native_sim``
+binary with host sockets, so no TAP setup is required. It is driven through
+the Zephyr ``lwm2m`` shell, see ``devtools/zephyr/client/README.rst``.
 
 .. code-block:: console
 
-  host:~/flownexus$ uv run --group zephyr python devtools/zephyr/run.py --help
-
-**Run simulation:**
-
-.. code-block:: console
-
-  # Build binaries
+  # Build the binary
   host:~/flownexus$ make build-sim
 
-  # Run against local server
-  host:~/flownexus$ uv run --group zephyr python devtools/zephyr/run.py --config devtools/zephyr/config.yaml --run --local
+  # Run it against a local Leshan on coap://127.0.0.1:5683
+  host:~/flownexus$ devtools/zephyr/client/build/zephyr/zephyr.exe --uart_stdinout
+  uart:~$ flownexus start my-device
 
 External Resources
 ------------------

@@ -3,10 +3,12 @@
 .PHONY: test-django \
 	test-all \
 	build-sim \
+	test-sim \
 	test-e2e \
 	run-mock \
 	run-mock-multi-site \
 	compliance \
+	checkpatch \
 	doc-html \
 	doc-pdf \
 	doc \
@@ -25,28 +27,41 @@ run-mock:
 run-mock-multi-site:
 	python3 devtools/mock/run_full_stack.py --scenario multi-site --fresh
 
+# Zephyr's own Python requirements, resolved by uv from the Zephyr tree
+ZEPHYR_REQS := ../zephyr/scripts
+ZEPHYR_UV := uv run --no-project --with-requirements $(ZEPHYR_REQS)/requirements-base.txt
+
 # Build Zephyr simulation binaries
 build-sim:
-	cd devtools/zephyr && python3 run.py --config config.yaml --build
+	$(ZEPHYR_UV) west build \
+		-b native_sim/native/64 \
+		devtools/zephyr/client \
+		-d devtools/zephyr/client/build
 
-# Run End-to-End tests (Requires Podman)
+# Run the native_sim twister tests
+test-sim:
+	$(ZEPHYR_UV) \
+		--with-requirements $(ZEPHYR_REQS)/requirements-build-test.txt \
+		--with-requirements $(ZEPHYR_REQS)/requirements-run-test.txt \
+		west twister -T devtools/zephyr/client -p native_sim/native/64 \
+		-O devtools/zephyr/twister-out
+
+# Run End-to-End tests (Requires Podman or Docker, plus a native_sim binary)
 test-e2e: build-sim
-	@echo "Starting backend stack..."
-	podman-compose -f server/compose.yml up -d
-	@echo "Running simulation..."
-	cd devtools/zephyr && python3 run.py --config config.yaml --run --local &
-	@echo "Verifying data..."
-	python3 devtools/zephyr/verify_e2e.py
-	@echo "Shutting down..."
-	podman-compose -f server/compose.yml down
-	pkill -f "run.py" || true
-	pkill -f "ep_.*exe" || true
+	FLOWNEXUS_RUN_E2E=1 PYTHONPATH=.:server/django \
+		uv run --extra test pytest --pyargs devtools.zephyr.e2e \
+		-n 0 --override-ini addopts=""
 
 # Run compliance checks (linting, formatting, git history)
 compliance:
 	uv run --group dev ruff check .
 	uv run --group dev ruff format --check .
 	uv run --group dev gitlint --commits "origin/HEAD..HEAD"
+
+# Run Zephyr checkpatch on the native_sim client
+checkpatch:
+	perl ../zephyr/scripts/checkpatch.pl --no-tree -f \
+		devtools/zephyr/client/src/*.c devtools/zephyr/client/src/*.h
 
 # Build documentation
 doc-html: doc-generate

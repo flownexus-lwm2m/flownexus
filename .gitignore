@@ -63,7 +63,8 @@ server/django/media/
 backups/
 
 # Build artifacts from simulate.py script
-simulation/lwm2m_client/endpoint_binaries/
-simulation/conf_tmp/
 
 AGENTS.md
+CLAUDE.md
+devtools/zephyr/twister-out/
+devtools/zephyr/e2e-artifacts/

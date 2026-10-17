@@ -32,6 +32,10 @@ The project uses a `Makefile` to simplify these checks:
   ```bash
   make compliance
   ```
+- **Run Zephyr checkpatch** (native_sim client, needs `../zephyr`):
+  ```bash
+  make checkpatch
+  ```
 - **Build the Server Stack**:
   ```bash
   make server-build

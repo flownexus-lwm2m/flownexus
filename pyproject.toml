@@ -80,12 +80,6 @@ mock = [
     "pyyaml>=6.0",
 ]
 
-# Zephyr E2E tests
-zephyr = [
-    "docker>=7.0",
-    "pyyaml>=6.0",
-]
-
 [tool.uv]
 default-groups = []
 
@@ -115,5 +109,8 @@ indent-style = "space"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.settings_test"
 python_files = ["test_*.py", "*_test.py", "tests.py"]
+markers = [
+    "e2e: local Django, Redis, Celery, Leshan, and native_sim workflow tests",
+]
 # Enable parallel execution and database reuse for speed
 addopts = "-n auto --reuse-db"
