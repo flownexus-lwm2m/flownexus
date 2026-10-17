@@ -1,63 +1,39 @@
-# Private config options for LwM2M client sample
-
-# Copyright (c) 2023 NordicNordic Semiconductor ASA
+# Copyright (c) 2023 Nordic Semiconductor ASA
+# Copyright (c) 2026 Jonas Remmert
 # SPDX-License-Identifier: Apache-2.0
 
-mainmenu "LwM2M Client sample"
+mainmenu "Flownexus LwM2M Client"
 
 config LWM2M_APP_ID
-	string "LwM2M Client identity"
-	default ""
+	string "LwM2M endpoint name"
+	default "flownexus-client"
 	help
-	  This is used as client endpoint name as well as PSK ID.
-	  Leave empty for using CONFIG_BOARD
+	  Endpoint name used by autostart and as DTLS PSK identity.
+
+config LWM2M_APP_SERVER
+	string "LwM2M server URI"
+	default "coaps://127.0.0.1:5684" if LWM2M_DTLS_SUPPORT
+	default "coap://127.0.0.1:5683"
+	help
+	  Initial Security object server URI (0/0/0). "flownexus start"
+	  can override it at runtime.
+
+config LWM2M_APP_AUTOSTART
+	bool "Start the RD client at boot"
+	help
+	  Register with CONFIG_LWM2M_APP_ID at boot. When disabled, start the
+	  client with "flownexus start [endpoint]".
 
 if LWM2M_DTLS_SUPPORT
+
 config LWM2M_APP_PSK
-	string "PSK key"
+	string "PSK as hex string"
 	default "000102030405060708090a0b0c0d0e0f"
-	help
-	  PSK key as a hex string.
-	  Maximum binary size is CONFIG_LWM2M_SECURITY_KEY_SIZE.
 
 config LWM2M_APP_TLS_TAG
 	int "TLS security tag"
 	default 1
-	help
-	  TLS security tag to use when connecting.
+
 endif
-
-if WIFI
-config WIFI_SSID
-	string "WiFi SSID"
-	#default "my_wifi"
-	default "FRITZ!Box 3490"
-	help
-	  WiFi SSID to connect to.
-
-config WIFI_PSK
-	string "WiFi PSK"
-	#default "my_password"
-	default "!linksys!"
-	help
-	  WiFi PSK to use.
-endif
-
-config DL_SERVER_HOSTNAME
-    string "Hostname of http download server. This is a security feature to \\
-            prevent downloading firmware from other sources."
-    default "https://flownexus.org"
-
-config LWM2M_APP_SERVER
-	string "LwM2M server address"
-	default "coap://flownexus.org:5683" if !LWM2M_DTLS_SUPPORT
-	default "coaps://192.0.2.2:5684" if (LWM2M_DTLS_SUPPORT && !LWM2M_RD_CLIENT_SUPPORT_BOOTSTRAP)
-	default "coaps://192.0.2.2:5784" if (LWM2M_DTLS_SUPPORT && LWM2M_RD_CLIENT_SUPPORT_BOOTSTRAP)
-	help
-	  LwM2M server address. Write as a full URI including optional port number.
-	  Only accepted protocols are "coap://" and "coaps://"
-	  When DNS resolver is enabled, DNS domain names could be used as well.
-	  When port number is missing, CONFIG_LWM2M_PEER_PORT is used instead.
-	  IPv6 addresses must be enclosed in square brackets, for example "coap://[fd00::1]".
 
 source "Kconfig.zephyr"
