@@ -20,7 +20,8 @@ Optional:
   --app-root        Repository root (default: script parent directory)
   --web-root        Web root (default: /var/www/flownexus)
   --db-path         SQLite database directory (default: <app-root>/server/data)
-  --firmware-path   Firmware download directory (default: /var/www/flownexus/binaries)
+  --firmware-path   Firmware download directory (default: /var/www/flownexus/binaries,
+                    <app-root>/server/firmware with --local-test)
   --nginx-conf      Path to the nginx config (default: <app-root>/deploy/nginx.conf)
   --nginx-conf-target Final nginx config path (default: /etc/nginx/sites-enabled/flownexus.conf)
   --tls-cert-name   Let's Encrypt certificate lineage name (default: flownexus.org)
@@ -40,13 +41,13 @@ EOF
 }
 
 deploy_user="flownexus"
-app_root="/home/flownexus/flownexus"
+app_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 web_root="/var/www/flownexus"
 db_path=""
-firmware_path="/var/www/flownexus/binaries"
+firmware_path=""
 nginx_conf_target="/etc/nginx/sites-enabled/flownexus.conf"
 health_url="http://127.0.0.1:8000/admin/login/"
-nginx_conf_source="/home/flownexus/flownexus/deploy/nginx.conf"
+nginx_conf_source=""
 tls_cert_name="flownexus.org"
 setup_only=0
 local_test=0
@@ -109,9 +110,16 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
+if [ -z "$firmware_path" ]; then
+    if [ "$local_test" -eq 1 ]; then
+        firmware_path="$app_root/server/firmware"
+    else
+        firmware_path="/var/www/flownexus/binaries"
+    fi
+fi
+
 if [ -z "$nginx_conf_source" ]; then
-    usage >&2
-    exit 2
+    nginx_conf_source="$app_root/deploy/nginx.conf"
 fi
 
 if [ -z "$tls_cert_name" ]; then
