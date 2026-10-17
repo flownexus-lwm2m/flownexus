@@ -4,18 +4,27 @@ Leshan
 Build and Run
 -------------
 
-The Leshan server can also run locally, without the need of a container.
+``server/leshan/Containerfile`` builds the Leshan gateway image. The build
+stage runs ``mvn package`` (including the tests), and the runtime stage
+contains only the JRE and ``leshan-svr.jar``. Compose, the E2E suite, and CI
+use this Containerfile.
 
 .. code-block:: console
 
-  host:~$ sudo apt update
-  host:~$ sudo apt install openjdk-17-jdk maven
-  host:~$ source venv/bin/activate
-  host:~$ cd workspace/flownexus/server/leshan
-  host:~/workspace/flownexus/server/leshan$ ./leshan_build_run.sh
+  host:~/workspace/flownexus$ make leshan-image
+  host:~/workspace/flownexus$ podman run --rm -p 5683:5683/udp -p 8080:8080 \
+      -e DATA_SENDER_URI=http://host.containers.internal:8000 \
+      localhost/flownexus-leshan:latest
 
-The Leshan server should now be up and running under the following URL:
-``http://localhost:8080``.
+The gateway listens on CoAP port 5683/udp and on HTTP port 8080. These ports
+are not configurable. ``GET /health`` returns 200 when the web server runs and
+does not read the registration store.
+
+CI publishes the image as ``ghcr.io/flownexus-lwm2m/flownexus-leshan`` on each
+push to ``main`` and each ``v*`` tag, after the E2E suite passes. The tags are
+``sha-<short sha>`` and the ``git describe --tags`` output. GHCR creates a new
+organization package as private, so a maintainer must set the package
+visibility to public once after the first push.
 
 Leshans Role in flownexus
 -------------------------

@@ -71,7 +71,7 @@ of the server.
 
 The following diagram shows the Container Environment. The file
 ``compose.yml`` defines the services and their configuration. The file
-``Dockerfile.leshan`` defines the Leshan container and the file
+``leshan/Containerfile`` defines the Leshan container and the file
 ``Dockerfile.django`` defines the Django container.
 
 The container can be built and started with the following commands:
@@ -103,7 +103,7 @@ Architecture Overview
 The deployment uses a split traffic routing approach:
 
 * **HTTP/HTTPS (Ports 80/443)**: Handled by nginx reverse proxy
-* **UDP Traffic (Ports 5683/5684)**: Directly bound to host, bypassing nginx for LwM2M
+* **UDP Traffic (Port 5683)**: Directly bound to host, bypassing nginx for LwM2M
 
 .. code-block:: text
 
@@ -115,9 +115,8 @@ The deployment uses a split traffic routing approach:
        │    ├── fw.<domain> (static, IoT-safe TLS)
        │    └── dashboard.<domain> (reverse proxy → localhost:8000)
        │
-       └── LwM2M UDP (Ports 5683/5684) → Direct to Leshan container
-            ├── 5683/udp - CoAP (unencrypted)
-            └── 5684/udp - DTLS/CoAPS (encrypted)
+       └── LwM2M UDP (Port 5683) → Direct to Leshan container
+            └── 5683/udp - CoAP (unencrypted)
 
 This architecture provides:
 
@@ -288,7 +287,6 @@ Before setting up GitHub Actions, generate a dedicated SSH key pair:
    vserver:~$ sudo ufw allow 80/tcp    # HTTP
    vserver:~$ sudo ufw allow 443/tcp   # HTTPS
    vserver:~$ sudo ufw allow 5683/udp  # LwM2M CoAP (unencrypted)
-   vserver:~$ sudo ufw allow 5684/udp  # LwM2M DTLS/CoAPS (encrypted)
 
 5. Configure nginx and obtain TLS certificates:
 
@@ -432,7 +430,7 @@ Use this as a reference when setting up a server from scratch.
 - Add the Actions private key to GitHub: Settings → Secrets → ``SSH_PRIVATE_KEY``
 - Configure passwordless sudo for the deploy script in
   ``/etc/sudoers.d/flownexus-deploy`` and validate with ``visudo -cf``
-- Open firewall: ports 22/tcp, 80/tcp, 443/tcp, 5683/udp, 5684/udp
+- Open firewall: ports 22/tcp, 80/tcp, 443/tcp, 5683/udp
 - Clone the repository into ``~flownexus/flownexus``
 - Remove the default nginx site: ``sudo rm -f /etc/nginx/sites-enabled/default``
 
