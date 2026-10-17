@@ -8,8 +8,12 @@
 echo "Running migrate..."
 python manage.py migrate
 
-echo "Loading initial data..."
-python manage.py loaddata db_initial_data.json
+# The fixture holds the admin user with a known password; load it only once.
+users=$(python manage.py shell -c "from django.contrib.auth import get_user_model; print(get_user_model().objects.count())" | tail -n 1)
+if [ "$users" = "0" ]; then
+    echo "Loading initial data..."
+    python manage.py loaddata db_initial_data.json
+fi
 
 # Check for existing records
 exists=$(python manage.py shell -c "from sensordata.models import ResourceType; print(ResourceType.objects.count())" | tail -n 1)
