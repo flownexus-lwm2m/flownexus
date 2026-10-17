@@ -220,6 +220,13 @@ class EndpointOperationView(APIView):
         endpoint = get_object_or_404(Endpoint, endpoint=endpoint_id)
         serializer = EndpointOperationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(resource__endpoint=endpoint)
+            resource = serializer.validated_data["resource"]
+            if resource.endpoint_id != endpoint.endpoint:
+                return Response(
+                    {"resource": "Resource does not belong to this endpoint."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
