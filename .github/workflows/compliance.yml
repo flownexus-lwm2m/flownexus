@@ -23,5 +23,6 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-            git fetch origin $BASE_REF
+            git fetch origin "$BASE_REF"
+            git remote set-head origin "$BASE_REF"
             make compliance
