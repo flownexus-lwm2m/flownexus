@@ -5,6 +5,7 @@
 	build-sim \
 	test-sim \
 	test-e2e \
+	leshan-image \
 	run-mock \
 	run-mock-multi-site \
 	compliance \
@@ -45,6 +46,12 @@ test-sim:
 		--with-requirements $(ZEPHYR_REQS)/requirements-run-test.txt \
 		west twister -T devtools/zephyr/client -p native_sim/native/64 \
 		-O devtools/zephyr/twister-out
+
+# Build the Leshan gateway image used by E2E, compose and deploy
+leshan-image:
+	podman build --build-arg REVISION=$$(git rev-parse HEAD) \
+		-t localhost/flownexus-leshan:latest \
+		-f server/leshan/Containerfile server/leshan
 
 # Run End-to-End tests (Requires Podman or Docker, plus a native_sim binary)
 test-e2e: build-sim
