@@ -76,6 +76,7 @@ import java.nio.ByteBuffer;
 import lwm2m.DataSenderRest;
 import lwm2m.servlet.ClientServlet;
 import lwm2m.servlet.EventServlet;
+import lwm2m.servlet.HealthServlet;
 import lwm2m.servlet.ObjectSpecServlet;
 
 import org.slf4j.Logger;
@@ -164,6 +165,8 @@ public class LeshanSvr{
         Server server = new Server(jettyAddr);
         ServletContextHandler root = new ServletContextHandler(null, "/", true, false);
         server.setHandler(root);
+
+        root.addServlet(new ServletHolder(new HealthServlet()), "/health");
 
         // Create REST API Servlets
         EventServlet eventServlet = new EventServlet(lwServer);

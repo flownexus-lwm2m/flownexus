@@ -16,7 +16,7 @@ from .harness import HarnessError, ManagedProcess, ProcessSupervisor, RunConfig,
 
 
 class LocalStack:
-    """Run Django, Celery, Redis, and the local Leshan artifact in isolation."""
+    """Run Django, Celery, Redis, and the Leshan image in isolation."""
 
     def __init__(self, config: RunConfig) -> None:
         self.config = config
@@ -81,15 +81,14 @@ class LocalStack:
         if shutil.which(command) is None:
             raise HarnessError(f"Required command is missing: {command}")
 
-    _LESHAN_IMAGES = ("localhost/flownexus-leshan:latest", "server-leshan:latest")
-
     def _select_runtime(self) -> tuple[str, str]:
-        """Return the first working runtime that has a Leshan image, and the image.
+        """Return the first working runtime that has the Leshan image, and the image.
 
         Hosts can run podman and docker side by side with separate image
         stores, so the runtime that built the image must also run it.
         """
 
+        image = os.environ.get("FLOWNEXUS_LESHAN_IMAGE", "localhost/flownexus-leshan:latest")
         runtimes = []
         for command in ("podman", "docker"):
             if shutil.which(command) is None:
@@ -97,15 +96,14 @@ class LocalStack:
             if subprocess.run([command, "info"], capture_output=True, check=False).returncode:
                 continue
             runtimes.append(command)
-            for image in self._LESHAN_IMAGES:
-                inspect = [command, "image", "inspect", image]
-                if subprocess.run(inspect, capture_output=True, check=False).returncode == 0:
-                    return command, image
+            inspect = [command, "image", "inspect", image]
+            if subprocess.run(inspect, capture_output=True, check=False).returncode == 0:
+                return command, image
         if not runtimes:
             raise HarnessError("No working container runtime (podman or docker)")
         raise HarnessError(
-            f"Leshan image is missing in {', '.join(runtimes)}; build it with "
-            "podman-compose -f server/compose.yml build leshan"
+            f"Leshan image {image} is missing in {', '.join(runtimes)}; "
+            "build it with make leshan-image"
         )
 
     def _host_gateway(self) -> tuple[str, str]:
@@ -236,19 +234,13 @@ class LocalStack:
                 f"127.0.0.1:{self.config.leshan_http_port}:8080",
                 "-p",
                 f"127.0.0.1:{self.config.leshan_coap_port}:5683/udp",
-                "-v",
-                f"{self.config.root / 'server/leshan/target'}:/leshan/target:ro",
-                "--entrypoint",
-                "java",
                 leshan_image,
-                "-jar",
-                "/leshan/target/leshan-svr-0.9-jar-with-dependencies.jar",
             ],
             cwd=self.config.root,
             env=self._env(),
         )
         self._processes["leshan"] = leshan
-        wait_for_http(f"{self.leshan_url}/api/clients", timeout=self.config.timeout, process=leshan)
+        wait_for_http(f"{self.leshan_url}/health", timeout=self.config.timeout, process=leshan)
 
     def _wait_celery(self, process: ManagedProcess) -> None:
         deadline = time.monotonic() + self.config.timeout
