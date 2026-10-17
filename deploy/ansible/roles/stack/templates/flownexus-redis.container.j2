@@ -3,19 +3,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Flownexus Redis Service
-# Rootless Quadlet container definition
-#
-
+{{ ansible_managed | comment }}
 [Unit]
-Description=Flownexus Redis Service
+Description=flownexus Redis (Celery broker)
 After=network-online.target
 
 [Container]
 ContainerName=flownexus-redis
-Image=localhost/flownexus-redis:latest
+Image={{ stack_images.redis }}
 Network=podman-flownexus-network
-PublishPort=127.0.0.1:6379:6379
 HealthCmd=redis-cli ping
 HealthInterval=10s
 HealthTimeout=3s

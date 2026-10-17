@@ -92,49 +92,66 @@ health route from Django. CI runs the same test before it publishes the images.
 Production Deployment
 ---------------------
 
-flownexus can be deployed to a virtual server using nginx as a reverse proxy
-with certbot for automatic TLS certificates. The default configuration supports
-four subdomains (using ``flownexus.org`` as the example domain -- substitute
-your own throughout):
+GitHub Actions deploys flownexus to one Debian server with an Ansible playbook
+(``deploy/ansible``). The server runs the CI-built images from GHCR as rootless
+Podman containers with systemd Quadlets, behind nginx with a Let's Encrypt
+certificate. The server does not build images and needs no git checkout.
 
-* **flownexus.org** - Main landing page (static HTML)
-* **docs.flownexus.org** - Documentation (Sphinx HTML)
-* **fw.flownexus.org** - Firmware download server (IoT-safe TLS)
-* **dashboard.flownexus.org** - Dynamic dashboard (Django application)
+Sites
+.....
 
-Architecture Overview
-.....................
+nginx serves up to four sites. Each site has its own host name, set by a
+GitHub variable. No host name is fixed, and the host names need not share a
+domain.
 
-The deployment uses a split traffic routing approach:
+.. list-table::
+   :widths: 30 15 55
+   :header-rows: 1
 
-* **HTTP/HTTPS (Ports 80/443)**: Handled by nginx reverse proxy
-* **UDP Traffic (Port 5683)**: Directly bound to host, bypassing nginx for LwM2M
+   * - Variable
+     - Default
+     - Site
+   * - ``FLOWNEXUS_DASHBOARD_HOST``
+     - required
+     - Django dashboard and API (reverse proxy to ``127.0.0.1:8000``)
+   * - ``FLOWNEXUS_FW_HOST``
+     - required
+     - Firmware downloads from ``/binaries/`` (IoT-safe TLS)
+   * - ``FLOWNEXUS_LANDING_HOST``
+     - off
+     - flownexus landing page (``utils/landing_page``)
+   * - ``FLOWNEXUS_DOCS_HOST``
+     - off
+     - This documentation (Sphinx HTML)
+
+A customer deployment usually sets only the dashboard and firmware hosts. The
+landing page and documentation are the flownexus project sites; when their
+variable is empty, the playbook does not render their nginx site, and the
+workflow does not build the documentation.
+
+Devices download firmware from ``https://<FLOWNEXUS_FW_HOST>/binaries/...``.
+The server sends only the path; the device firmware contains the host name. A
+change of ``FLOWNEXUS_FW_HOST`` therefore needs a firmware that uses the new
+host.
+
+LwM2M CoAP (5683/udp) goes directly to the Leshan container and bypasses nginx.
 
 .. code-block:: text
 
    Internet
        │
-       ├── nginx (Ports 80/443)
-       │    ├── <domain> (static)
-       │    ├── docs.<domain> (static)
-       │    ├── fw.<domain> (static, IoT-safe TLS)
-       │    └── dashboard.<domain> (reverse proxy → localhost:8000)
+       ├── nginx (80/tcp, 443/tcp)
+       │    ├── FLOWNEXUS_DASHBOARD_HOST → 127.0.0.1:8000 (Django)
+       │    ├── FLOWNEXUS_FW_HOST        → /var/www/flownexus/binaries
+       │    ├── FLOWNEXUS_LANDING_HOST   → /var/www/flownexus/landing (optional)
+       │    └── FLOWNEXUS_DOCS_HOST      → /var/www/flownexus/docs (optional)
        │
-       └── LwM2M UDP (Port 5683) → Direct to Leshan container
-            └── 5683/udp - CoAP (unencrypted)
-
-This architecture provides:
-
-* **nginx** - Reverse proxy with IoT-compatible TLS record sizing
-* **certbot** - Automatic HTTPS via Let's Encrypt
-* **Podman** - Container runtime (rootless)
-* **systemd Quadlet** - Container orchestration via systemd units
-* **GitHub Actions** - CI/CD pipeline
+       └── 5683/udp (CoAP) → Leshan container
 
 IoT Firmware Downloads (TLS Record Sizing)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The firmware download server (``fw.<domain>``) is configured with
+The firmware download server (``FLOWNEXUS_FW_HOST``) is configured with
 ``ssl_buffer_size 1370`` in nginx. This limits TLS record sizes to fit within a
 single TCP segment (1500 byte MTU - IP/TCP headers - TLS overhead), which is
 the industry standard for IoT-compatible HTTPS.
@@ -151,525 +168,238 @@ framing adds overhead that can push effective TLS record sizes above device
 limits. Gzip compression is also disabled since firmware binaries are not
 compressible.
 
-Container Management with systemd Quadlet
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Release Flow
+............
 
-The production deployment uses **systemd Quadlet** instead of Podman Compose. Quadlet
-provides native systemd integration for rootless containers, offering several advantages:
+#. A push to ``main`` runs "Zephyr E2E CI". It builds the Django, Redis and
+   Leshan images, runs the image smoke test and the E2E suite, and pushes the
+   images as ``ghcr.io/<owner>/flownexus-<service>:sha-<short sha>``.
+#. When that run succeeds, the "Deploy" workflow starts for the same commit.
+   It skips the deployment if ``FLOWNEXUS_DASHBOARD_HOST`` is not set, so forks
+   without a server do not fail.
+#. The workflow checks that the three images exist and lists their digests in
+   the job summary. Then it runs ``deploy/ansible/site.yml`` over SSH.
+#. The playbook configures the host, nginx and TLS, syncs the optional sites,
+   pulls the images and writes quadlets that reference the image digests. It
+   stops Django and Celery, backs up the database, runs the migrations once,
+   and restarts all services. It fails if Django or the Celery worker do not
+   answer.
+#. The workflow checks each enabled site over HTTPS from the runner.
 
-* **Automatic startup** - Containers start on boot via systemd
-* **Better lifecycle management** - systemd handles stop/start/restart
-* **Health checks** - systemd monitors container health automatically
-* **Logging** - Centralized logging via ``journalctl``
-* **Crash recovery** - Automatic restart on failure
-* **SSH session independence** - Containers persist after logout (via ``loginctl enable-linger``)
+Deployments do not overlap. A manual run of "Deploy" (``workflow_dispatch``)
+deploys the commit given in its ``sha`` input; this is also the rollback path
+(see `Rollback and Restore`_).
 
-Quadlet files are located in ``deploy/quadlet/`` and define three services:
+The playbook changes nginx only through a checked step: it renders the site,
+runs ``nginx -t``, and reloads nginx only if the test passes. If the test
+fails, it restores the previous site file and stops the deployment, so the
+running nginx keeps its configuration.
 
-* **flownexus-redis** - Redis cache and message broker
-* **flownexus-leshan** - LwM2M server with CoAP/DTLS endpoints
-* **flownexus-django** - Django application with Celery worker
+Services
+........
 
-Each service is defined as a ``.container`` file that systemd converts to a service unit.
-Logs are captured by systemd journal, viewable with ``journalctl --user -u flownexus-<service> -f``
-(see `Troubleshooting`_ for details).
+The playbook installs these quadlets in ``~flownexus/.config/containers/systemd``:
 
-For local development and testing, use ``make run-mock`` or
-``podman-compose -f server/compose.yml up`` which provides the same container
-configuration but without systemd integration.
+* ``flownexus-redis``: Celery broker
+* ``flownexus-leshan``: LwM2M server, publishes 5683/udp
+* ``flownexus-django``: web application (``web`` command of the Django image)
+* ``flownexus-celery``: Celery worker (``worker`` command of the same image)
 
-Server Requirements
-...................
+The migrations run in a one-off container (``migrate`` command) before the
+services restart. Into an empty database, ``migrate`` also loads the initial
+data, which includes the ``admin`` user with a default password. Change that
+password after the first deployment.
 
-* Linux server (tested on Debian 13)
-* Domain name with DNS A/AAAA records pointing to server
-* Minimum: 1 vCPU
-
-Initial Server Setup
+GitHub Configuration
 ....................
 
-This section contains the required one-time manual bootstrap steps for a new
-server. After that, normal deployments are handled by GitHub Actions via
-``deploy/deploy-flownexus``.
+Set these in the repository under *Settings → Secrets and variables →
+Actions*. The variables must be repository variables, because the workflow
+reads ``FLOWNEXUS_DASHBOARD_HOST`` before it selects the ``production``
+environment. Secrets can be repository or ``production`` environment secrets.
 
-1. Install required packages:
+.. list-table::
+   :widths: 30 12 58
+   :header-rows: 1
 
-.. code-block:: console
+   * - Name
+     - Kind
+     - Purpose
+   * - ``FLOWNEXUS_DASHBOARD_HOST``
+     - variable
+     - Required. Enables deployment.
+   * - ``FLOWNEXUS_FW_HOST``
+     - variable
+     - Required.
+   * - ``FLOWNEXUS_LANDING_HOST``
+     - variable
+     - Optional site; empty is off.
+   * - ``FLOWNEXUS_DOCS_HOST``
+     - variable
+     - Optional site; empty is off.
+   * - ``DEPLOY_HOST``
+     - variable
+     - SSH host. Default: ``FLOWNEXUS_DASHBOARD_HOST``.
+   * - ``DEPLOY_USER``
+     - variable
+     - SSH user. Default: ``flownexus``.
+   * - ``SSH_KNOWN_HOSTS``
+     - variable
+     - Required. Host key lines for ``DEPLOY_HOST``.
+   * - ``FLOWNEXUS_TLS_CERT_NAME``
+     - variable
+     - Let's Encrypt lineage name. Default: ``FLOWNEXUS_DASHBOARD_HOST``.
+   * - ``LETSENCRYPT_EMAIL``
+     - variable
+     - Optional contact for Let's Encrypt.
+   * - ``SSH_PRIVATE_KEY``
+     - secret
+     - Required. Private key of the deploy user.
+   * - ``DJANGO_SECRET_KEY``
+     - secret
+     - Optional. If not set, the first deployment generates a key on the
+       server and keeps it.
 
-   vserver:~$ sudo apt update && sudo apt upgrade -y
-   vserver:~$ sudo apt install -y podman podman-compose nginx python3-certbot-nginx git curl rsync ufw
-
-2. Create a non-root user:
-
-**Important:** Complete this step while logged in as root (or your initial
-admin user).
-
-Create a dedicated user for running the application instead of using root:
-
-.. code-block:: console
-
-   vserver:~$ sudo useradd -m -s /bin/bash flownexus
-   vserver:~$ sudo passwd flownexus
-   vserver:~$ sudo usermod -aG sudo flownexus
-
-**Note:** Log out and log back in for the sudo group membership to take effect.
-
-Allow the GitHub Actions deploy key to run the deploy script without an
-interactive password prompt:
-
-.. code-block:: console
-
-   vserver:~$ sudo sh -c "printf '%s\n' 'flownexus ALL=(root) NOPASSWD: /home/flownexus/flownexus/deploy/deploy-flownexus' > /etc/sudoers.d/flownexus-deploy && chmod 440 /etc/sudoers.d/flownexus-deploy"
-
-Validate the sudoers file before continuing:
-
-.. code-block:: console
-
-   vserver:~$ sudo visudo -cf /etc/sudoers.d/flownexus-deploy
-
-Set up SSH access for the new user. Since the user is new, add your SSH key
-manually:
-
-.. code-block:: console
-
-   # Create .ssh directory and add your public key
-   vserver:~$ sudo mkdir -p ~flownexus/.ssh
-   vserver:~$ echo "YOUR_PUBLIC_KEY_HERE" | sudo tee ~flownexus/.ssh/authorized_keys
-
-   # Fix permissions (important!)
-   vserver:~$ sudo chmod 700 ~flownexus/.ssh
-   vserver:~$ sudo chmod 600 ~flownexus/.ssh/authorized_keys
-   vserver:~$ sudo chown -R flownexus:flownexus ~flownexus/.ssh
-
-Replace ``YOUR_PUBLIC_KEY_HERE`` with your actual public key content from
-``~/.ssh/id_ed25519.pub`` on your local machine.
-
-Now you can SSH as the flownexus user:
+The workflow pulls the images with its own ``GITHUB_TOKEN``, so the GHCR
+packages can stay private. Get the ``SSH_KNOWN_HOSTS`` value from a trusted
+connection to the server, for example:
 
 .. code-block:: console
 
-   local:~$ ssh flownexus@your-server-ip
+   local:~$ ssh-keyscan -t ed25519 <DEPLOY_HOST>
 
-**Generate SSH Key for GitHub Actions (on your local machine):**
+Server Setup
+............
 
-Before setting up GitHub Actions, generate a dedicated SSH key pair:
+The playbook installs packages, the firewall, directories, nginx and the
+certificate. A new server needs only these manual steps:
 
-.. code-block:: console
-
-   # Generate a new SSH key (do NOT add a passphrase)
-   local:~$ ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/flownexus_deploy
-
-   # This creates two files:
-   # ~/.ssh/flownexus_deploy     (private key - keep secret!)
-   # ~/.ssh/flownexus_deploy.pub (public key - copy to server)
-
-   # Copy the public key to the server (as root or flownexus user)
-   local:~$ cat ~/.ssh/flownexus_deploy.pub
-
-   # On the server, add this to authorized_keys:
-   vserver:~$ echo "PASTE_PUBLIC_KEY_HERE" >> ~flownexus/.ssh/authorized_keys
-
-   # Add the private key to GitHub Secrets:
-   # 1. Go to GitHub repo → Settings → Secrets and variables → Actions
-   # 2. Click "New repository secret"
-   # 3. Name: SSH_PRIVATE_KEY
-   # 4. Value: Copy contents of ~/.ssh/flownexus_deploy (private key)
-   # 5. Click "Add secret"
-
-3. Clone the repository:
-
-.. code-block:: console
-
-   vserver:~$ cd ~flownexus
-   vserver:~flownexus$ git clone https://github.com/flownexus-lwm2m/flownexus.git
-
-4. Configure firewall:
-
-.. code-block:: console
-
-   vserver:~$ sudo ufw enable
-   vserver:~$ sudo ufw allow 22/tcp    # SSH
-   vserver:~$ sudo ufw allow 80/tcp    # HTTP
-   vserver:~$ sudo ufw allow 443/tcp   # HTTPS
-   vserver:~$ sudo ufw allow 5683/udp  # LwM2M CoAP (unencrypted)
-
-5. Configure nginx and obtain TLS certificates:
-
-Remove the default nginx site that would otherwise conflict with the flownexus
-configuration:
-
-.. code-block:: console
-
-   vserver:~$ sudo rm -f /etc/nginx/sites-enabled/default
-
-Obtain a single SAN certificate covering all domains. Certbot will temporarily
-use nginx to complete the ACME challenge, so nginx must be running and DNS must
-already resolve to this server:
-
-.. code-block:: console
-
-   vserver:~$ sudo certbot certonly --nginx --cert-name flownexus.org \
-        -d flownexus.org \
-        -d docs.flownexus.org \
-        -d fw.flownexus.org \
-        -d dashboard.flownexus.org
-
-This creates one certificate lineage at
-``/etc/letsencrypt/live/flownexus.org/`` with all four domains as SANs. The
-deployment script renders nginx against that lineage path by default. Certbot
-installs a systemd timer that renews it automatically before expiry.
-
-.. important::
-
-   Pass ``--cert-name flownexus.org`` exactly as shown above. Without an
-   explicit lineage name, certbot may reuse a different existing certificate
-   name such as ``dashboard.flownexus.org``, which leaves the certificate valid
-   but causes deployment to fail because nginx is rendered against the expected
-   lineage path.
-
-.. note::
-
-   If any domain uses a **manually provisioned certificate** (e.g. a private
-   CA for IoT device trust), skip it from the certbot invocation above and
-   instead copy the certificate files to ``/etc/nginx/ssl/`` before deploying:
+1. Install Debian 13 and create the DNS A/AAAA records for each enabled host.
+   The certificate request fails if a host does not resolve to the server.
+2. Create the deploy user and give it passwordless sudo. Ansible runs the
+   host tasks with ``sudo``:
 
    .. code-block:: console
 
-      vserver:~$ sudo install -d -m 755 /etc/nginx/ssl
-      vserver:~$ sudo install -m 644 fw.crt /etc/nginx/ssl/
-      vserver:~$ sudo install -m 640 -o root -g www-data fw.key /etc/nginx/ssl/
+      vserver:~$ sudo useradd -m -s /bin/bash flownexus
+      vserver:~$ echo 'flownexus ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/flownexus
+      vserver:~$ sudo chmod 440 /etc/sudoers.d/flownexus && sudo visudo -cf /etc/sudoers.d/flownexus
 
-   The ``deploy/nginx.conf`` for that server block must then reference
-   ``/etc/nginx/ssl/fw.crt`` and ``/etc/nginx/ssl/fw.key`` directly instead
-   of the Let's Encrypt paths. This is done in the deployment-specific branch.
+3. Generate a key pair without a passphrase for GitHub Actions. Add the public
+   key to ``~flownexus/.ssh/authorized_keys`` (mode ``0600``, directory
+   ``0700``) and the private key as the ``SSH_PRIVATE_KEY`` secret:
 
-Add the deploy user to the ``www-data`` group so it can write files that nginx
-serves:
+   .. code-block:: console
 
-.. code-block:: console
+      local:~$ ssh-keygen -t ed25519 -C github-actions-deploy -f flownexus_deploy
 
-   vserver:~$ sudo usermod -aG www-data flownexus
+4. Set the GitHub variables and secrets, then run the "Deploy" workflow
+   manually or push to ``main``.
 
-Environment Variables
-.....................
+The playbook enables ``ufw`` and allows 22/tcp, 80/tcp, 443/tcp and 5683/udp.
+Set ``flownexus_manage_firewall: false`` in a manual inventory to keep an
+existing firewall.
 
-Django reads its configuration from environment variables at runtime. This
-separates deployment-specific settings from the application code, so the same
-container image runs in development (with safe defaults) or production (with
-hardened settings) without rebuilding.
+After the first deployment:
 
-**The Django secret key**
+- Change the ``admin`` password in the Django admin.
+- Check that ``https://<FLOWNEXUS_DASHBOARD_HOST>/`` shows no debug pages.
 
-Django uses a secret key to cryptographically sign sessions, CSRF tokens, and
-password reset links. If an attacker obtains the key, they can forge session
-cookies and impersonate any user. The development default key (prefixed
-``django-insecure-``) is public knowledge because it lives in the repository
--- it must never be used on an internet-facing server.
-
-The deploy script handles this automatically. On first run it:
-
-1. Generates a cryptographically random 50-character key using Python's
-   ``secrets`` module
-2. Writes it to ``~flownexus/.config/flownexus/env`` with permissions ``0600``
-   (readable only by the deploy user)
-3. Skips generation on all subsequent deploys so the key is stable across
-   redeploys
-
-The file is never committed to the repository or passed through GitHub Actions.
-Verify it was created after the first deploy:
-
-.. code-block:: console
-
-   vserver:~$ cat ~flownexus/.config/flownexus/env
-   DJANGO_SECRET_KEY=<your-generated-key>
-
-.. warning::
-
-   Never copy, share, or log this key. If it leaks, delete the file and
-   redeploy to rotate it. All existing sessions will be invalidated.
-
-**Other production environment variables**
-
-The remaining variables are set inline in
-``deploy/quadlet/flownexus-django.container``. These are deployment config,
-not secrets, so keeping them in version control is fine:
-
-.. list-table::
-   :widths: 40 35 25
-   :header-rows: 1
-
-   * - Variable
-     - Production value
-     - Purpose
-   * - ``DJANGO_DEBUG``
-     - ``False``
-     - Disables debug mode and detailed error pages
-   * - ``DJANGO_ALLOWED_HOSTS``
-     - ``dashboard.flownexus.org,localhost,127.0.0.1``
-     - Restricts ``Host`` headers Django will respond to
-   * - ``DJANGO_CSRF_ORIGINS``
-     - ``https://dashboard.flownexus.org``
-     - Trusted origins for CSRF checks
-
-For local development (``make run-mock``, tests), no environment variables are
-needed -- ``settings.py`` defaults are used automatically.
-
-When deploying to a different domain, update these values in the quadlet file
-on the relevant deployment branch.
-
-New Server Deployment Checklist
-................................
-
-Use this as a reference when setting up a server from scratch.
-
-**Server preparation**
-
-- Install required packages: ``podman``, ``podman-compose``, ``nginx``,
-  ``python3-certbot-nginx``, ``git``, ``curl``, ``rsync``, ``ufw``
-- Create the ``flownexus`` deploy user
-- Add deploy user to ``www-data`` group: ``sudo usermod -aG www-data flownexus``
-- Add your personal SSH public key to ``~flownexus/.ssh/authorized_keys``
-- Generate a dedicated SSH key pair for GitHub Actions (no passphrase):
-  ``ssh-keygen -t ed25519 -C "github-actions-deploy"``
-- Add the Actions public key to ``~flownexus/.ssh/authorized_keys``
-- Add the Actions private key to GitHub: Settings → Secrets → ``SSH_PRIVATE_KEY``
-- Configure passwordless sudo for the deploy script in
-  ``/etc/sudoers.d/flownexus-deploy`` and validate with ``visudo -cf``
-- Open firewall: ports 22/tcp, 80/tcp, 443/tcp, 5683/udp
-- Clone the repository into ``~flownexus/flownexus``
-- Remove the default nginx site: ``sudo rm -f /etc/nginx/sites-enabled/default``
-
-**DNS**
-
-- Create an A record for each subdomain (``dashboard``, ``fw``, ``docs``,
-  ``<root domain>``) pointing to the server IP
-- Wait for DNS propagation before running certbot (ACME challenge requires
-  valid DNS)
-
-**TLS certificates**
-
-- Run certbot for a single SAN cert covering all domains and pin the lineage
-  name:
-  ``sudo certbot certonly --nginx --cert-name <domain> -d <domain> -d docs.<domain> -d fw.<domain> -d dashboard.<domain>``
-- For manually provisioned certs (e.g. private CA for IoT), copy them to
-  ``/etc/nginx/ssl/`` and reference them in the deployment-specific nginx config
-
-**First deployment**
-
-- Run the deploy script: ``sudo ~flownexus/flownexus/deploy/deploy-flownexus``
-  (or push to the tracked branch to trigger GitHub Actions)
-- Confirm the secret key file was created:
-
-  .. code-block:: console
-
-     vserver:~$ ls -la ~flownexus/.config/flownexus/env
-     # Must show: -rw------- 1 flownexus flownexus
-
-- Confirm all three services are running:
-
-  .. code-block:: console
-
-     vserver:~$ systemctl --user status flownexus-django flownexus-redis flownexus-leshan
-
-- Confirm the health check passes:
-
-  .. code-block:: console
-
-     vserver:~$ curl -sf http://127.0.0.1:8000/admin/login/ > /dev/null && echo OK
-
-- Open the dashboard in a browser and verify HTTPS (no certificate warning)
-- **Change the default admin password** in the Django admin interface
-- Verify debug mode is off: the ``/`` page must not show a Django debug toolbar
-  or stack traces on errors
-
-Automated CI/CD
-................
-
-This is the normal deployment path after the initial server bootstrap. When
-code is pushed to the main branch:
-
-1. **Build static assets locally** (landing page, Sphinx documentation)
-2. **Deploy static files via rsync** to ``/var/www/flownexus/``
-3. **Update the backend checkout and run ``deploy/deploy-flownexus``** to refresh code, nginx, and containers
-
-The workflow updates the backend checkout, then runs the deploy script on the
-server. The script creates the required directories, installs the nginx
-configuration, and restarts the stack. The Django container stores its SQLite
-database in ``~flownexus/flownexus/server/data/db.sqlite3`` and stores uploaded
-firmware in ``/var/www/flownexus/binaries``.
-
-Required GitHub Secrets:
-
-* ``SSH_PRIVATE_KEY`` - Private key for the deploy user
-
-The workflow uses ``sudo -n`` only to invoke ``deploy/deploy-flownexus``.
-That script performs the privileged server setup and restart steps in one place.
-
-To deploy to a different domain or server layout, update ``deploy/nginx.conf``
-and the environment values in ``.github/workflows/deploy.yml``.
-
-Troubleshooting
+Manual Deployment
 .................
 
-Everything in this section is optional and only needed for debugging a broken
-deployment or validating a suspicious state.
-
-nginx Issues
-~~~~~~~~~~~~
-
-**Check nginx logs:**
+``make deploy`` runs the same playbook from a workstation. Copy
+``deploy/ansible/inventory.example.yml`` to ``deploy/ansible/inventory.yml``
+(ignored by git), set the host names and the image prefix, then:
 
 .. code-block:: console
 
-   vserver:~$ sudo journalctl -u nginx -f
-   vserver:~$ sudo tail -f /var/log/nginx/error.log
+   host:~/workspace/flownexus$ make deploy IMAGE_TAG=sha-<short sha>
 
-**Validate configuration:**
+Add ``--check --diff --tags host,nginx`` to the ``ansible-playbook`` command to
+preview the host and nginx changes without applying them. The ``stack`` tag
+cannot run in check mode, because it needs the pulled images.
 
-.. code-block:: console
+``make deploy-test`` lints the playbook and tests the rendered nginx site in a
+container for a customer setup (dashboard and firmware only) and for all four
+sites. CI runs it on each pull request.
 
-   vserver:~$ sudo nginx -t
+Rollback and Restore
+....................
 
-Container Issues
-~~~~~~~~~~~~~~~~
+To roll back, run the "Deploy" workflow manually with the full 40-character
+``sha`` of an older commit. Its images must still exist in GHCR. The playbook
+does not reverse migrations. If the older release cannot read the database,
+also restore the backup that was made before the newer release.
 
-**Check service status:**
+If the backup or the migration fails, the deployment stops with Django and
+Celery stopped, and the quadlets already reference the new images. Roll back
+as above, and restore the backup if the migration changed the database.
 
-.. code-block:: console
-
-   vserver:~$ systemctl --user status flownexus-django
-   vserver:~$ systemctl --user status flownexus-redis
-   vserver:~$ systemctl --user status flownexus-leshan
-
-**View logs (via systemd journal):**
-
-.. code-block:: console
-
-   vserver:~$ journalctl --user -u flownexus-django -f
-   vserver:~$ journalctl --user -u flownexus-redis -f
-   vserver:~$ journalctl --user -u flownexus-leshan -f
-
-**Restart specific service:**
+Before each migration, the playbook writes
+``~flownexus/backups/db_<time>_<tag>.sqlite3`` with ``sqlite3 .backup`` and
+keeps the newest 30 backups. To restore one:
 
 .. code-block:: console
 
-   vserver:~$ systemctl --user restart flownexus-django
+   vserver:~$ systemctl --user stop flownexus-celery flownexus-django
+   vserver:~$ cp ~/backups/db_<time>_<tag>.sqlite3 ~/data/db.sqlite3
+   vserver:~$ systemctl --user start flownexus-django flownexus-celery
 
-**View all flownexus services:**
+Each deployment writes the deployed tag and image digests to
+``~flownexus/.local/state/flownexus/release.json`` and appends them to
+``releases.log`` in the same directory.
+
+Migration from the Script Deployment
+....................................
+
+Servers that ran ``deploy/deploy-flownexus`` need these changes once:
+
+- Replace the sudoers rule for the script with the rule from `Server Setup`_.
+- Set the GitHub variables. For flownexus.org, set
+  ``FLOWNEXUS_TLS_CERT_NAME=flownexus.org`` to keep the existing certificate.
+- On the first run, the playbook copies
+  ``~flownexus/flownexus/server/data/db.sqlite3`` to ``~flownexus/data`` if no
+  database exists there. It does not change the old copy.
+
+After a successful deployment, ``~flownexus/flownexus`` and the old
+``localhost/flownexus-*`` images are no longer used.
+
+File Locations
+..............
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Content
+     - Location
+   * - SQLite database
+     - ``~flownexus/data/db.sqlite3``
+   * - Database backups
+     - ``~flownexus/backups/``
+   * - Firmware
+     - ``/var/www/flownexus/binaries/``
+   * - Landing page, documentation
+     - ``/var/www/flownexus/landing/``, ``/var/www/flownexus/docs/``
+   * - Django settings, secret key
+     - ``~flownexus/.config/flownexus/django.env``, ``env`` (mode ``0600``)
+   * - Quadlets
+     - ``~flownexus/.config/containers/systemd/``
+   * - Release record
+     - ``~flownexus/.local/state/flownexus/``
+   * - nginx site
+     - ``/etc/nginx/sites-enabled/flownexus.conf``
+   * - Certificate
+     - ``/etc/letsencrypt/live/<FLOWNEXUS_TLS_CERT_NAME>/``
+
+Troubleshooting
+...............
 
 .. code-block:: console
 
    vserver:~$ systemctl --user list-units 'flownexus-*'
-
-SSL Certificate Issues
-~~~~~~~~~~~~~~~~~~~~~~
-
-Certificates are managed by certbot (Let's Encrypt). If certificates fail,
-check certbot logs and ensure DNS is resolving correctly:
-
-.. code-block:: console
-
+   vserver:~$ journalctl --user -u flownexus-django -f
+   vserver:~$ sudo nginx -t
+   vserver:~$ sudo journalctl -u nginx
    vserver:~$ sudo certbot certificates
-   vserver:~$ sudo certbot renew --dry-run
-   vserver:~$ sudo journalctl -u nginx | grep -i "ssl\|tls\|cert"
-
-Security Considerations
-.......................
-
-* Use ed25519 SSH keys: ``ssh-keygen -t ed25519 -a 100``
-* Keep ``/var/www/flownexus`` writable by ``flownexus`` and readable by nginx
-* Regularly update nginx and container base images
-* Never commit secrets to the repository
-
-Customizing for Your Deployment
-................................
-
-To deploy on a different domain, update the domain names in
-``deploy/nginx.conf``, the environment variables (``DJANGO_ALLOWED_HOSTS``,
-``DJANGO_CSRF_ORIGINS``) in ``deploy/quadlet/flownexus-django.container``, and
-the target server in ``.github/workflows/deploy.yml``.
-
-File Locations
-....................
-
-+------------------+----------------------------------------------------------+---------------------------+
-| File             | Location                                                 | Purpose                   |
-+==================+==========================================================+===========================+
-| Static website   | ``/var/www/flownexus/landing/``                          | Landing page              |
-+------------------+----------------------------------------------------------+---------------------------+
-| Documentation    | ``/var/www/flownexus/docs/``                             | Sphinx HTML               |
-+------------------+----------------------------------------------------------+---------------------------+
-| Firmware         | ``/var/www/flownexus/binaries/``                         | Firmware downloads        |
-+------------------+----------------------------------------------------------+---------------------------+
-| SQLite database  | ``~flownexus/flownexus/server/data/``                    | Persistent Django data    |
-+------------------+----------------------------------------------------------+---------------------------+
-| Database backups | ``~flownexus/backups/``                                  | Automatic DB backups      |
-+------------------+----------------------------------------------------------+---------------------------+
-| Django env file  | ``~flownexus/.config/flownexus/env``                     | Secret key (auto-created) |
-+------------------+----------------------------------------------------------+---------------------------+
-| nginx config     | ``/etc/nginx/sites-enabled/flownexus.conf``              | Reverse proxy             |
-+------------------+----------------------------------------------------------+---------------------------+
-| Let's Encrypt    | ``/etc/letsencrypt/``                                    | SSL certificates          |
-+------------------+----------------------------------------------------------+---------------------------+
-| Quadlet configs  | ``~flownexus/.config/containers/systemd/``               | Container systemd units   |
-+------------------+----------------------------------------------------------+---------------------------+
-| Quadlet source   | ``~flownexus/flownexus/deploy/quadlet/``                 | Quadlet definitions       |
-+------------------+----------------------------------------------------------+---------------------------+
-| Logs             | ``journalctl --user -u flownexus-*``                     | Container logs            |
-+------------------+----------------------------------------------------------+---------------------------+
-
-Maintenance
-.............
-
-Everything in this section is optional day-2 operations guidance.
-
-Updating Containers
-~~~~~~~~~~~~~~~~~~~
-
-Usually GitHub Actions performs updates for you. Use these commands only when
-you intentionally want to update or recover the server manually.
-
-**Option 1: Using make deploy (Recommended for manual deploys)**
-
-From your local development machine:
-
-.. code-block:: console
-
-   local:~$ make deploy SERVER=flownexus.org USER=flownexus
-
-This will:
-1. SSH to the server and update the git checkout
-2. Run the deploy script via sudo
-
-**Option 2: Direct deployment on server**
-
-.. code-block:: console
-
-   vserver:~flownexus/flownexus$ git pull
-   vserver:~flownexus/flownexus$ sudo deploy/deploy-flownexus
-
-To create directories and reload nginx without rebuilding containers
-(useful after an nginx config change):
-
-.. code-block:: console
-
-   vserver:~flownexus/flownexus$ sudo deploy/deploy-flownexus --setup-only
-
-For local development and testing, use Podman Compose:
-
-.. code-block:: console
-
-   vserver:~flownexus/flownexus$ podman-compose -f server/compose.yml up -d --build
-
-Cleaning Up
-~~~~~~~~~~~
-
-Use these commands only for manual housekeeping.
-
-.. code-block:: console
-
-   # Remove old container images
-   vserver:~$ podman image prune -a
-
-   # Clean up volumes
-   vserver:~$ podman volume prune

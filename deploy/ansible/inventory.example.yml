@@ -1,0 +1,22 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copy to inventory.yml (ignored by git) for a manual deployment:
+#   uv run --only-group deploy ansible-playbook -i inventory.yml site.yml \
+#     -e flownexus_image_tag=sha-<short sha>
+
+all:
+  children:
+    flownexus:
+      hosts:
+        example.org:
+          ansible_user: flownexus
+      vars:
+        flownexus_dashboard_host: dashboard.example.org
+        flownexus_fw_host: fw.example.org
+        # Optional sites, off when unset
+        # flownexus_landing_host: example.org
+        # flownexus_docs_host: docs.example.org
+        flownexus_image_prefix: ghcr.io/example/flownexus
+        flownexus_letsencrypt_email: admin@example.org

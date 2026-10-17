@@ -6,45 +6,95 @@
 
 name: Deploy
 
+# Deploys the images that "Zephyr E2E CI" tested and published for a commit
+# on main. A manual run deploys any commit with published images, which is
+# also the rollback path. Configuration: doc/source/deploy.rst.
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:  # Allow manual triggering
+  workflow_run:
+    workflows: ["Zephyr E2E CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full 40-character commit SHA to deploy (default is the head of the selected branch)
+        required: false
 
-env:
-  DEPLOY_USER: flownexus
-  SERVER_HOST: flownexus.org
-  LANDING_PAGE_LOCAL_PATH: utils/landing_page
-  DOC_BUILD_LOCAL_PATH: doc/build/html
-  LANDING_PAGE_REMOTE_PATH: /var/www/flownexus/landing
-  DOCS_REMOTE_PATH: /var/www/flownexus/docs
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
+    # Forks without a configured dashboard host skip deployment.
+    if: >-
+      vars.FLOWNEXUS_DASHBOARD_HOST != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ vars.FLOWNEXUS_DASHBOARD_HOST }}
+    env:
+      DASHBOARD_HOST: ${{ vars.FLOWNEXUS_DASHBOARD_HOST }}
+      FW_HOST: ${{ vars.FLOWNEXUS_FW_HOST }}
+      LANDING_HOST: ${{ vars.FLOWNEXUS_LANDING_HOST }}
+      DOCS_HOST: ${{ vars.FLOWNEXUS_DOCS_HOST }}
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST || vars.FLOWNEXUS_DASHBOARD_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'flownexus' }}
 
     steps:
-      # ==========================================
-      # 1. CHECKOUT AND SETUP
-      # ==========================================
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.workflow_run.head_sha || inputs.sha || github.sha }}
           fetch-depth: 0
           fetch-tags: true
+          persist-credentials: false
+
+      # GHCR rejects upper case; the tag matches e2e_test.yml.
+      - name: Image names and tag
+        id: image
+        run: |
+          sha=$(git rev-parse HEAD)
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/flownexus" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${sha::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check that the images exist
+        env:
+          IMAGE_PREFIX: ${{ steps.image.outputs.prefix }}
+          IMAGE_TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          {
+            echo "### Images for ${IMAGE_TAG}"
+            echo
+            for service in django redis leshan; do
+              digest=$(docker buildx imagetools inspect \
+                "${IMAGE_PREFIX}-${service}:${IMAGE_TAG}" --format '{{json .Manifest.Digest}}')
+              echo "- \`${IMAGE_PREFIX}-${service}@${digest//\"/}\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      # ==========================================
-      # 2. BUILD STATIC ASSETS
-      # ==========================================
-
-      # 2.1 Build Sphinx Documentation
-      - name: Install system dependencies
+      - name: Install documentation dependencies
+        if: vars.FLOWNEXUS_DOCS_HOST != ''
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -57,89 +107,89 @@ jobs:
             imagemagick \
             librsvg2-bin
 
-      - name: Build documentation (HTML)
-        run: make doc-html
-
-      - name: Build documentation (PDF)
-        run: make doc-pdf
-
-      - name: Copy PDF to downloads
+      - name: Build documentation
+        if: vars.FLOWNEXUS_DOCS_HOST != ''
         run: |
+          make doc-html
+          make doc-pdf
           mkdir -p doc/build/html/_downloads
-          cp doc/build/pdf/latex/*.pdf doc/build/html/_downloads/ || true
+          cp doc/build/pdf/latex/*.pdf doc/build/html/_downloads/
 
-      # 2.2 Prepare Landing Page
-      - name: Prepare landing page assets
+      - name: Set up SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
         run: |
-          # Landing page is already static HTML in utils/landing_page
-          # Just verify it exists
-          ls -la utils/landing_page/
-          ls -la utils/landing_page/assets/
+          if [ -z "${SSH_KNOWN_HOSTS}" ]; then
+            echo "::error::Set the SSH_KNOWN_HOSTS variable (see doc/source/deploy.rst)"
+            exit 1
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
+          printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
 
-      # ==========================================
-      # 3. DEPLOY STATIC ASSETS VIA RSYNC
-      # ==========================================
-
-      - name: Setup SSH
+      - name: Run the playbook
+        working-directory: deploy/ansible
+        env:
+          IMAGE_PREFIX: ${{ steps.image.outputs.prefix }}
+          IMAGE_TAG: ${{ steps.image.outputs.tag }}
+          REVISION: ${{ steps.image.outputs.sha }}
+          TLS_CERT_NAME: ${{ vars.FLOWNEXUS_TLS_CERT_NAME }}
+          LETSENCRYPT_EMAIL: ${{ vars.LETSENCRYPT_EMAIL }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          REGISTRY_USERNAME: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+          vars="${RUNNER_TEMP}/deploy-vars.json"
+          trap 'rm -f "$vars"' EXIT
+          jq -n \
+            --arg host "$DEPLOY_HOST" \
+            --arg user "$DEPLOY_USER" \
+            --arg dashboard "$DASHBOARD_HOST" \
+            --arg fw "$FW_HOST" \
+            --arg landing_host "$LANDING_HOST" \
+            --arg docs_host "$DOCS_HOST" \
+            --arg cert_name "${TLS_CERT_NAME:-$DASHBOARD_HOST}" \
+            --arg prefix "$IMAGE_PREFIX" \
+            --arg tag "$IMAGE_TAG" \
+            --arg revision "$REVISION" \
+            --arg email "$LETSENCRYPT_EMAIL" \
+            --arg secret "$DJANGO_SECRET_KEY" \
+            --arg registry_user "$REGISTRY_USERNAME" \
+            --arg registry_password "$REGISTRY_PASSWORD" \
+            --arg landing "${GITHUB_WORKSPACE}/utils/landing_page" \
+            --arg docs "${GITHUB_WORKSPACE}/doc/build/html" \
+            '{
+              flownexus_dashboard_host: $dashboard,
+              flownexus_fw_host: $fw,
+              flownexus_landing_host: $landing_host,
+              flownexus_docs_host: $docs_host,
+              flownexus_tls_cert_name: $cert_name,
+              flownexus_image_prefix: $prefix,
+              flownexus_image_tag: $tag,
+              flownexus_revision: $revision,
+              flownexus_letsencrypt_email: $email,
+              flownexus_django_secret_key: $secret,
+              flownexus_registry_username: $registry_user,
+              flownexus_registry_password: $registry_password,
+              flownexus_landing_src: $landing,
+              flownexus_docs_src: $docs
+            }' > "$vars"
+          printf 'flownexus:\n  hosts:\n    %s:\n      ansible_user: %s\n' \
+            "$DEPLOY_HOST" "$DEPLOY_USER" > "${RUNNER_TEMP}/inventory.yml"
+          uv run --only-group deploy ansible-playbook \
+            -i "${RUNNER_TEMP}/inventory.yml" -e "@${vars}" --diff site.yml
 
-      # 3.1 Update backend code first (so deploy script exists)
-      - name: Update backend code
+      - name: Check the public endpoints
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "cd /home/flownexus/flownexus && \
-             git fetch origin && \
-             git checkout ${{ github.sha }} && \
-             git submodule update --init --recursive"
-
-      # 3.2 Ensure directories exist with proper permissions
-      - name: Setup deployment directories
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus --setup-only"
-
-      # 3.3 Deploy Main Website
-      - name: Deploy landing page
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./${{ env.LANDING_PAGE_LOCAL_PATH }}/ \
-            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.LANDING_PAGE_REMOTE_PATH }}/
-
-      # 3.4 Deploy Documentation
-      - name: Deploy documentation
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./${{ env.DOC_BUILD_LOCAL_PATH }}/ \
-            ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }}:${{ env.DOCS_REMOTE_PATH }}/
-
-      # 3.5 Deploy containers (re-runs deploy script, but it's idempotent)
-      - name: Deploy dashboard stack
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "sudo -n /home/flownexus/flownexus/deploy/deploy-flownexus"
-
-      - name: Verify deployment
-        run: |
-          echo "Checking service health..."
-          sleep 10
-          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.SERVER_HOST }} \
-            "export XDG_RUNTIME_DIR=/run/user/\$(id -u) && \
-             systemctl --user is-active flownexus-redis.service && \
-             systemctl --user is-active flownexus-leshan.service && \
-             systemctl --user is-active flownexus-django.service"
-
-      # ==========================================
-      # 6. CLEANUP
-      # ==========================================
-
-      - name: Cleanup SSH keys
-        if: always()
-        run: |
-          rm -f ~/.ssh/deploy_key
-          rm -f ~/.ssh/config
+          check() {
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-all-errors "$1")
+            echo "$1 -> ${code}"
+            [ "$code" = "$2" ]
+          }
+          check "https://${DASHBOARD_HOST}/admin/login/" 200
+          # The firmware host serves files only; TLS must still verify.
+          check "https://${FW_HOST}/" 404
+          if [ -n "$LANDING_HOST" ]; then check "https://${LANDING_HOST}/" 200; fi
+          if [ -n "$DOCS_HOST" ]; then check "https://${DOCS_HOST}/" 200; fi

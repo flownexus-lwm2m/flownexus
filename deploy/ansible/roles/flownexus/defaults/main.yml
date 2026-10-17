@@ -1,0 +1,60 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Settings for a flownexus host, at the lowest precedence. The deploy workflow
+# sets them from GitHub configuration; see doc/source/deploy.rst.
+
+# Required
+flownexus_dashboard_host: ""  # e.g. dashboard.example.org
+flownexus_fw_host: ""         # firmware downloads, e.g. fw.example.org
+flownexus_image_prefix: ""    # ghcr.io/<owner>/flownexus
+flownexus_image_tag: ""       # sha-<short sha>
+
+# Optional sites; empty disables the site
+flownexus_landing_host: ""
+flownexus_docs_host: ""
+
+flownexus_hosts: >-
+  {{ [flownexus_landing_host, flownexus_docs_host, flownexus_fw_host, flownexus_dashboard_host]
+     | select | list }}
+
+# Images pulled per release, and the quadlet units in start order
+flownexus_services: [django, redis, leshan]
+flownexus_units: [redis, leshan, django, celery]
+
+# Release metadata for the deployment record
+flownexus_revision: ""
+
+flownexus_user: "{{ ansible_user | default('flownexus') }}"
+flownexus_home: "/home/{{ flownexus_user }}"
+flownexus_web_root: /var/www/flownexus
+flownexus_data_dir: "{{ flownexus_home }}/data"
+flownexus_backup_dir: "{{ flownexus_home }}/backups"
+flownexus_backup_keep: 30
+flownexus_config_dir: "{{ flownexus_home }}/.config/flownexus"
+flownexus_state_dir: "{{ flownexus_home }}/.local/state/flownexus"
+# Database location of the git-checkout deployment; copied once if present
+flownexus_legacy_data_dir: "{{ flownexus_home }}/flownexus/server/data"
+
+# TLS: one Let's Encrypt certificate for all enabled hosts
+flownexus_tls_cert_name: "{{ flownexus_dashboard_host }}"
+flownexus_tls_cert_dir: "/etc/letsencrypt/live/{{ flownexus_tls_cert_name }}"
+flownexus_letsencrypt_email: ""
+# Override for a firmware host certificate from a private CA
+flownexus_fw_ssl_certificate: "{{ flownexus_tls_cert_dir }}/fullchain.pem"
+flownexus_fw_ssl_certificate_key: "{{ flownexus_tls_cert_dir }}/privkey.pem"
+
+flownexus_manage_firewall: true
+
+# Empty: generate a key on the server once and keep it
+flownexus_django_secret_key: ""
+flownexus_django_workers: 2
+
+# Registry login for private images; empty for public images
+flownexus_registry_username: ""
+flownexus_registry_password: ""
+
+# Local build output synced to the optional sites; empty skips the sync
+flownexus_landing_src: ""
+flownexus_docs_src: ""

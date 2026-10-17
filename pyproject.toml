@@ -75,6 +75,12 @@ docs = [
     "sphinxcontrib-redoc>=1.6.0",
 ]
 
+# Deployment (Ansible playbook in deploy/ansible)
+deploy = [
+    "ansible>=12,<13",
+    "ansible-lint>=25",
+]
+
 # Mock device simulator
 mock = [
     "pyyaml>=6.0",

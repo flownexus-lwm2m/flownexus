@@ -3,40 +3,33 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-
-# Flownexus nginx Configuration
-# Install to /etc/nginx/sites-enabled/flownexus.conf on the server.
-#
+{{ ansible_managed | comment }}
 # Serves:
-#   flownexus.org            — Landing page (static HTML)
-#   docs.flownexus.org       — Documentation (Sphinx HTML)
-#   fw.flownexus.org         — Firmware binaries (IoT-safe TLS, no HTTP/2)
-#   dashboard.flownexus.org  — Django dashboard (reverse proxy to uvicorn)
+#   {{ flownexus_dashboard_host }} - Django dashboard (reverse proxy to uvicorn)
+#   {{ flownexus_fw_host }} - Firmware binaries (IoT-safe TLS, no HTTP/2)
+{% if flownexus_landing_host %}
+#   {{ flownexus_landing_host }} - Landing page (static HTML)
+{% endif %}
+{% if flownexus_docs_host %}
+#   {{ flownexus_docs_host }} - Documentation (Sphinx HTML)
+{% endif %}
 #
-# TLS certificates are managed by certbot (Let's Encrypt).
-# All four domains share one SAN certificate issued as:
-#   sudo certbot certonly --nginx --cert-name flownexus.org \
-#       -d flownexus.org -d docs.flownexus.org \
-#       -d fw.flownexus.org -d dashboard.flownexus.org
-# The deploy script substitutes __TLS_CERT_DIR__ with the configured lineage
-# directory (default: /etc/letsencrypt/live/flownexus.org).
-#
-# IMPORTANT: nginx handles HTTP/HTTPS traffic only.
-# UDP traffic for LwM2M (CoAP) is handled separately in server/compose.yml.
+# nginx handles HTTP/HTTPS only; LwM2M CoAP (5683/udp) goes directly to Leshan.
 
+{% if flownexus_landing_host %}
 # --------------------------------------------------------------------------
-# flownexus.org — Landing page
+# {{ flownexus_landing_host }} — Landing page
 # --------------------------------------------------------------------------
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name flownexus.org;
+    server_name {{ flownexus_landing_host }};
 
-    ssl_certificate     __TLS_CERT_DIR__/fullchain.pem;
-    ssl_certificate_key __TLS_CERT_DIR__/privkey.pem;
+    ssl_certificate     {{ flownexus_tls_cert_dir }}/fullchain.pem;
+    ssl_certificate_key {{ flownexus_tls_cert_dir }}/privkey.pem;
 
-    root /var/www/flownexus/landing;
+    root {{ flownexus_web_root }}/landing;
     index index.html;
 
     # Security headers
@@ -55,23 +48,25 @@ server {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml;
 
-    access_log /var/log/nginx/flownexus.org-access.log;
-    error_log  /var/log/nginx/flownexus.org-error.log;
+    access_log /var/log/nginx/{{ flownexus_landing_host }}-access.log;
+    error_log  /var/log/nginx/{{ flownexus_landing_host }}-error.log;
 }
+{% endif %}
 
+{% if flownexus_docs_host %}
 # --------------------------------------------------------------------------
-# docs.flownexus.org — Sphinx documentation
+# {{ flownexus_docs_host }} — Sphinx documentation
 # --------------------------------------------------------------------------
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name docs.flownexus.org;
+    server_name {{ flownexus_docs_host }};
 
-    ssl_certificate     __TLS_CERT_DIR__/fullchain.pem;
-    ssl_certificate_key __TLS_CERT_DIR__/privkey.pem;
+    ssl_certificate     {{ flownexus_tls_cert_dir }}/fullchain.pem;
+    ssl_certificate_key {{ flownexus_tls_cert_dir }}/privkey.pem;
 
-    root /var/www/flownexus/docs;
+    root {{ flownexus_web_root }}/docs;
     index index.html;
 
     # Security headers
@@ -94,12 +89,13 @@ server {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml;
 
-    access_log /var/log/nginx/docs.flownexus.org-access.log;
-    error_log  /var/log/nginx/docs.flownexus.org-error.log;
+    access_log /var/log/nginx/{{ flownexus_docs_host }}-access.log;
+    error_log  /var/log/nginx/{{ flownexus_docs_host }}-error.log;
 }
+{% endif %}
 
 # --------------------------------------------------------------------------
-# fw.flownexus.org — Firmware download server (IoT-safe TLS)
+# {{ flownexus_fw_host }} — Firmware download server (IoT-safe TLS)
 # --------------------------------------------------------------------------
 #
 # This server block is specifically configured for constrained IoT devices
@@ -119,13 +115,13 @@ server {
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name fw.flownexus.org;
+    server_name {{ flownexus_fw_host }};
 
-    ssl_certificate     __TLS_CERT_DIR__/fullchain.pem;
-    ssl_certificate_key __TLS_CERT_DIR__/privkey.pem;
+    ssl_certificate     {{ flownexus_fw_ssl_certificate }};
+    ssl_certificate_key {{ flownexus_fw_ssl_certificate_key }};
     ssl_buffer_size 1370;
 
-    root /var/www/flownexus;
+    root {{ flownexus_web_root }};
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -143,21 +139,21 @@ server {
         try_files $uri =404;
     }
 
-    access_log /var/log/nginx/fw.flownexus.org-access.log;
-    error_log  /var/log/nginx/fw.flownexus.org-error.log;
+    access_log /var/log/nginx/{{ flownexus_fw_host }}-access.log;
+    error_log  /var/log/nginx/{{ flownexus_fw_host }}-error.log;
 }
 
 # --------------------------------------------------------------------------
-# dashboard.flownexus.org — Django application (reverse proxy)
+# {{ flownexus_dashboard_host }} — Django application (reverse proxy)
 # --------------------------------------------------------------------------
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name dashboard.flownexus.org;
+    server_name {{ flownexus_dashboard_host }};
 
-    ssl_certificate     __TLS_CERT_DIR__/fullchain.pem;
-    ssl_certificate_key __TLS_CERT_DIR__/privkey.pem;
+    ssl_certificate     {{ flownexus_tls_cert_dir }}/fullchain.pem;
+    ssl_certificate_key {{ flownexus_tls_cert_dir }}/privkey.pem;
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -191,8 +187,8 @@ server {
         proxy_set_header Connection $connection_upgrade;
     }
 
-    access_log /var/log/nginx/dashboard.flownexus.org-access.log;
-    error_log  /var/log/nginx/dashboard.flownexus.org-error.log;
+    access_log /var/log/nginx/{{ flownexus_dashboard_host }}-access.log;
+    error_log  /var/log/nginx/{{ flownexus_dashboard_host }}-error.log;
 }
 
 # --------------------------------------------------------------------------
@@ -201,7 +197,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name flownexus.org docs.flownexus.org fw.flownexus.org dashboard.flownexus.org;
+    server_name {{ flownexus_hosts | join(' ') }};
     return 301 https://$host$request_uri;
 }
 

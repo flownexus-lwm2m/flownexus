@@ -1,0 +1,27 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+{{ ansible_managed | comment }}
+[Unit]
+Description=flownexus Celery worker
+After=flownexus-redis.service flownexus-leshan.service network-online.target
+Requires=flownexus-redis.service
+
+[Container]
+ContainerName=flownexus-celery
+Image={{ stack_images.django }}
+Exec=worker
+Network=podman-flownexus-network
+Volume={{ flownexus_data_dir }}:/data:z
+Volume={{ flownexus_web_root }}/binaries:/var/www/flownexus/binaries:z
+EnvironmentFile={{ flownexus_config_dir }}/django.env
+EnvironmentFile={{ flownexus_config_dir }}/env
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

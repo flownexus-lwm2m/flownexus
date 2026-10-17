@@ -1,0 +1,114 @@
+#!/bin/sh
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Render the nginx site for a customer setup (dashboard and firmware only) and
+# for a setup with all four sites, then check each one in an nginx container
+# with a self-signed certificate.
+
+set -eu
+
+runtime="${CONTAINER_RUNTIME:-}"
+if [ -z "$runtime" ]; then
+    if podman info > /dev/null 2>&1; then runtime=podman; else runtime=docker; fi
+fi
+nginx_image="${NGINX_IMAGE:-docker.io/library/nginx:1.26}"
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+work=$(mktemp -d)
+container="flownexus-nginx-test-$$"
+https_port="${NGINX_TEST_HTTPS_PORT:-18443}"
+http_port="${NGINX_TEST_HTTP_PORT:-18080}"
+
+cleanup() {
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        "$runtime" logs "$container" >&2 2>&1 || true
+    fi
+    "$runtime" rm -f "$container" > /dev/null 2>&1 || true
+    rm -rf "$work"
+    exit "$status"
+}
+trap cleanup EXIT INT TERM
+
+expect() {
+    url="$1"
+    host="$2"
+    port="$3"
+    want="$4"
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --cacert "$work/root/etc/nginx/test-cert/fullchain.pem" \
+        --resolve "$host:$port:127.0.0.1" "$url")
+    if [ "$code" != "$want" ]; then
+        printf 'FAIL %s: got %s, expected %s\n' "$url" "$code" "$want" >&2
+        exit 1
+    fi
+    printf 'ok   %s -> %s\n' "$url" "$code"
+}
+
+# $1: name, then key=value extra variables for the playbook
+run_case() {
+    name="$1"
+    shift
+    printf '%s\n' "== $name"
+    conf="$work/$name.conf"
+    set -- "output=$conf" flownexus_tls_cert_dir=/etc/nginx/test-cert "$@"
+    for arg in "$@"; do
+        set -- "$@" -e "$arg"
+        shift
+    done
+    (cd "$here/.." && uv run --only-group deploy ansible-playbook -i localhost, "$@" tests/render-nginx.yml \
+        > "$work/$name.log") || { cat "$work/$name.log" >&2; exit 1; }
+
+    hosts=$(sed -n 's/^ *server_name \(.*\);/\1/p' "$conf" | tr ' ' '\n' | sort -u | grep -v localhost)
+    san=$(printf 'DNS:%s,' $hosts | sed 's/,$//')
+    root="$work/root"
+    cert="$root/etc/nginx/test-cert"
+    www="$root/var/www/flownexus"
+    rm -rf "$root"
+    mkdir -p "$cert" "$www/binaries" "$www/landing" "$www/docs/guide" "$root/etc/nginx/conf.d"
+    cp "$conf" "$root/etc/nginx/conf.d/default.conf"
+    openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=flownexus-test" \
+        -addext "subjectAltName=$san" -keyout "$cert/privkey.pem" \
+        -out "$cert/fullchain.pem" 2> /dev/null
+    chmod 644 "$cert/privkey.pem"
+    echo firmware > "$www/binaries/test.bin"
+    echo landing > "$www/landing/index.html"
+    echo guide > "$www/docs/guide/index.html"
+
+    "$runtime" rm -f "$container" > /dev/null 2>&1 || true
+    # Copy instead of bind mounts, so a remote container daemon works too.
+    "$runtime" create --name "$container" \
+        -p "127.0.0.1:$https_port:443" -p "127.0.0.1:$http_port:80" \
+        "$nginx_image" > /dev/null
+    "$runtime" cp "$root/." "$container:/"
+    "$runtime" start "$container" > /dev/null
+    "$runtime" exec "$container" nginx -t
+    sleep 1
+}
+
+run_case customer \
+    flownexus_dashboard_host=dashboard.customer.test \
+    flownexus_fw_host=updates.customer.test
+grep -q 'server_name dashboard.customer.test;' "$work/customer.conf"
+if grep -q 'root /var/www/flownexus/landing\|root /var/www/flownexus/docs' "$work/customer.conf"; then
+    printf '%s\n' "FAIL customer: landing or docs site rendered" >&2
+    exit 1
+fi
+expect "https://dashboard.customer.test:$https_port/admin/login/" dashboard.customer.test "$https_port" 502
+expect "https://updates.customer.test:$https_port/binaries/test.bin" updates.customer.test "$https_port" 200
+expect "https://updates.customer.test:$https_port/" updates.customer.test "$https_port" 404
+expect "http://updates.customer.test:$http_port/binaries/test.bin" updates.customer.test "$http_port" 301
+
+run_case all-sites \
+    flownexus_dashboard_host=dashboard.example.test \
+    flownexus_fw_host=fw.example.test \
+    flownexus_landing_host=example.test \
+    flownexus_docs_host=docs.example.test
+expect "https://example.test:$https_port/" example.test "$https_port" 200
+expect "https://docs.example.test:$https_port/guide" docs.example.test "$https_port" 200
+expect "https://dashboard.example.test:$https_port/admin/login/" dashboard.example.test "$https_port" 502
+expect "https://fw.example.test:$https_port/binaries/test.bin" fw.example.test "$https_port" 200
+expect "http://docs.example.test:$http_port/" docs.example.test "$http_port" 301
+
+printf '%s\n' "nginx tests passed"

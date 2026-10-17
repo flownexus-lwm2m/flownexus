@@ -1,0 +1,123 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Start nginx
+  become: true
+  ansible.builtin.systemd_service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Check the TLS certificate
+  become: true
+  ansible.builtin.stat:
+    path: "{{ flownexus_tls_cert_dir }}/fullchain.pem"
+  register: nginx_tls_cert
+
+- name: Read the certificate host names
+  when: nginx_tls_cert.stat.exists
+  become: true
+  ansible.builtin.command: openssl x509 -in {{ flownexus_tls_cert_dir }}/fullchain.pem -noout -ext subjectAltName
+  register: nginx_tls_san
+  changed_when: false
+  check_mode: false
+
+- name: Find hosts the certificate does not cover
+  ansible.builtin.set_fact:
+    nginx_tls_missing: >-
+      {{ flownexus_hosts | difference(nginx_tls_san.stdout | default('')
+         | regex_findall('DNS:([^,\s]+)')) }}
+
+# The nginx authenticator needs DNS for all hosts pointing to this server.
+- name: Issue or expand the TLS certificate
+  when: nginx_tls_missing | length > 0
+  become: true
+  ansible.builtin.command:
+    argv:
+      - certbot
+      - certonly
+      - --nginx
+      - --non-interactive
+      - --agree-tos
+      - --expand
+      - "{{ '--email=' ~ flownexus_letsencrypt_email if flownexus_letsencrypt_email else '--register-unsafely-without-email' }}"
+      - --cert-name={{ flownexus_tls_cert_name }}
+      - --domains={{ flownexus_hosts | join(',') }}
+  changed_when: true
+
+- name: Create the certbot deploy hook directory
+  become: true
+  ansible.builtin.file:
+    path: /etc/letsencrypt/renewal-hooks/deploy
+    state: directory
+    mode: "0755"
+
+- name: Reload nginx after certificate renewal
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
+    content: |
+      #!/bin/sh
+      systemctl reload nginx
+    mode: "0755"
+
+- name: Remove the default nginx site
+  become: true
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+# A rejected config is never reloaded, and the previous file is restored.
+- name: Install the nginx site
+  become: true
+  vars:
+    nginx_site: /etc/nginx/sites-enabled/flownexus.conf
+    nginx_previous: /etc/nginx/flownexus.conf.previous
+  block:
+    - name: Check the current nginx site
+      ansible.builtin.stat:
+        path: "{{ nginx_site }}"
+      register: nginx_current
+
+    - name: Keep the current nginx site
+      when: nginx_current.stat.exists
+      ansible.builtin.copy:
+        src: "{{ nginx_site }}"
+        dest: "{{ nginx_previous }}"
+        remote_src: true
+        mode: "0644"
+
+    - name: Render the nginx site
+      ansible.builtin.template:
+        src: flownexus.conf.j2
+        dest: "{{ nginx_site }}"
+        mode: "0644"
+      notify: Reload nginx
+
+    - name: Test the nginx configuration
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+  rescue:
+    - name: Restore the previous nginx site
+      when: nginx_current.stat.exists
+      ansible.builtin.copy:
+        src: "{{ nginx_previous }}"
+        dest: "{{ nginx_site }}"
+        remote_src: true
+        mode: "0644"
+
+    - name: Remove the rejected nginx site
+      when: not nginx_current.stat.exists
+      ansible.builtin.file:
+        path: "{{ nginx_site }}"
+        state: absent
+
+    - name: Stop the deployment
+      ansible.builtin.fail:
+        msg: nginx rejected the new configuration; the previous one is restored
+
+- name: Apply nginx changes
+  ansible.builtin.meta: flush_handlers

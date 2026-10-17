@@ -1,0 +1,70 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Install host packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - nginx
+      - podman
+      - python3-certbot-nginx
+      - rsync
+      - sqlite3
+      - ufw
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Keep user services running without a login session
+  become: true
+  ansible.builtin.command: loginctl enable-linger {{ flownexus_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ flownexus_user }}
+
+- name: Create web directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ flownexus_user }}"
+    group: www-data
+    mode: "2775"
+  loop: >-
+    {{ [flownexus_web_root, flownexus_web_root ~ '/binaries']
+       + ([flownexus_web_root ~ '/landing'] if flownexus_landing_host else [])
+       + ([flownexus_web_root ~ '/docs'] if flownexus_docs_host else []) }}
+
+- name: Create data directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ flownexus_user }}"
+    group: "{{ flownexus_user }}"
+    mode: "0750"
+  loop:
+    - "{{ flownexus_data_dir }}"
+    - "{{ flownexus_backup_dir }}"
+
+- name: Configure the firewall
+  when: flownexus_manage_firewall
+  become: true
+  block:
+    - name: Allow SSH, HTTP, HTTPS and LwM2M
+      community.general.ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+      loop:
+        - { port: "{{ ansible_port | default(22) | string }}", proto: tcp }
+        - { port: "80", proto: tcp }
+        - { port: "443", proto: tcp }
+        - { port: "5683", proto: udp }
+
+    - name: Enable the firewall
+      community.general.ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
