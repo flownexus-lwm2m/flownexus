@@ -16,7 +16,6 @@ ContainerName=flownexus-redis
 Image=localhost/flownexus-redis:latest
 Network=podman-flownexus-network
 PublishPort=127.0.0.1:6379:6379
-Exec=redis-server /redis/redis.conf
 HealthCmd=redis-cli ping
 HealthInterval=10s
 HealthTimeout=3s

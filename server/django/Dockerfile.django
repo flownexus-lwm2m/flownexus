@@ -1,16 +1,23 @@
 # Use the official lightweight Python image.
-FROM docker.io/library/python:3.13-slim
+FROM docker.io/library/python:3.13-slim@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /bin/uv
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV UV_NO_CACHE=1
 
 # Accept version as a build argument and set it as an environment variable
 ARG APP_VERSION=unknown
 ENV APP_VERSION=${APP_VERSION}
+
+ARG REVISION=unknown
+LABEL org.opencontainers.image.title="flownexus-django" \
+      org.opencontainers.image.description="flownexus Django application and Celery worker" \
+      org.opencontainers.image.source="https://github.com/flownexus-lwm2m/flownexus" \
+      org.opencontainers.image.revision="${REVISION}"
 
 # Create and set the working directory in the container
 WORKDIR /django
@@ -31,7 +38,7 @@ ENV PATH="/django/.venv/bin:$PATH"
 COPY server/django/ /django/
 
 # Collect static files
-RUN uv run python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput
 
 # Give execution rights on the start-up script
 RUN chmod +x /django/django_start.sh

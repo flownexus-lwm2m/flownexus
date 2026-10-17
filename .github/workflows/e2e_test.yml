@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# A newer push cancels the older run, so Deploy never follows an older commit.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   harness-tests:
     runs-on: ubuntu-latest
@@ -87,8 +92,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      LESHAN_IMAGE: ghcr.io/flownexus-lwm2m/flownexus-leshan
     steps:
     - uses: actions/checkout@v6
       with:
@@ -100,18 +103,14 @@ jobs:
       with:
         enable-cache: true
 
-    - name: Describe version
-      id: version
-      run: echo "describe=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
-
-    - name: Leshan image metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.LESHAN_IMAGE }}
-        tags: |
-          type=sha
-          type=raw,value=${{ steps.version.outputs.describe }}
+    # GHCR rejects upper case, and forks publish under their own owner
+    - name: Image names and tags
+      id: image
+      run: |
+        owner="${GITHUB_REPOSITORY_OWNER,,}"
+        echo "prefix=ghcr.io/${owner}/flownexus" >> "$GITHUB_OUTPUT"
+        echo "sha=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        echo "describe=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -124,10 +123,46 @@ jobs:
         build-args: REVISION=${{ github.sha }}
         tags: |
           localhost/flownexus-leshan:latest
-          ${{ steps.meta.outputs.tags }}
+          ${{ steps.image.outputs.prefix }}-leshan:${{ steps.image.outputs.sha }}
+          ${{ steps.image.outputs.prefix }}-leshan:${{ steps.image.outputs.describe }}
         load: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=gha,scope=leshan
+        cache-to: type=gha,mode=max,scope=leshan
+
+    - name: Build Django image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: server/django/Dockerfile.django
+        build-args: |
+          APP_VERSION=${{ steps.image.outputs.describe }}
+          REVISION=${{ github.sha }}
+        tags: |
+          localhost/flownexus-django:latest
+          ${{ steps.image.outputs.prefix }}-django:${{ steps.image.outputs.sha }}
+          ${{ steps.image.outputs.prefix }}-django:${{ steps.image.outputs.describe }}
+        load: true
+        cache-from: type=gha,scope=django
+        cache-to: type=gha,mode=max,scope=django
+
+    - name: Build Redis image
+      uses: docker/build-push-action@v6
+      with:
+        context: server/redis
+        file: server/redis/Dockerfile.redis
+        build-args: REVISION=${{ github.sha }}
+        tags: |
+          localhost/flownexus-redis:latest
+          ${{ steps.image.outputs.prefix }}-redis:${{ steps.image.outputs.sha }}
+          ${{ steps.image.outputs.prefix }}-redis:${{ steps.image.outputs.describe }}
+        load: true
+        cache-from: type=gha,scope=redis
+        cache-to: type=gha,mode=max,scope=redis
+
+    - name: Smoke test images
+      env:
+        CONTAINER_RUNTIME: docker
+      run: devtools/image-smoke-test
 
     - name: Download native_sim binary
       uses: actions/download-artifact@v4
@@ -155,9 +190,14 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push Leshan image
+    - name: Push images
       if: github.event_name == 'push'
-      run: docker push --all-tags "${LESHAN_IMAGE}"
+      env:
+        IMAGE_PREFIX: ${{ steps.image.outputs.prefix }}
+      run: |
+        for service in leshan django redis; do
+          docker push --all-tags "${IMAGE_PREFIX}-${service}"
+        done
 
     - name: Upload E2E artifacts
       if: failure()

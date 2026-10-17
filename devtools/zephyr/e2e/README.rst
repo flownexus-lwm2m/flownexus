@@ -37,8 +37,11 @@ used otherwise. Artifacts are retained after failures.
 
 CI (``.github/workflows/e2e_test.yml``) always runs the fast harness tests.
 The ``build-sim`` job builds ``native_sim`` in ``ci-base`` and runs the
-twister tests of the client. The full-stack job builds the Leshan JAR and
-image on the runner, then runs this suite with ``FLOWNEXUS_RUN_E2E=1``.
+twister tests of the client. The full-stack job builds the Leshan, Django,
+and Redis images, runs ``devtools/image-smoke-test`` against them, then runs
+this suite with ``FLOWNEXUS_RUN_E2E=1``. This suite runs Django from source;
+the smoke test covers the Django image. On ``push`` the job publishes all
+three images to GHCR.
 
 To add a scenario, use the ``e2e_context`` fixture, drive the device with
 ``device.shell.command()`` and check the result with ``DjangoApi`` or
