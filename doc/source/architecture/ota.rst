@@ -17,16 +17,15 @@ A https server is usually be hosted under a subdomain. The default is
 certificate for the https server. For details, check chapter
 :ref:`setup-a-virtual-server-label`.
 
-More information about a possible firmware implementation can be found in the
-``lwm2m_client`` firmware sample at
-``flownexus/devtools/zephyr/client/src/firmware_update.c``.
+The native_sim E2E client does not implement object 5. Firmware update is
+handled by the LwM2M server and a device that exposes the Firmware Update
+object.
 
 .. note::
 
-   Firmware Updates are implemented in the LwM2M server and the example
-   firmware. A set up a PKI with self-signed certificates is required for the
-   server to communicate with the device via https. This setup will be
-   described in upcoming releases shortly.
+   Firmware updates are implemented in the LwM2M server. A device that
+   exposes object 5 must still implement package download. A PKI with
+   self-signed certificates is required for HTTPS firmware hosts.
 
 Update process of a Firmware
 ----------------------------

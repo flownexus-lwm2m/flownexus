@@ -19,4 +19,8 @@ manifest:
       remote: zephyrproject-rtos
       repo-path: zephyr
       revision: main
-      import: true
+      import:
+        name-allowlist:
+          - mbedtls
+          - tf-psa-crypto
+          - zcbor
