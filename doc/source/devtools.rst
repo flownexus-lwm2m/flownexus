@@ -35,8 +35,10 @@ Celery, and Leshan)::
 
   host:~/flownexus$ make test-e2e
 
-Requires a container runtime (Podman or Docker), a built Leshan image, and
-the Zephyr toolchain. Fast harness tests run without ``FLOWNEXUS_RUN_E2E``;
+Requires a container runtime (Podman or Docker), the Leshan image from
+``make leshan-image``, and the Zephyr toolchain. Set
+``FLOWNEXUS_LESHAN_IMAGE`` to use a different image, for example one pulled
+from GHCR. Fast harness tests run without ``FLOWNEXUS_RUN_E2E``;
 the three stack workflows need that flag, which ``make test-e2e`` sets.
 
 Run the native_sim twister tests (shell test and overlay builds) without the
