@@ -17,7 +17,8 @@
 	doc-pdf \
 	doc \
 	server-run \
-	deploy
+	deploy \
+	deploy-test
 
 # Run Django tests using uv
 test-django:
@@ -127,20 +128,16 @@ server-run:
 	echo "Shutting down containers..."; \
 	podman-compose -f server/compose.yml down
 
-# Deploy to production server (requires sudo and SSH access)
-# This uses systemd Quadlet for persistent rootless containers
+# Deploy published images with Ansible (normally done by .github/workflows/deploy.yml)
+# Usage: make deploy IMAGE_TAG=sha-<short sha>, with deploy/ansible/inventory.yml
 deploy:
-	@echo "Deploying Flownexus to production..."
-	@echo "Usage: make deploy SERVER=flownexus.org USER=flownexus"
-	@if [ -z "$(SERVER)" ]; then \
-		echo "Error: SERVER variable not set. Example: make deploy SERVER=flownexus.org"; \
-		exit 1; \
-	fi
-	@if [ -z "$(USER)" ]; then \
-		USER=flownexus; \
-	fi
-	@echo "Deploying to $(SERVER) as user $(USER)..."
-	ssh $(USER)@$(SERVER) "cd /home/$(USER)/flownexus && git fetch origin && git checkout main && git pull"
-	ssh -t $(USER)@$(SERVER) "sudo /home/$(USER)/flownexus/deploy/deploy-flownexus"
-	@echo "Deployment complete. View logs with:"
-	@echo "  ssh $(USER)@$(SERVER) 'journalctl --user -u flownexus-django -f'"
+	@test -f deploy/ansible/inventory.yml || \
+		{ echo "Create deploy/ansible/inventory.yml from inventory.example.yml"; exit 1; }
+	@test -n "$(IMAGE_TAG)" || { echo "Usage: make deploy IMAGE_TAG=sha-<short sha>"; exit 1; }
+	cd deploy/ansible && uv run --only-group deploy ansible-playbook -i inventory.yml \
+		-e flownexus_image_tag=$(IMAGE_TAG) --diff site.yml
+
+# Lint the deployment and test the rendered nginx config in a container
+deploy-test:
+	cd deploy/ansible && uv run --only-group deploy ansible-lint
+	deploy/ansible/tests/nginx-test

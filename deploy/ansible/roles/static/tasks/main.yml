@@ -1,0 +1,23 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Sync the landing page
+  when: flownexus_landing_host | length > 0 and flownexus_landing_src | length > 0
+  ansible.posix.synchronize:
+    src: "{{ flownexus_landing_src }}/"
+    dest: "{{ flownexus_web_root }}/landing/"
+    delete: true
+    recursive: true
+    checksum: true
+    times: false
+
+- name: Sync the documentation
+  when: flownexus_docs_host | length > 0 and flownexus_docs_src | length > 0
+  ansible.posix.synchronize:
+    src: "{{ flownexus_docs_src }}/"
+    dest: "{{ flownexus_web_root }}/docs/"
+    delete: true
+    recursive: true
+    checksum: true
+    times: false

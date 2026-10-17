@@ -19,6 +19,7 @@ services:
   django:
     container_name: flownexus-django
     image: localhost/flownexus-django:latest
+    command: ["migrate", "web"]
     stop_grace_period: 5s
     build:
       context: ..
@@ -53,6 +54,28 @@ services:
     depends_on:
       - redis
       - leshan
+
+  celery:
+    container_name: flownexus-celery
+    image: localhost/flownexus-django:latest
+    command: ["worker"]
+    stop_grace_period: 5s
+    volumes:
+      - ${DJANGO_DB_HOST_PATH:-./data}:/data:rw,z
+      - ${FIRMWARE_STORAGE_HOST_PATH:-./firmware}:/var/www/flownexus/binaries:rw,z
+    networks:
+      - flownexus-network
+    environment:
+      - LESHAN_URI=http://leshan:8080
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - C_FORCE_ROOT=true
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - DJANGO_DB_PATH=/data/db.sqlite3
+      - MEDIA_ROOT=/var/www/flownexus/binaries
+    restart: unless-stopped
+    depends_on:
+      - django
 
   redis:
     container_name: flownexus-redis

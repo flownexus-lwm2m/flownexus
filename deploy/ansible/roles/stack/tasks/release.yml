@@ -1,0 +1,113 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Stop the services that write the database
+  ansible.builtin.systemd_service:
+    name: flownexus-{{ item }}
+    scope: user
+    state: stopped
+  loop: [celery, django]
+
+- name: Check the database
+  ansible.builtin.stat:
+    path: "{{ flownexus_data_dir }}/db.sqlite3"
+  register: stack_db
+
+- name: Check the database of the git-checkout deployment
+  ansible.builtin.stat:
+    path: "{{ flownexus_legacy_data_dir }}/db.sqlite3"
+  register: stack_legacy_db
+
+- name: Copy the database of the git-checkout deployment
+  when: stack_legacy_db.stat.exists and not stack_db.stat.exists
+  ansible.builtin.command:
+    argv:
+      - sqlite3
+      - "{{ flownexus_legacy_data_dir }}/db.sqlite3"
+      - .backup '{{ flownexus_data_dir }}/db.sqlite3'
+  changed_when: true
+
+- name: Back up the database
+  when: stack_db.stat.exists or stack_legacy_db.stat.exists
+  ansible.builtin.command:
+    argv:
+      - sqlite3
+      - "{{ flownexus_data_dir }}/db.sqlite3"
+      - .backup '{{ flownexus_backup_dir }}/db_{{ ansible_facts.date_time.iso8601_basic_short }}_{{ flownexus_image_tag }}.sqlite3'
+  changed_when: true
+
+- name: Find database backups
+  ansible.builtin.find:
+    paths: "{{ flownexus_backup_dir }}"
+    patterns: db_*.sqlite3
+  register: stack_backups
+
+- name: Remove old database backups
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ (stack_backups.files | sort(attribute='mtime', reverse=true))[flownexus_backup_keep:] }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Migrate the database
+  ansible.builtin.command:
+    argv:
+      - podman
+      - run
+      - --rm
+      - --name=flownexus-migrate
+      - --volume={{ flownexus_data_dir }}:/data:z
+      - --env-file={{ flownexus_config_dir }}/django.env
+      - --env-file={{ flownexus_config_dir }}/env
+      - "{{ stack_images.django }}"
+      - migrate
+  register: stack_migrate
+  changed_when: "'No migrations to apply' not in stack_migrate.stdout"
+
+- name: Start the services
+  ansible.builtin.systemd_service:
+    name: flownexus-{{ item }}
+    scope: user
+    state: restarted
+  loop: "{{ flownexus_units }}"
+
+- name: Wait for Django
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8000/admin/login/
+  register: stack_health
+  until: stack_health.status == 200
+  retries: 30
+  delay: 5
+
+- name: Wait for the Celery worker
+  ansible.builtin.command: podman exec flownexus-django celery -A core inspect ping --timeout=5
+  register: stack_celery_ping
+  until: "'pong' in stack_celery_ping.stdout"
+  retries: 12
+  delay: 5
+  changed_when: false
+
+- name: Record the release
+  ansible.builtin.copy:
+    dest: "{{ flownexus_state_dir }}/release.json"
+    content: "{{ {'revision': flownexus_revision, 'tag': flownexus_image_tag, 'images': stack_images,
+      'deployed': ansible_facts.date_time.iso8601} | to_nice_json }}\n"
+    mode: "0644"
+
+- name: Append to the release log
+  ansible.builtin.lineinfile:
+    path: "{{ flownexus_state_dir }}/releases.log"
+    line: "{{ ansible_facts.date_time.iso8601 }} {{ flownexus_image_tag }} {{ stack_images | dictsort | map('last') | join(' ') }}"
+    create: true
+    mode: "0644"
+
+- name: Remove images older than two weeks
+  ansible.builtin.command: podman image prune --all --force --filter until=336h
+  register: stack_prune
+  changed_when: stack_prune.stdout | length > 0
+
+- name: Show the deployed images
+  ansible.builtin.debug:
+    var: stack_images

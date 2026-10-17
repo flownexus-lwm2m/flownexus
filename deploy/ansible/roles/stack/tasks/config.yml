@@ -1,0 +1,46 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Create configuration directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ flownexus_config_dir }}"
+    - "{{ flownexus_state_dir }}"
+    - "{{ flownexus_home }}/.config/containers/systemd"
+
+# Without a configured key, the first deployment generates one and keeps it.
+- name: Write the Django secret key
+  ansible.builtin.copy:
+    dest: "{{ flownexus_config_dir }}/env"
+    content: >
+      DJANGO_SECRET_KEY={{ flownexus_django_secret_key
+      or lookup('ansible.builtin.password', '/dev/null', length=64, chars=['ascii_letters', 'digits']) }}
+    force: "{{ flownexus_django_secret_key | length > 0 }}"
+    mode: "0600"
+  no_log: true
+
+- name: Write the Django settings
+  ansible.builtin.template:
+    src: django.env.j2
+    dest: "{{ flownexus_config_dir }}/django.env"
+    mode: "0600"
+
+- name: Install the quadlets
+  ansible.builtin.template:
+    src: flownexus-{{ item }}.container.j2
+    dest: "{{ flownexus_home }}/.config/containers/systemd/flownexus-{{ item }}.container"
+    mode: "0644"
+  loop: "{{ flownexus_units }}"
+
+- name: Create the container network
+  containers.podman.podman_network:
+    name: podman-flownexus-network
+
+- name: Generate the service units
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user

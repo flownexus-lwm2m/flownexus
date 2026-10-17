@@ -1,0 +1,19 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Deploy flownexus
+  hosts: flownexus
+  any_errors_fatal: true
+
+  roles:
+    - role: flownexus
+      tags: [always]
+    - role: host
+      tags: [host]
+    - role: nginx
+      tags: [nginx]
+    - role: static
+      tags: [static]
+    - role: stack
+      tags: [stack]

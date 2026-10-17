@@ -49,16 +49,17 @@ data="flownexus-data-$id"
 redis="flownexus-redis-$id"
 leshan="flownexus-leshan-$id"
 django="flownexus-django-$id"
+celery="flownexus-celery-$id"
 
 cleanup() {
     status=$?
     if [ "$status" -ne 0 ]; then
-        for container in "$redis" "$leshan" "$django"; do
+        for container in "$redis" "$leshan" "$django" "$celery"; do
             printf '%s\n' "----- $container logs -----" >&2
             "$runtime" logs "$container" >&2 2>&1 || true
         done
     fi
-    "$runtime" rm -f "$django" "$leshan" "$redis" > /dev/null 2>&1 || true
+    "$runtime" rm -f "$celery" "$django" "$leshan" "$redis" > /dev/null 2>&1 || true
     "$runtime" network rm "$network" > /dev/null 2>&1 || true
     "$runtime" volume rm "$data" > /dev/null 2>&1 || true
     exit "$status"
@@ -94,7 +95,7 @@ django_run() {
         "$django_image" "$@" > /dev/null
 }
 
-django_run "$django"
+django_run "$django" migrate web
 
 printf '%s\n' "Waiting for Django..."
 elapsed=0
@@ -115,6 +116,7 @@ printf '%s\n' "Checking static files..."
 django_get http://127.0.0.1:8000/static/img/flownexus_logo_dark.svg
 
 printf '%s\n' "Checking Celery through Redis..."
+django_run "$celery" worker
 elapsed=0
 until "$runtime" exec "$django" celery -A core inspect ping --timeout=2 2> /dev/null | grep -q pong; do
     elapsed=$((elapsed + 2))
@@ -127,5 +129,12 @@ done
 
 printf '%s\n' "Checking Leshan from Django..."
 django_get "http://$leshan:8080/health"
+
+printf '%s\n' "Checking that migrate keeps an existing admin password..."
+"$runtime" exec "$django" python manage.py shell -c \
+    "from django.contrib.auth.models import User; u = User.objects.get(username='admin'); u.set_password('smoke-changed'); u.save()"
+"$runtime" exec "$django" /django/django_start.sh migrate > /dev/null
+"$runtime" exec "$django" python manage.py shell -c \
+    "from django.contrib.auth.models import User; assert User.objects.get(username='admin').check_password('smoke-changed')"
 
 printf '%s\n' "Image smoke test passed"

@@ -1,0 +1,43 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Pull and resolve the images
+  block:
+    - name: Log in to the image registry
+      when: flownexus_registry_password | length > 0
+      containers.podman.podman_login:
+        registry: "{{ flownexus_image_prefix.split('/') | first }}"
+        username: "{{ flownexus_registry_username }}"
+        password: "{{ flownexus_registry_password }}"
+      no_log: true
+
+    - name: Pull the images
+      containers.podman.podman_image:
+        name: "{{ flownexus_image_prefix }}-{{ item }}"
+        tag: "{{ flownexus_image_tag }}"
+      loop: "{{ flownexus_services }}"
+
+    - name: Inspect the images
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ flownexus_image_prefix }}-{{ item }}:{{ flownexus_image_tag }}"]
+      loop: "{{ flownexus_services }}"
+      register: stack_image_inspect
+      changed_when: false
+
+  always:
+    - name: Log out of the image registry
+      when: flownexus_registry_password | length > 0
+      containers.podman.podman_logout:
+        registry: "{{ flownexus_image_prefix.split('/') | first }}"
+      failed_when: false
+
+# Quadlets reference digests, so a moved tag cannot change a running release.
+- name: Pin the images by digest
+  ansible.builtin.set_fact:
+    stack_images: >-
+      {{ stack_images | default({}) | combine({item.item: flownexus_image_prefix ~ '-' ~ item.item
+         ~ '@' ~ (item.stdout | from_json | first).Digest}) }}
+  loop: "{{ stack_image_inspect.results }}"
+  loop_control:
+    label: "{{ item.item }}"

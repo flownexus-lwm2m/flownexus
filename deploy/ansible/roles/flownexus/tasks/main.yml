@@ -1,0 +1,15 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Check required variables
+  ansible.builtin.assert:
+    that:
+      - flownexus_dashboard_host | length > 0
+      - flownexus_fw_host | length > 0
+      - flownexus_image_prefix | length > 0
+      - flownexus_image_tag | length > 0
+    fail_msg: >-
+      Set flownexus_dashboard_host, flownexus_fw_host, flownexus_image_prefix
+      and flownexus_image_tag
+    quiet: true

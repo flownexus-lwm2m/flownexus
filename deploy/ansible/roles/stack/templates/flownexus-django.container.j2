@@ -1,0 +1,33 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+{{ ansible_managed | comment }}
+[Unit]
+Description=flownexus Django web application
+After=flownexus-redis.service flownexus-leshan.service network-online.target
+Requires=flownexus-redis.service flownexus-leshan.service
+
+[Container]
+ContainerName=flownexus-django
+Image={{ stack_images.django }}
+Exec=web
+Network=podman-flownexus-network
+PublishPort=127.0.0.1:8000:8000
+Volume={{ flownexus_data_dir }}:/data:z
+Volume={{ flownexus_web_root }}/binaries:/var/www/flownexus/binaries:z
+EnvironmentFile={{ flownexus_config_dir }}/django.env
+EnvironmentFile={{ flownexus_config_dir }}/env
+HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/admin/login/', timeout=5)"
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

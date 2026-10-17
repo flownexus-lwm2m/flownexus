@@ -3,17 +3,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Flownexus Leshan LwM2M Server
-# Rootless Quadlet container definition
-#
-
+{{ ansible_managed | comment }}
 [Unit]
-Description=Flownexus Leshan LwM2M Server
+Description=flownexus Leshan LwM2M server
 After=network-online.target
 
 [Container]
 ContainerName=flownexus-leshan
-Image=localhost/flownexus-leshan:latest
+Image={{ stack_images.leshan }}
 Network=podman-flownexus-network
 PublishPort=0.0.0.0:5683:5683/udp
 PublishPort=127.0.0.1:8080:8080

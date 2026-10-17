@@ -1,0 +1,16 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Deploy the container stack
+  environment:
+    XDG_RUNTIME_DIR: /run/user/{{ ansible_facts.user_uid }}
+  block:
+    - name: Pull the images
+      ansible.builtin.import_tasks: images.yml
+
+    - name: Install the configuration
+      ansible.builtin.import_tasks: config.yml
+
+    - name: Migrate and restart
+      ansible.builtin.import_tasks: release.yml

@@ -43,5 +43,5 @@ RUN python manage.py collectstatic --noinput
 # Give execution rights on the start-up script
 RUN chmod +x /django/django_start.sh
 
-# Configure the container to run in an executed manner
 ENTRYPOINT ["/django/django_start.sh"]
+CMD ["web"]

@@ -1,0 +1,21 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Renders the nginx site with the deployment variables; used by tests/nginx-test.
+
+- name: Render the nginx site
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../roles/flownexus/defaults/main.yml
+  vars:
+    flownexus_image_prefix: unused
+    flownexus_image_tag: unused
+  tasks:
+    - name: Render the template
+      ansible.builtin.template:
+        src: ../roles/nginx/templates/flownexus.conf.j2
+        dest: "{{ output }}"
+        mode: "0644"
