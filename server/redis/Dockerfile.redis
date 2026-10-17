@@ -1,17 +1,12 @@
-# Use the latest stable Redis alpine image
-FROM docker.io/library/redis:8.4-alpine
+FROM docker.io/library/redis:8.4-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
 
-# Update and upgrade packages for security patches
-RUN apk update && apk upgrade
+ARG REVISION=unknown
+LABEL org.opencontainers.image.title="flownexus-redis" \
+      org.opencontainers.image.description="flownexus Celery broker" \
+      org.opencontainers.image.source="https://github.com/flownexus-lwm2m/flownexus" \
+      org.opencontainers.image.revision="${REVISION}"
 
-# Create and set the working directory in the container
-WORKDIR /redis
+COPY redis.conf /usr/local/etc/redis/redis.conf
 
-# Copy the configuration and scripts to the container
-COPY . /redis/
-
-# Give execution rights on the start-up script
-RUN chmod +x /redis/redis_start.sh
-
-# Entry point for the container
-ENTRYPOINT ["/redis/redis_start.sh"]
+# The base entrypoint drops to the redis user for redis-server
+CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]

@@ -71,8 +71,9 @@ of the server.
 
 The following diagram shows the Container Environment. The file
 ``compose.yml`` defines the services and their configuration. The file
-``leshan/Containerfile`` defines the Leshan container and the file
-``Dockerfile.django`` defines the Django container.
+``leshan/Containerfile`` defines the Leshan container, ``Dockerfile.django``
+the Django container and ``Dockerfile.redis`` the Redis container. Compose runs
+the images without source mounts, as in production.
 
 The container can be built and started with the following commands:
 
@@ -80,6 +81,10 @@ The container can be built and started with the following commands:
 
   host:~/workspace/flownexus$ make server-build
   host:~/workspace/flownexus$ podman-compose -f server/compose.yml up
+
+``make image-smoke-test`` starts the three images on a private network and
+checks the admin login, static files, Celery through Redis, and the Leshan
+health route from Django. CI runs the same test before it publishes the images.
 
 
 .. _setup-a-virtual-server-label:

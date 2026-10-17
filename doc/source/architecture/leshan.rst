@@ -20,11 +20,13 @@ The gateway listens on CoAP port 5683/udp and on HTTP port 8080. These ports
 are not configurable. ``GET /health`` returns 200 when the web server runs and
 does not read the registration store.
 
-CI publishes the image as ``ghcr.io/flownexus-lwm2m/flownexus-leshan`` on each
-push to ``main`` and each ``v*`` tag, after the E2E suite passes. The tags are
-``sha-<short sha>`` and the ``git describe --tags`` output. GHCR creates a new
-organization package as private, so a maintainer must set the package
-visibility to public once after the first push.
+CI publishes the image as ``ghcr.io/<owner>/flownexus-leshan`` on each push to
+``main`` and each ``v*`` tag, after the E2E suite passes. ``<owner>`` is the
+lowercase GitHub repository owner. The tags are ``sha-<short sha>`` and the
+``git describe --tags`` output. GHCR creates a new organization package as
+private. The deploy workflow pulls with its own token; to pull without a login,
+a maintainer must set the package visibility to public once after the first
+push.
 
 Leshans Role in flownexus
 -------------------------

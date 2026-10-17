@@ -26,16 +26,10 @@ services:
       args:
         APP_VERSION: ${APP_VERSION:-dev}
     volumes:
-      # Django code (read-write, private SELinux context) - needs rw for .venv mount
-      - ./django:/django:rw,Z
       # Persistent SQLite database storage
-      - ${DJANGO_DB_HOST_PATH:-./data}:/data:rw,Z
-      # Logs directory (writable, shared context)
-      - ./logs:/django/logs:rw,z
+      - ${DJANGO_DB_HOST_PATH:-./data}:/data:rw,z
       # Firmware binaries for upload and download
       - ${FIRMWARE_STORAGE_HOST_PATH:-./firmware}:/var/www/flownexus/binaries:rw,z
-      # Named volume to shadow host's .venv with container's built venv
-      - django-venv:/django/.venv
     # Only bind to localhost - nginx will reverse proxy
     ports:
       - "127.0.0.1:8000:8000"
@@ -67,10 +61,6 @@ services:
     build:
       context: ./redis
       dockerfile: Dockerfile.redis
-    volumes:
-      # Redis data (private SELinux context)
-      - ./redis:/redis:rw,Z
-      - ./logs:/redis/logs:rw,z
     # Only bind to localhost - not exposed externally
     ports:
       - "127.0.0.1:6379:6379"
@@ -118,8 +108,3 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
-
-# Named volumes
-volumes:
-  # Django virtual environment to shadow host's .venv
-  django-venv:

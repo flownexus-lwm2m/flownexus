@@ -6,6 +6,9 @@
 	test-sim \
 	test-e2e \
 	leshan-image \
+	django-image \
+	redis-image \
+	image-smoke-test \
 	run-mock \
 	run-mock-multi-site \
 	compliance \
@@ -53,6 +56,23 @@ leshan-image:
 		-t localhost/flownexus-leshan:latest \
 		-f server/leshan/Containerfile server/leshan
 
+# Build the Django image (application and Celery worker)
+django-image:
+	podman build --build-arg APP_VERSION=$$(git describe --always --dirty --tags) \
+		--build-arg REVISION=$$(git rev-parse HEAD) \
+		-t localhost/flownexus-django:latest \
+		-f server/django/Dockerfile.django .
+
+# Build the Redis image
+redis-image:
+	podman build --build-arg REVISION=$$(git rev-parse HEAD) \
+		-t localhost/flownexus-redis:latest \
+		-f server/redis/Dockerfile.redis server/redis
+
+# Run the Redis, Leshan and Django images together and check basic function
+image-smoke-test:
+	devtools/image-smoke-test
+
 # Run End-to-End tests (Requires Podman or Docker, plus a native_sim binary)
 test-e2e: build-sim
 	FLOWNEXUS_RUN_E2E=1 PYTHONPATH=.:server/django \
@@ -95,11 +115,10 @@ server-build:
 	@APP_VERSION=$$(git describe --always --dirty --tags) podman-compose -f server/compose.yml build
 
 # Run server stack in foreground with persistent data (Ctrl+C to stop)
-# Uses --build to rebuild images and -v to remove named volumes (e.g. django-venv)
-# so that dependency changes in uv.lock are always picked up.
+# Uses --build to rebuild images from the current source.
 server-run:
 	@echo "Starting flownexus server stack..."
-	@podman-compose -f server/compose.yml down -v 2>/dev/null || true
+	@podman-compose -f server/compose.yml down 2>/dev/null || true
 	@trap 'echo "Shutting down containers..."; podman-compose -f server/compose.yml down; exit 0' INT TERM; \
 	APP_VERSION=$$(git describe --always --dirty --tags 2>/dev/null || echo "dev") \
 		DJANGO_DB_HOST_PATH=$$(pwd)/server/data \

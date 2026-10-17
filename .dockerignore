@@ -33,7 +33,7 @@
 # Django
 **/static_collect/
 **/media/
-**/db.sqlite3
+**/*.sqlite3
 
 # Environment
 **/.env

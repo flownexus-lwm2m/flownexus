@@ -1,0 +1,131 @@
+#!/bin/sh
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+set -eu
+
+usage() {
+    cat <<'EOF'
+Usage: image-smoke-test
+
+Start the Redis, Leshan and Django images on a private network and check
+that they work together as in production.
+
+Environment:
+  CONTAINER_RUNTIME  podman or docker (default: podman if it works, else docker)
+  DJANGO_IMAGE       (default: localhost/flownexus-django:latest)
+  REDIS_IMAGE        (default: localhost/flownexus-redis:latest)
+  LESHAN_IMAGE       (default: localhost/flownexus-leshan:latest)
+  SMOKE_TIMEOUT      Seconds to wait for Django (default: 120)
+EOF
+}
+
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+    "") ;;
+    *) usage >&2; exit 2 ;;
+esac
+
+runtime="${CONTAINER_RUNTIME:-}"
+if [ -z "$runtime" ]; then
+    if podman info > /dev/null 2>&1; then
+        runtime=podman
+    else
+        runtime=docker
+    fi
+fi
+
+django_image="${DJANGO_IMAGE:-localhost/flownexus-django:latest}"
+redis_image="${REDIS_IMAGE:-localhost/flownexus-redis:latest}"
+leshan_image="${LESHAN_IMAGE:-localhost/flownexus-leshan:latest}"
+timeout="${SMOKE_TIMEOUT:-120}"
+
+id="smoke-$$"
+network="flownexus-$id"
+data="flownexus-data-$id"
+redis="flownexus-redis-$id"
+leshan="flownexus-leshan-$id"
+django="flownexus-django-$id"
+
+cleanup() {
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        for container in "$redis" "$leshan" "$django"; do
+            printf '%s\n' "----- $container logs -----" >&2
+            "$runtime" logs "$container" >&2 2>&1 || true
+        done
+    fi
+    "$runtime" rm -f "$django" "$leshan" "$redis" > /dev/null 2>&1 || true
+    "$runtime" network rm "$network" > /dev/null 2>&1 || true
+    "$runtime" volume rm "$data" > /dev/null 2>&1 || true
+    exit "$status"
+}
+trap cleanup EXIT INT TERM
+
+django_get() {
+    "$runtime" exec "$django" python -c \
+        "import sys, urllib.request; urllib.request.urlopen(sys.argv[1], timeout=5)" "$1"
+}
+
+"$runtime" network create "$network" > /dev/null
+"$runtime" volume create "$data" > /dev/null
+
+"$runtime" run -d --name "$redis" --network "$network" "$redis_image" > /dev/null
+"$runtime" run -d --name "$leshan" --network "$network" \
+    -e DATA_SENDER_URI="http://$django:8000" "$leshan_image" > /dev/null
+django_run() {
+    name="$1"
+    shift
+    "$runtime" run -d --name "$name" --network "$network" \
+        -v "$data:/data" --tmpfs /var/www/flownexus/binaries \
+        -e LESHAN_URI="http://$leshan:8080" \
+        -e CELERY_BROKER_URL="redis://$redis:6379/0" \
+        -e CELERY_RESULT_BACKEND="redis://$redis:6379/0" \
+        -e C_FORCE_ROOT=true \
+        -e DJANGO_SETTINGS_MODULE=core.settings \
+        -e DJANGO_DB_PATH=/data/db.sqlite3 \
+        -e MEDIA_ROOT=/var/www/flownexus/binaries \
+        -e DJANGO_DEBUG=False \
+        -e DJANGO_SECRET_KEY=image-smoke-test \
+        -e DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1 \
+        "$django_image" "$@" > /dev/null
+}
+
+django_run "$django"
+
+printf '%s\n' "Waiting for Django..."
+elapsed=0
+until django_get http://127.0.0.1:8000/admin/login/ 2> /dev/null; do
+    if [ "$("$runtime" inspect -f '{{.State.Running}}' "$django")" != "true" ]; then
+        printf '%s\n' "Django container exited" >&2
+        exit 1
+    fi
+    elapsed=$((elapsed + 2))
+    if [ "$elapsed" -ge "$timeout" ]; then
+        printf '%s\n' "Timed out waiting for Django" >&2
+        exit 1
+    fi
+    sleep 2
+done
+
+printf '%s\n' "Checking static files..."
+django_get http://127.0.0.1:8000/static/img/flownexus_logo_dark.svg
+
+printf '%s\n' "Checking Celery through Redis..."
+elapsed=0
+until "$runtime" exec "$django" celery -A core inspect ping --timeout=2 2> /dev/null | grep -q pong; do
+    elapsed=$((elapsed + 2))
+    if [ "$elapsed" -ge "$timeout" ]; then
+        printf '%s\n' "Timed out waiting for the Celery worker" >&2
+        exit 1
+    fi
+    sleep 2
+done
+
+printf '%s\n' "Checking Leshan from Django..."
+django_get "http://$leshan:8080/health"
+
+printf '%s\n' "Image smoke test passed"
