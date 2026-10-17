@@ -1,4 +1,4 @@
-name: End-to-End CI
+name: Zephyr E2E CI
 
 on:
   push:
@@ -6,20 +6,129 @@ on:
   pull_request:
     branches: main
 
+permissions:
+  contents: read
+
 jobs:
-  e2e-test:
+  harness-tests:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       with:
         enable-cache: true
 
-    - name: Install system tools
-      run: |
-        pip install podman-compose west
+    - name: Run fast E2E harness tests
+      env:
+        DJANGO_SETTINGS_MODULE: core.settings_test
+        PYTHONPATH: .:server/django
+      run: uv run --extra test pytest --pyargs devtools.zephyr.e2e.test_harness -n 0
 
-    - name: Run E2E Tests
-      run: make test-e2e || echo "Skipping full E2E as Zephyr build is local-only for now"
+  build-sim:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci-base:v0.29.3
+    env:
+      ZEPHYR_TOOLCHAIN_VARIANT: host
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+      with:
+        path: flownexus
+        persist-credentials: false
+
+    - name: Initialize west
+      working-directory: flownexus
+      run: |
+        git config --global --add safe.directory "${GITHUB_WORKSPACE}/flownexus"
+        west init -l .
+        west update --narrow -o=--depth=1
+        west zephyr-export
+
+    - name: Install Zephyr Python dependencies
+      run: |
+        pip install -r zephyr/scripts/requirements-base.txt \
+          -r zephyr/scripts/requirements-build-test.txt \
+          -r zephyr/scripts/requirements-run-test.txt
+
+    - name: Run checkpatch
+      working-directory: flownexus
+      run: make checkpatch
+
+    - name: Build native_sim
+      working-directory: flownexus
+      run: |
+        west build -b native_sim/native/64 \
+          devtools/zephyr/client \
+          -d devtools/zephyr/client/build
+
+    - name: Run twister shell test and overlay builds
+      working-directory: flownexus
+      run: |
+        west twister -T devtools/zephyr/client -p native_sim/native/64 \
+          -O twister-out --inline-logs
+
+    - name: Upload native_sim binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: zephyr-native-sim
+        path: flownexus/devtools/zephyr/client/build/zephyr/zephyr.exe
+        if-no-files-found: error
+
+  e2e-stack:
+    needs: build-sim
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 21
+        cache: maven
+
+    - name: Build Leshan JAR
+      run: mvn -f server/leshan/pom.xml -q -DskipTests package
+
+    - name: Build Leshan image
+      run: |
+        docker build -t localhost/flownexus-leshan:latest \
+          -f server/leshan/Dockerfile.leshan server/leshan
+
+    - name: Download native_sim binary
+      uses: actions/download-artifact@v4
+      with:
+        name: zephyr-native-sim
+        path: ${{ github.workspace }}/zephyr-bin
+
+    - name: Run full-stack E2E
+      env:
+        FLOWNEXUS_RUN_E2E: "1"
+        FLOWNEXUS_ZEPHYR_BINARY: ${{ github.workspace }}/zephyr-bin/zephyr.exe
+        FLOWNEXUS_E2E_ARTIFACT_ROOT: ${{ github.workspace }}/e2e-artifacts
+        PYTHONPATH: .:server/django
+      run: |
+        chmod +x "${FLOWNEXUS_ZEPHYR_BINARY}"
+        uv run --extra test pytest --pyargs devtools.zephyr.e2e \
+          -n 0 --override-ini addopts=""
+
+    - name: Upload E2E artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-artifacts
+        path: ${{ github.workspace }}/e2e-artifacts
+        if-no-files-found: ignore
