@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Jonas Remmert
+/* Copyright (c) 2026 Jonas Remmert
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -63,6 +63,11 @@ public class IngestForwarder implements RegistrationListener, SendListener {
     @Override
     public void unregistered(Registration registration, Collection<Observation> observations,
                              boolean expired, Registration newReg) {
+        // A new registration replaces this one (reboot); registered() follows. Posting
+        // both concurrently could leave Django with the stale "unregistered" last.
+        if (newReg != null) {
+            return;
+        }
         log.trace("Unregistered: {} (expired: {})", registration.getEndpoint(), expired);
         registrationEvent(registration.getEndpoint(), "unregistered", Instant.now());
     }
