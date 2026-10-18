@@ -12,7 +12,9 @@ import time
 from pathlib import Path
 
 import pytest
+import requests
 
+from . import contract
 from .harness import (
     HarnessError,
     ProcessSupervisor,
@@ -127,3 +129,42 @@ def test_shell_fails_when_process_dies(tmp_path: Path) -> None:
     with pytest.raises(HarnessError, match="exited"):
         device.logs.wait_for("never", timeout=1)
     supervisor.stop_all()
+
+
+def test_contract_normalizes_volatile_values() -> None:
+    body = {
+        "ep": "urn:imei:e2e-1",
+        "val": [
+            {"2026-10-18T17:40:24Z": {"nodes": {"/3/0/13": {"type": "TIME", "value": 17}}}},
+            {"null": {"nodes": {"/3303/0/5700": {"type": "FLOAT", "value": "21.5"}}}},
+        ],
+    }
+
+    assert contract.normalize(body, "urn:imei:e2e-1") == {
+        "ep": "<endpoint>",
+        "val": [
+            {"<timestamp>": {"nodes": {"/3/0/13": {"type": "TIME", "value": "<time>"}}}},
+            {"null": {"nodes": {"/3303/0/5700": {"type": "FLOAT", "value": "21.5"}}}},
+        ],
+    }
+
+
+def test_recording_sink_records_requests_per_endpoint() -> None:
+    sink = contract.RecordingSink(host="127.0.0.1", status=503)
+    try:
+        url = f"http://127.0.0.1:{sink.port}/flownexus/ingest/registration"
+        assert requests.post(url, json={"ep": "a", "event": "registered"}).status_code == 503
+        requests.post(url, json={"ep": "b"})
+
+        recorded = sink.wait_settled("a", known=0, timeout=1, quiet=0.05)
+        assert [r.normalized("a") for r in recorded] == [
+            {
+                "method": "POST",
+                "path": "/flownexus/ingest/registration",
+                "body": {"ep": "<endpoint>", "event": "registered"},
+            }
+        ]
+        with pytest.raises(TimeoutError):
+            sink.wait_settled("a", known=1, timeout=0.05)
+    finally:
+        sink.close()

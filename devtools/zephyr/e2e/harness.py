@@ -328,6 +328,7 @@ def start_zephyr(
     binary: Path,
     arguments: Iterable[str] = (),
     environment: dict[str, str] | None = None,
+    name: str = "zephyr",
 ) -> ZephyrDevice:
     """Launch one native_sim binary and attach to its shell terminal."""
 
@@ -337,7 +338,7 @@ def start_zephyr(
     if environment:
         env.update(environment)
     process = supervisor.start(
-        "zephyr",
+        name,
         [str(binary), *(arg for arg in arguments if arg)],
         cwd=binary.parent,
         env=env,
@@ -374,6 +375,18 @@ class ShellContract:
     @staticmethod
     def update() -> str:
         return "lwm2m update"
+
+    @staticmethod
+    def stop() -> str:
+        return "lwm2m stop"
+
+    @staticmethod
+    def write_string(path: str, value: str) -> str:
+        return f"lwm2m write {path} -s {value}"
+
+    @staticmethod
+    def fota_state(state: int) -> str:
+        return f"flownexus fota state {state}"
 
 
 @dataclass
@@ -441,6 +454,23 @@ class DjangoApi:
             json={"resource": resource_id, "operation_type": operation_type},
             timeout=2,
         )
+        response.raise_for_status()
+        return response.json()
+
+    def create_firmware_update(self, version: str, binary: bytes) -> dict:
+        response = requests.post(
+            f"{self.base_url}/endpoints/{self.endpoint}/firmware/",
+            data={"version": version},
+            files={"binary": (f"{version}.bin", binary)},
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def firmware_updates(self) -> list[dict]:
+        response = requests.get(f"{self.base_url}/endpoints/{self.endpoint}/firmware/", timeout=2)
+        if response.status_code == 404:
+            return []
         response.raise_for_status()
         return response.json()
 
