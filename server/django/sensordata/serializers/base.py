@@ -61,11 +61,10 @@ class HandleResourceMixin:
             return
 
         res_id = res["id"]
-        # Fetch resource information from Database
-        res_type = ResourceType.objects.get(object_id=obj_id, resource_id=res_id)
-        if not res_type:
-            err = f"Resource type {obj_id}/{res_id} not found"
-            raise serializers.ValidationError(err)
+        res_type = ResourceType.objects.filter(object_id=obj_id, resource_id=res_id).first()
+        if res_type is None:
+            logger.warning(f"Skipping {ep}: no ResourceType {obj_id}/{res_id}")
+            return
 
         # Validate that datatype is matching the resource type
         data_type = dict(ResourceType.TYPE_CHOICES).get(res["type"])
