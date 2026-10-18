@@ -47,6 +47,15 @@ To add a scenario, use the ``e2e_context`` fixture, drive the device with
 ``device.shell.command()`` and check the result with ``DjangoApi`` or
 ``device.logs.wait_for()``.
 
+``test_contract.py`` is the producer check of the gateway contract. It runs
+only the Leshan image, points ``DATA_SENDER_URI`` at a recording sink, and
+compares the recorded requests with the golden files in ``contract/gateway``.
+See ``contract/gateway/README.rst``.
+
+``test_write_rejected_by_device_fails_operation`` writes the read-only
+``3/0/0``. It is an expected failure until the gateway reports device errors
+to Django (plan P-008).
+
 Device I/O
 ----------
 
@@ -72,6 +81,23 @@ queues a write operation and triggers a registration update, because Django
 sends queued operations on registration update. The test then waits for the
 device log ``write 3/0/14=<value>`` and for the operation status
 ``CONFIRMED``.
+
+The FOTA scenario uploads a firmware for the endpoint, which queues a write
+of Firmware Update ``5/0/1`` (Package URI). The client only logs the URI and
+does not download it. The test sets the update state with ``flownexus fota
+state <n>``, which sends ``5/0/3`` to the server. On state ``DOWNLOADED``
+Django executes ``5/0/2``, and the client sends state ``UPDATING``. The test
+then simulates a reboot into the new image: it writes the version to
+``3/0/3``, stops the client, and starts it again. Leshan reads ``/3`` on the
+new registration, so Django compares the version and sets the result
+``SUCCESS``::
+
+    flownexus fota state 1
+    lwm2m write /3/0/3 -s 2.0.0-<run-id>
+    lwm2m stop
+
+``flownexus fota result <n>`` sends ``5/0/3`` and ``5/0/5`` to report a
+failed update.
 
 Fixture evaluation
 ------------------

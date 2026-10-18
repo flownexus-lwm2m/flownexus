@@ -1,0 +1,38 @@
+{
+  "scenario": "send_single_resource",
+  "description": "LwM2M Send of one resource.",
+  "setup": [
+    "flownexus start <endpoint> <server>"
+  ],
+  "steps": [
+    {
+      "device": [
+        "lwm2m write /3303/0/5700 -f 21.5",
+        "lwm2m send /3303/0/5700"
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/flownexus/ingest/resource/timestamped",
+          "body": {
+            "ep": "<endpoint>",
+            "val": [
+              {
+                "null": {
+                  "nodes": {
+                    "/3303/0/5700": {
+                      "kind": "singleResource",
+                      "id": 5700,
+                      "type": "FLOAT",
+                      "value": "21.5"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "scenario": "send_multiple_resources",
+  "description": "LwM2M Send of resources from two objects.",
+  "setup": [
+    "flownexus start <endpoint> <server>"
+  ],
+  "steps": [
+    {
+      "device": [
+        "lwm2m write /3303/0/5700 -f 17.25",
+        "lwm2m write /3304/0/5700 -f 45.5",
+        "lwm2m send /3303/0/5700 /3304/0/5700"
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/flownexus/ingest/resource/timestamped",
+          "body": {
+            "ep": "<endpoint>",
+            "val": [
+              {
+                "null": {
+                  "nodes": {
+                    "/3303/0/5700": {
+                      "kind": "singleResource",
+                      "id": 5700,
+                      "type": "FLOAT",
+                      "value": "17.25"
+                    },
+                    "/3304/0/5700": {
+                      "kind": "singleResource",
+                      "id": 5700,
+                      "type": "FLOAT",
+                      "value": "45.5"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

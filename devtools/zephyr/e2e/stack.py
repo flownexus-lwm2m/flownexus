@@ -134,6 +134,17 @@ class LocalStack:
             self.stop()
             raise
 
+    def start_gateway(self, data_sender_port: int) -> None:
+        """Start only the Leshan image, posting ingest requests to a host port."""
+
+        try:
+            self._runtime, image = self._select_runtime()
+            self.config.artifact_dir.mkdir(parents=True, exist_ok=True)
+            self._start_leshan(image, data_sender_port)
+        except BaseException:
+            self.stop()
+            raise
+
     def _start(self) -> None:
         """Initialize and start all services, failing on the first bad owner."""
 
@@ -141,7 +152,6 @@ class LocalStack:
         self._runtime, leshan_image = self._select_runtime()
         self.config.artifact_dir.mkdir(parents=True, exist_ok=True)
         self.media_path.mkdir(parents=True, exist_ok=True)
-        add_host, host_alias = self._host_gateway()
 
         redis = self.supervisor.start(
             "redis",
@@ -217,7 +227,10 @@ class LocalStack:
         # A Celery worker does not expose HTTP readiness.  Its process must
         # stay alive through a short broker round trip before tests proceed.
         self._wait_celery(celery)
+        self._start_leshan(leshan_image, self.config.django_port)
 
+    def _start_leshan(self, image: str, data_sender_port: int) -> None:
+        add_host, host_alias = self._host_gateway()
         leshan = self.supervisor.start(
             "leshan",
             [
@@ -229,12 +242,12 @@ class LocalStack:
                 "--add-host",
                 add_host,
                 "-e",
-                f"DATA_SENDER_URI=http://{host_alias}:{self.config.django_port}",
+                f"DATA_SENDER_URI=http://{host_alias}:{data_sender_port}",
                 "-p",
                 f"127.0.0.1:{self.config.leshan_http_port}:8080",
                 "-p",
                 f"127.0.0.1:{self.config.leshan_coap_port}:5683/udp",
-                leshan_image,
+                image,
             ],
             cwd=self.config.root,
             env=self._env(),
