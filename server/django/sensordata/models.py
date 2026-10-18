@@ -234,6 +234,9 @@ class EndpointOperation(models.Model):
 
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     operation_type = models.CharField(max_length=100)  # e.g., 'send', 'update'
+    instance_id = models.PositiveIntegerField(
+        default=0, help_text="Object instance the operation targets"
+    )
     status = models.CharField(
         max_length=100,
         choices=Status.choices,

@@ -39,7 +39,8 @@ Placeholder        Replaces
 =================  ==========================================================
 ``<endpoint>``     The endpoint name of the test device.
 ``<time>``         The value of a resource of type ``TIME``.
-``<timestamp>``    An ISO 8601 timestamp key of a timestamped Send.
+``<timestamp>``    An ISO 8601 timestamp, as a value or as the key of a
+                   timestamped Send.
 =================  ==========================================================
 
 The Django tests substitute fixed values for the placeholders. To add a

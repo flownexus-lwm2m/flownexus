@@ -11,6 +11,5 @@
 		<appender-ref ref="CONSOLE"/>
 	</root>
 
-	<logger name="lwm2m.LeshanSvr" level="DEBUG"/>
-	<logger name="lwm2m.DataSenderRest" level="DEBUG"/>
+	<logger name="lwm2m" level="DEBUG"/>
 </configuration>

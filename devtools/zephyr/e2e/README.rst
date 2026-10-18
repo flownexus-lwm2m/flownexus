@@ -53,8 +53,7 @@ compares the recorded requests with the golden files in ``contract/gateway``.
 See ``contract/gateway/README.rst``.
 
 ``test_write_rejected_by_device_fails_operation`` writes the read-only
-``3/0/0``. It is an expected failure until the gateway reports device errors
-to Django (plan P-008).
+``3/0/0`` and expects the operation to end as ``FAILED``.
 
 Device I/O
 ----------

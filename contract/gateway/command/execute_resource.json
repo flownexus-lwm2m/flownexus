@@ -1,0 +1,24 @@
+{
+  "scenario": "execute_resource",
+  "description": "Execute of a resource without arguments.",
+  "setup": [
+    "flownexus start <endpoint> <server>"
+  ],
+  "steps": [
+    {
+      "device": [
+        "http POST /api/clients/<endpoint>/3/0/4?timeout=5&format=CBOR"
+      ],
+      "requests": [],
+      "responses": [
+        {
+          "status": 200,
+          "body": {
+            "status": "CHANGED",
+            "code": "2.04"
+          }
+        }
+      ]
+    }
+  ]
+}

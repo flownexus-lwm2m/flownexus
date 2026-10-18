@@ -104,22 +104,11 @@ class HandleResourceMixin:
             EventResource.objects.create(event=self.event, resource=created_res)
             logger.debug(f"Added Resource to event: {self.event.event_type}")
 
-        # Update the registration status if the resource is a registration resource
-        if res_type.name in ["ep_registered", "ep_registration_update"]:
-            ep.registered = True
-            ep.save()
-            process_pending_operations.delay(ep.endpoint)
-            return
-        elif res_type.name == "ep_unregistered":
-            ep.registered = False
-            ep.save()
-            return
-
         # Cond 1: Check for fota update after ep registration.
         # "Firmware Version - 3/0/3" Resource.
         #
         # Cond 2: Handle FOTA Update
-        elif (res_type.object_id == 3 and res_type.resource_id == 3) or res_type.object_id == 5:
+        if (res_type.object_id == 3 and res_type.resource_id == 3) or res_type.object_id == 5:
             self.handle_fota(ep, res_type, res["value"])
             return
 

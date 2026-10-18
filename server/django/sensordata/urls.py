@@ -9,6 +9,7 @@ from django.urls import path
 from . import views
 from .views import (
     PostCompositeResourceView,
+    PostRegistrationEventView,
     PostSingleResourceView,
     PostTimestampedResourceView,
     # ResourceDataView
@@ -39,6 +40,7 @@ urlpatterns = [
         views.EndpointOperationView.as_view(),
         name="endpoint-operations",
     ),
+    path("registration", PostRegistrationEventView.as_view(), name="post-registration-event"),
     path("resource/single", PostSingleResourceView.as_view(), name="post-single-resource"),
     path("resource/composite", PostCompositeResourceView.as_view(), name="post-composite-resource"),
     path(

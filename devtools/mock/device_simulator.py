@@ -11,6 +11,7 @@ import os
 import random
 import threading
 import time
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 import requests
@@ -18,7 +19,40 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+def device_object(endpoint):
+    """Device object (3) as the gateway returns it for a read of /3."""
+
+    def resource(rid, value):
+        return {"kind": "singleResource", "id": rid, "type": "STRING", "value": value}
+
+    imei = endpoint.rsplit(":", 1)[-1]
+    resources = [
+        resource(0, "Acme Corp"),
+        resource(1, "Mock Device"),
+        resource(2, imei),
+        resource(3, "v0.0.1"),
+    ]
+    return {
+        "kind": "obj",
+        "id": 3,
+        "instances": [{"kind": "instance", "id": 0, "resources": resources}],
+    }
+
+
 class MockLeshanHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        # Handle /api/clients/{ep}/3 (Django reads the Device object after registration)
+        path_parts = urlparse(self.path).path.strip("/").split("/")
+        if len(path_parts) == 4 and path_parts[:2] == ["api", "clients"] and path_parts[3] == "3":
+            body = {"status": "CONTENT", "code": "2.05", "content": device_object(path_parts[2])}
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(body).encode())
+            return
+        self.send_response(404)
+        self.end_headers()
+
     def do_PUT(self):
         # Handle /api/clients/{ep}/5/0/1 (Package URI)
         path = urlparse(self.path).path
@@ -120,35 +154,14 @@ class MockBackend:
 
     def _register_device(self, imei):
         urn = f"urn:imei:{imei}"
-        url_composite = f"{self.target_url}/resource/composite"
-
-        # 1. Registration Event
-        reg_payload = {
+        payload = {
             "ep": urn,
-            "val": {
-                "/10240": {
-                    "kind": "obj",
-                    "id": 10240,
-                    "instances": [
-                        {
-                            "id": 0,
-                            "kind": "instance",
-                            "resources": [
-                                {
-                                    "kind": "singleResource",
-                                    "id": 0,
-                                    "type": "INTEGER",
-                                    "value": 1,
-                                }
-                            ],
-                        }
-                    ],
-                }
-            },
+            "event": "registered",
+            "time": datetime.now(UTC).isoformat(),
         }
 
         try:
-            response = requests.post(url_composite, json=reg_payload, timeout=5)
+            response = requests.post(f"{self.target_url}/registration", json=payload, timeout=5)
             if response.status_code != 201:
                 print(f"Failed to register {urn}: {response.status_code}")
                 logger.error(f"Failed to register {urn}: {response.status_code} {response.text}")
@@ -156,50 +169,6 @@ class MockBackend:
 
             print(f"Registered device: {urn}")
             logger.info(f"Registered device: {urn}")
-
-            # 2. Device Info Event (sent after registration accepted)
-            info_payload = {
-                "ep": urn,
-                "val": {
-                    "/3": {
-                        "kind": "obj",
-                        "id": 3,
-                        "instances": [
-                            {
-                                "id": 0,
-                                "kind": "instance",
-                                "resources": [
-                                    {
-                                        "kind": "singleResource",
-                                        "id": 0,
-                                        "type": "STRING",
-                                        "value": "Acme Corp",
-                                    },
-                                    {
-                                        "kind": "singleResource",
-                                        "id": 1,
-                                        "type": "STRING",
-                                        "value": "Mock Device",
-                                    },
-                                    {
-                                        "kind": "singleResource",
-                                        "id": 2,
-                                        "type": "STRING",
-                                        "value": str(imei),
-                                    },
-                                    {
-                                        "kind": "singleResource",
-                                        "id": 3,
-                                        "type": "STRING",
-                                        "value": "v0.0.1",
-                                    },
-                                ],
-                            }
-                        ],
-                    }
-                },
-            }
-            requests.post(url_composite, json=info_payload, timeout=5)
             return True
 
         except Exception as e:

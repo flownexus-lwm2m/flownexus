@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -53,27 +55,19 @@ class TestMockSetupCommands:
 
 @pytest.mark.django_db
 class TestMockRegistrationHandling:
-    def test_registration_resource_marks_endpoint_as_registered(self, client, settings):
+    def test_registration_event_marks_endpoint_as_registered(self, client, settings):
         settings.CELERY_TASK_ALWAYS_EAGER = True
         settings.CELERY_TASK_EAGER_PROPAGATES = True
         call_command("load_initial_resource_types")
 
-        payload = {
-            "ep": "urn:imei:123",
-            "obj_id": 10240,
-            "val": {
-                "kind": "singleResource",
-                "id": 0,
-                "type": "INTEGER",
-                "value": "1",
-            },
-        }
+        payload = {"ep": "urn:imei:123", "event": "registered", "time": "2026-01-01T00:00:00Z"}
 
-        response = client.post(
-            reverse("post-single-resource"),
-            payload,
-            content_type="application/json",
-        )
+        with patch("sensordata.tasks.read_device_object.delay"):
+            response = client.post(
+                reverse("post-registration-event"),
+                payload,
+                content_type="application/json",
+            )
 
         assert response.status_code == 201
         endpoint = Endpoint.objects.get(endpoint="urn:imei:123")

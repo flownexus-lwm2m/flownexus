@@ -227,11 +227,6 @@ def test_deregistration_marks_endpoint_unregistered(e2e_context) -> None:
     registered(True)
 
 
-@pytest.mark.xfail(
-    reason="defect P-008: the gateway returns HTTP 200 for a device error, so Django "
-    "records the rejected write as CONFIRMED",
-    strict=True,
-)
 def test_write_rejected_by_device_fails_operation(e2e_context) -> None:
     """Write the read-only Device/Manufacturer; the device answers 4.05."""
 

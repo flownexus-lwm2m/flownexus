@@ -1,0 +1,21 @@
+{
+  "scenario": "unknown_endpoint",
+  "description": "Command for an endpoint that is not registered.",
+  "setup": [],
+  "steps": [
+    {
+      "device": [
+        "http GET /api/clients/urn:imei:unknown/3?timeout=5"
+      ],
+      "requests": [],
+      "responses": [
+        {
+          "status": 404,
+          "body": {
+            "error": "no registered client urn:imei:unknown"
+          }
+        }
+      ]
+    }
+  ]
+}
