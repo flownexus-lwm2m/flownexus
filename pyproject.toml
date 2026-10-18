@@ -77,7 +77,7 @@ docs = [
 
 # Deployment (Ansible playbook in deploy/ansible)
 deploy = [
-    "ansible>=12,<13",
+    "ansible>=14,<15",
     "ansible-lint>=25",
 ]
 
