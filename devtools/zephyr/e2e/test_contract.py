@@ -6,9 +6,12 @@
 
 Each scenario drives a fresh native_sim device against the Leshan image,
 which posts to a recording sink instead of Django. The recorded requests
-must match ``contract/gateway/ingest/<scenario>.json``. Set
-``FLOWNEXUS_UPDATE_GOLDEN=1`` to re-record the files instead. A ``sleep``
-step waits on the host; all other steps are device shell commands.
+and command responses must match ``contract/gateway/<kind>/<scenario>.json``.
+Set ``FLOWNEXUS_UPDATE_GOLDEN=1`` to re-record the files instead.
+
+A step command is a device shell command, ``sleep <seconds>`` on the host,
+or ``http <METHOD> <path> [json]`` against the gateway command API, as
+Django sends it.
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+import requests
 
 from . import contract
 from .harness import ProcessSupervisor, RunConfig, start_zephyr, write_run_metadata
@@ -29,8 +33,11 @@ from .stack import LocalStack
 pytestmark = pytest.mark.e2e
 
 ROOT = Path(__file__).resolve().parents[3]
-GOLDEN_DIR = ROOT / "contract/gateway/ingest"
+GOLDEN_DIR = ROOT / "contract/gateway"
 START = "flownexus start <endpoint> <server>"
+DEVICE = "/api/clients/<endpoint>"
+# Query parameters as sensordata.tasks sends them
+PARAMS = "?timeout=5&format=CBOR"
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,7 @@ class Scenario:
     description: str
     steps: tuple[tuple[str, ...], ...]
     setup: tuple[str, ...] = (START,)
+    kind: str = "ingest"
 
 
 SCENARIOS = {
@@ -80,6 +88,53 @@ SCENARIOS = {
             ),
         ),
     ),
+    "read_device_object": Scenario(
+        "Read of the Device object, as Django requests it after a registration.",
+        steps=((f"http GET {DEVICE}/3?timeout=5",),),
+        kind="command",
+    ),
+    "write_resource": Scenario(
+        "Write of a single resource that the device accepts.",
+        steps=(
+            (
+                f"http PUT {DEVICE}/3/0/14{PARAMS} "
+                '{"id": 14, "kind": "singleResource", "value": "+02:00", "type": "STRING"}',
+            ),
+        ),
+        kind="command",
+    ),
+    "write_rejected": Scenario(
+        "Write of a read-only resource; the device answers 4.05.",
+        steps=(
+            (
+                f"http PUT {DEVICE}/3/0/0{PARAMS} "
+                '{"id": 0, "kind": "singleResource", "value": "Rejected", "type": "STRING"}',
+            ),
+        ),
+        kind="command",
+    ),
+    "execute_resource": Scenario(
+        "Execute of a resource without arguments.",
+        steps=((f"http POST {DEVICE}/3/0/4{PARAMS}",),),
+        kind="command",
+    ),
+    "device_timeout": Scenario(
+        "Write while the device is offline; the gateway times out.",
+        steps=(
+            (
+                "lwm2m pause",
+                f"http PUT {DEVICE}/3/0/14?timeout=2&format=CBOR "
+                '{"id": 14, "kind": "singleResource", "value": "+03:00", "type": "STRING"}',
+            ),
+        ),
+        kind="command",
+    ),
+    "unknown_endpoint": Scenario(
+        "Command for an endpoint that is not registered.",
+        steps=(("http GET /api/clients/urn:imei:unknown/3?timeout=5",),),
+        setup=(),
+        kind="command",
+    ),
 }
 
 
@@ -113,17 +168,30 @@ def _record(config: RunConfig, sink: contract.RecordingSink, name: str, scenario
     # The shell wraps its echo at 80 columns, so the start command must stay short
     endpoint = f"{config.endpoint}-{sorted(SCENARIOS).index(name)}"
     server = f"coap://127.0.0.1:{config.leshan_coap_port}"
+    gateway = f"http://127.0.0.1:{config.leshan_http_port}"
     supervisor = ProcessSupervisor(config.artifact_dir)
     device = start_zephyr(supervisor, config, binary=_binary(), name=f"zephyr-{name}")
 
-    def run(commands: tuple[str, ...]) -> None:
+    def run(commands: tuple[str, ...]) -> list[dict]:
+        responses = []
         for command in commands:
+            command = command.replace("<endpoint>", endpoint).replace("<server>", server)
             if command.startswith("sleep "):
                 time.sleep(float(command.split()[1]))
-                continue
-            device.shell.command(
-                command.replace("<endpoint>", endpoint).replace("<server>", server)
-            )
+            elif command.startswith("http "):
+                _, method, path, *body = command.split(" ", 3)
+                response = requests.request(
+                    method, gateway + path, data=body[0] if body else None, timeout=30
+                )
+                responses.append(
+                    {
+                        "status": response.status_code,
+                        "body": contract.normalize(response.json(), endpoint),
+                    }
+                )
+            else:
+                device.shell.command(command)
+        return responses
 
     try:
         run(scenario.setup)
@@ -132,14 +200,17 @@ def _record(config: RunConfig, sink: contract.RecordingSink, name: str, scenario
         steps = []
         for commands in scenario.steps:
             known = len(sink.for_endpoint(endpoint))
-            run(commands)
-            recorded = sink.wait_settled(endpoint, known=known, timeout=config.timeout)
-            steps.append(
-                {
-                    "device": list(commands),
-                    "requests": [r.normalized(endpoint) for r in recorded[known:]],
-                }
+            responses = run(commands)
+            recorded = sink.wait_settled(
+                endpoint, known=known, timeout=config.timeout, require=not responses
             )
+            step = {
+                "device": list(commands),
+                "requests": [r.normalized(endpoint) for r in recorded[known:]],
+            }
+            if responses:
+                step["responses"] = responses
+            steps.append(step)
     finally:
         supervisor.stop_all()
     return {
@@ -154,7 +225,7 @@ def _record(config: RunConfig, sink: contract.RecordingSink, name: str, scenario
 def test_gateway_requests_match_golden_file(gateway, name: str) -> None:
     config, sink = gateway
     recorded = _record(config, sink, name, SCENARIOS[name])
-    path = GOLDEN_DIR / f"{name}.json"
+    path = GOLDEN_DIR / SCENARIOS[name].kind / f"{name}.json"
 
     if os.getenv("FLOWNEXUS_UPDATE_GOLDEN") == "1":
         contract.dump(path, recorded)
@@ -171,3 +242,24 @@ def test_gateway_requests_match_golden_file(gateway, name: str) -> None:
             lineterm="",
         )
         pytest.fail("Gateway requests differ from the golden file:\n" + "\n".join(diff))
+
+
+def test_gateway_retries_while_django_is_down(gateway) -> None:
+    """A 5xx answer from Django makes the gateway send the request again."""
+
+    config, sink = gateway
+    endpoint = f"{config.endpoint}-r"
+    supervisor = ProcessSupervisor(config.artifact_dir)
+    device = start_zephyr(supervisor, config, binary=_binary(), name="zephyr-retry")
+    sink.failures = 1
+    try:
+        device.shell.command(
+            f"flownexus start {endpoint} coap://127.0.0.1:{config.leshan_coap_port}"
+        )
+        recorded = sink.wait_settled(endpoint, known=1, timeout=config.timeout, quiet=3)
+    finally:
+        sink.failures = 0
+        supervisor.stop_all()
+
+    assert [r.status for r in recorded] == [503, 201]
+    assert recorded[0].body == recorded[1].body

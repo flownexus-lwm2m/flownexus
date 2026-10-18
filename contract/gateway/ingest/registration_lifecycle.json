@@ -10,159 +10,11 @@
       "requests": [
         {
           "method": "POST",
-          "path": "/flownexus/ingest/resource/single",
+          "path": "/flownexus/ingest/registration",
           "body": {
             "ep": "<endpoint>",
-            "obj_id": 10240,
-            "val": {
-              "kind": "singleResource",
-              "id": 0,
-              "type": "TIME",
-              "value": "<time>"
-            }
-          }
-        },
-        {
-          "method": "POST",
-          "path": "/flownexus/ingest/resource/composite",
-          "body": {
-            "ep": "<endpoint>",
-            "val": {
-              "/3": {
-                "instances": [
-                  {
-                    "kind": "instance",
-                    "resources": [
-                      {
-                        "kind": "singleResource",
-                        "id": 0,
-                        "type": "STRING",
-                        "value": "Zephyr"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 1,
-                        "type": "STRING",
-                        "value": "Flownexus Client"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 2,
-                        "type": "STRING",
-                        "value": "345000123"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 3,
-                        "type": "STRING",
-                        "value": "1.0"
-                      },
-                      {
-                        "kind": "multiResource",
-                        "values": {
-                          "0": "5"
-                        },
-                        "id": 6,
-                        "type": "INTEGER"
-                      },
-                      {
-                        "kind": "multiResource",
-                        "values": {
-                          "0": "5000"
-                        },
-                        "id": 7,
-                        "type": "INTEGER"
-                      },
-                      {
-                        "kind": "multiResource",
-                        "values": {
-                          "0": "900"
-                        },
-                        "id": 8,
-                        "type": "INTEGER"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 9,
-                        "type": "INTEGER",
-                        "value": "95"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 10,
-                        "type": "INTEGER",
-                        "value": "15"
-                      },
-                      {
-                        "kind": "multiResource",
-                        "values": {
-                          "0": "0"
-                        },
-                        "id": 11,
-                        "type": "INTEGER"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 13,
-                        "type": "TIME",
-                        "value": "<time>"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 14,
-                        "type": "STRING",
-                        "value": "+00:00"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 15,
-                        "type": "STRING",
-                        "value": ""
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 16,
-                        "type": "STRING",
-                        "value": "U"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 17,
-                        "type": "STRING",
-                        "value": "native_sim"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 18,
-                        "type": "STRING",
-                        "value": "1.0.1"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 19,
-                        "type": "STRING",
-                        "value": ""
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 20,
-                        "type": "INTEGER",
-                        "value": "1"
-                      },
-                      {
-                        "kind": "singleResource",
-                        "id": 21,
-                        "type": "INTEGER",
-                        "value": "25"
-                      }
-                    ],
-                    "id": 0
-                  }
-                ],
-                "kind": "obj",
-                "id": 3
-              }
-            }
+            "event": "registered",
+            "time": "<timestamp>"
           }
         }
       ]
@@ -174,16 +26,11 @@
       "requests": [
         {
           "method": "POST",
-          "path": "/flownexus/ingest/resource/single",
+          "path": "/flownexus/ingest/registration",
           "body": {
             "ep": "<endpoint>",
-            "obj_id": 10240,
-            "val": {
-              "kind": "singleResource",
-              "id": 2,
-              "type": "TIME",
-              "value": "<time>"
-            }
+            "event": "updated",
+            "time": "<timestamp>"
           }
         }
       ]
@@ -195,16 +42,11 @@
       "requests": [
         {
           "method": "POST",
-          "path": "/flownexus/ingest/resource/single",
+          "path": "/flownexus/ingest/registration",
           "body": {
             "ep": "<endpoint>",
-            "obj_id": 10240,
-            "val": {
-              "kind": "singleResource",
-              "id": 1,
-              "type": "TIME",
-              "value": "<time>"
-            }
+            "event": "unregistered",
+            "time": "<timestamp>"
           }
         }
       ]

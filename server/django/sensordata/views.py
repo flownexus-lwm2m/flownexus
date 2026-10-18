@@ -21,12 +21,27 @@ from .serializers.generic_serializer import (
     FirmwareSerializer,
     FirmwareUpdateSerializer,
 )
+from .serializers.registration_serializer import RegistrationEventSerializer
 from .serializers.single_resource_serializer import SingleResourceSerializer
 from .serializers.timestamped_resource_serializer import TimestampedResourceSerializer
 
 logger = logging.getLogger(__name__)
 
 # API Views
+
+
+class PostRegistrationEventView(APIView):
+    """API View for a registration, registration update, or deregistration."""
+
+    serializer_class = RegistrationEventSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            logger.error("Invalid registration event %s: %s", request.data, serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
 
 class PostSingleResourceView(APIView):

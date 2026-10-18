@@ -1,0 +1,24 @@
+{
+  "scenario": "write_rejected",
+  "description": "Write of a read-only resource; the device answers 4.05.",
+  "setup": [
+    "flownexus start <endpoint> <server>"
+  ],
+  "steps": [
+    {
+      "device": [
+        "http PUT /api/clients/<endpoint>/3/0/0?timeout=5&format=CBOR {\"id\": 0, \"kind\": \"singleResource\", \"value\": \"Rejected\", \"type\": \"STRING\"}"
+      ],
+      "requests": [],
+      "responses": [
+        {
+          "status": 502,
+          "body": {
+            "status": "METHOD_NOT_ALLOWED",
+            "code": "4.05"
+          }
+        }
+      ]
+    }
+  ]
+}

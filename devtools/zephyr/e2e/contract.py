@@ -39,6 +39,8 @@ def normalize(value: object, endpoint: str) -> object:
         return [normalize(item, endpoint) for item in value]
     if value == endpoint:
         return ENDPOINT
+    if isinstance(value, str) and _ISO_TIMESTAMP.match(value):
+        return TIMESTAMP
     return value
 
 
@@ -57,13 +59,15 @@ class Recorded:
 class RecordingSink:
     """HTTP server that stands in for Django and records each request.
 
-    ``status`` is the response code for every request, so a test can also
-    simulate a failing Django.
+    ``status`` is the response code for every request. While ``failures`` is
+    above zero, the sink answers 503 and counts it down, to simulate a Django
+    outage.
     """
 
     host: str = "0.0.0.0"
     port: int = 0
     status: int = 201
+    failures: int = 0
     requests: list[Recorded] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -75,8 +79,9 @@ class RecordingSink:
                 length = int(self.headers.get("Content-Length", 0))
                 raw = self.rfile.read(length).decode() if length else ""
                 body = json.loads(raw) if raw else None
-                status = sink.status
                 with sink._changed:
+                    status = 503 if sink.failures > 0 else sink.status
+                    sink.failures = max(0, sink.failures - 1)
                     sink.requests.append(Recorded(self.command, self.path, body, status))
                     sink._changed.notify_all()
                 self.send_response(status)
@@ -97,13 +102,20 @@ class RecordingSink:
             return [r for r in self.requests if _endpoint_of(r.body) == endpoint]
 
     def wait_settled(
-        self, endpoint: str, *, known: int, timeout: float, quiet: float = 1.5
+        self,
+        endpoint: str,
+        *,
+        known: int,
+        timeout: float,
+        quiet: float = 1.5,
+        require: bool = True,
     ) -> list[Recorded]:
         """Wait for a request after the first ``known`` ones, then for ``quiet`` seconds
-        without another request. Return all requests of ``endpoint``."""
+        without another request. Return all requests of ``endpoint``. With
+        ``require=False``, only wait for the quiet period."""
 
         with self._changed:
-            if not self._changed.wait_for(
+            if require and not self._changed.wait_for(
                 lambda: len(self.for_endpoint(endpoint)) > known, timeout=timeout
             ):
                 raise TimeoutError(f"no gateway request for {endpoint} within {timeout}s")

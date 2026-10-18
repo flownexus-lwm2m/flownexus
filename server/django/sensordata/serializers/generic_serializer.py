@@ -46,7 +46,15 @@ class FirmwareSerializer(serializers.ModelSerializer):
 class EndpointOperationSerializer(serializers.ModelSerializer):
     class Meta:
         model = EndpointOperation
-        fields = ["id", "resource", "operation_type", "status", "timestamp_created", "last_attempt"]
+        fields = [
+            "id",
+            "resource",
+            "instance_id",
+            "operation_type",
+            "status",
+            "timestamp_created",
+            "last_attempt",
+        ]
 
 
 class FirmwareUpdateSerializer(serializers.ModelSerializer):

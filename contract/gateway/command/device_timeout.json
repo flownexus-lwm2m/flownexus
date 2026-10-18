@@ -1,0 +1,24 @@
+{
+  "scenario": "device_timeout",
+  "description": "Write while the device is offline; the gateway times out.",
+  "setup": [
+    "flownexus start <endpoint> <server>"
+  ],
+  "steps": [
+    {
+      "device": [
+        "lwm2m pause",
+        "http PUT /api/clients/<endpoint>/3/0/14?timeout=2&format=CBOR {\"id\": 14, \"kind\": \"singleResource\", \"value\": \"+03:00\", \"type\": \"STRING\"}"
+      ],
+      "requests": [],
+      "responses": [
+        {
+          "status": 504,
+          "body": {
+            "error": "no device response within 2 s"
+          }
+        }
+      ]
+    }
+  ]
+}
