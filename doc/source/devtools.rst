@@ -16,30 +16,47 @@ Run Zephyr checkpatch on the native_sim client (needs the Zephyr tree in
 
   host:~/flownexus$ make checkpatch
 
+CI Targets
+..........
+
+``make checks`` runs what the CI workflow ``checks.yml`` runs: the unit
+tests, compliance, the documentation build and the deployment lint.
+``make system-test`` runs what ``system_test.yml`` runs: checkpatch, the
+native_sim build and twister tests, the container images, the gateway
+contract check, the image smoke test and the E2E scenarios. ``make test-all``
+runs both.
+
 Unit Tests
 ..........
 
-Run Django unit tests::
+Run the Django tests::
 
   host:~/flownexus$ make test-django
 
-Or directly with pytest::
+Run all tests that need only the source checkout (Django and the E2E harness
+tests)::
 
-  host:~/flownexus$ uv run --extra test pytest server/django/sensordata/tests/
+  host:~/flownexus$ make test-unit
 
-End-to-End Tests
-................
+System Tests
+............
 
-Run the local Zephyr E2E suite (native_sim plus isolated Django, Redis,
-Celery, and Leshan)::
+System tests need a container runtime (Podman or Docker), the Leshan image
+from ``make leshan-image``, and the Zephyr toolchain. Set
+``FLOWNEXUS_LESHAN_IMAGE`` to use a different image, for example one pulled
+from GHCR.
+
+Check the Leshan gateway against the golden files in ``contract/gateway``::
+
+  host:~/flownexus$ make test-contract
+
+Run the E2E scenarios (native_sim plus isolated Django, Redis, Celery, and
+Leshan)::
 
   host:~/flownexus$ make test-e2e
 
-Requires a container runtime (Podman or Docker), the Leshan image from
-``make leshan-image``, and the Zephyr toolchain. Set
-``FLOWNEXUS_LESHAN_IMAGE`` to use a different image, for example one pulled
-from GHCR. Fast harness tests run without ``FLOWNEXUS_RUN_E2E``;
-the three stack workflows need that flag, which ``make test-e2e`` sets.
+Both targets build the native_sim binary first, unless
+``FLOWNEXUS_ZEPHYR_BINARY`` names a binary.
 
 Run the native_sim twister tests (shell test and overlay builds) without the
 server stack::

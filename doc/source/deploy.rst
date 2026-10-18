@@ -171,9 +171,10 @@ compressible.
 Release Flow
 ............
 
-#. A push to ``main`` runs "Zephyr E2E CI". It builds the Django, Redis and
-   Leshan images, runs the image smoke test and the E2E suite, and pushes the
-   images as ``ghcr.io/<owner>/flownexus-<service>:sha-<short sha>``.
+#. A push to ``main`` runs "System Tests". It builds the Django, Redis and
+   Leshan images, runs the gateway contract check, the image smoke test and
+   the E2E scenarios, and pushes the images as
+   ``ghcr.io/<owner>/flownexus-<service>:sha-<short sha>``.
 #. When that run succeeds, the "Deploy" workflow starts for the same commit.
    It skips the deployment if ``FLOWNEXUS_DASHBOARD_HOST`` is not set, so forks
    without a server do not fail.
