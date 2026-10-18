@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   build-sim:
+    name: Zephyr client (checkpatch, build, twister)
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/zephyrproject-rtos/ci-base:v0.29.3
@@ -72,6 +73,7 @@ jobs:
         if-no-files-found: error
 
   gateway-contract:
+    name: Gateway contract (golden files)
     needs: build-sim
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -123,6 +125,7 @@ jobs:
         if-no-files-found: ignore
 
   e2e:
+    name: E2E (images, smoke test, scenarios)
     needs: [build-sim, gateway-contract]
     runs-on: ubuntu-latest
     timeout-minutes: 45
