@@ -92,6 +92,10 @@ def send_operation(endpointOperation_id: int) -> None:
         logger.error(f"Operation {e_ops.id} rejected by {ep} with CoAP {code}")
         e_ops.transmit_counter += 1
         e_ops.status = e_ops.Status.FAILED
+    elif status_code == 400:
+        logger.error(f"Gateway rejected operation {e_ops.id} as invalid: {response.text}")
+        e_ops.transmit_counter += 1
+        e_ops.status = e_ops.Status.FAILED
     else:
         logger.error(f"Operation {e_ops.id} not delivered: {status_code}")
         e_ops.transmit_counter += 1

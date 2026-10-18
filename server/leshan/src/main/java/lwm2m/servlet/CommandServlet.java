@@ -69,7 +69,7 @@ public class CommandServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         Target target = target(req, resp, false);
         if (target != null) {
-            send(req, resp, target, new ReadRequest(format(req), target.path()));
+            send(req, resp, target, format -> new ReadRequest(format, target.path()));
         }
     }
 
@@ -86,12 +86,19 @@ public class CommandServlet extends HttpServlet {
             respond(resp, HttpServletResponse.SC_BAD_REQUEST, error("invalid resource: " + e.getMessage()));
             return;
         }
-        if (!(node instanceof LwM2mSingleResource)) {
+        LwM2mPath path = new LwM2mPath(target.path());
+        if (!(node instanceof LwM2mSingleResource) || !path.isResource()) {
             respond(resp, HttpServletResponse.SC_BAD_REQUEST, error("only a single resource can be written"));
             return;
         }
+        int id = ((LwM2mSingleResource) node).getId();
+        if (id != path.getResourceId()) {
+            respond(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    error("resource id " + id + " does not match the path " + target.path()));
+            return;
+        }
         send(req, resp, target,
-                new WriteRequest(WriteRequest.Mode.REPLACE, format(req), target.path(), node));
+                format -> new WriteRequest(WriteRequest.Mode.REPLACE, format, target.path(), node));
     }
 
     @Override
@@ -99,7 +106,8 @@ public class CommandServlet extends HttpServlet {
         Target target = target(req, resp, true);
         if (target != null) {
             String arguments = new String(req.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            send(req, resp, target, new ExecuteRequest(target.path(), arguments.isEmpty() ? null : arguments));
+            send(req, resp, target,
+                    format -> new ExecuteRequest(target.path(), arguments.isEmpty() ? null : arguments));
         }
     }
 
@@ -131,12 +139,25 @@ public class CommandServlet extends HttpServlet {
         return new Target(registration, path);
     }
 
-    private void send(HttpServletRequest req, HttpServletResponse resp, Target target,
-                      DownlinkDeviceManagementRequest<? extends LwM2mResponse> request) throws IOException {
-        long timeout = timeoutSeconds(req);
+    /** Builds the Leshan request inside send(), so that Leshan's validation errors become 400. */
+    private interface RequestFactory {
+        DownlinkDeviceManagementRequest<? extends LwM2mResponse> create(ContentFormat format);
+    }
+
+    private void send(HttpServletRequest req, HttpServletResponse resp, Target target, RequestFactory factory)
+            throws IOException {
+        ContentFormat format;
+        long timeout;
+        try {
+            format = format(req);
+            timeout = timeoutSeconds(req);
+        } catch (IllegalArgumentException e) {
+            respond(resp, HttpServletResponse.SC_BAD_REQUEST, error(e.getMessage()));
+            return;
+        }
         LwM2mResponse response;
         try {
-            response = server.send(target.registration(), request, timeout * 1000);
+            response = server.send(target.registration(), factory.create(format), timeout * 1000);
         } catch (InvalidRequestException | CodecException | IllegalArgumentException e) {
             respond(resp, HttpServletResponse.SC_BAD_REQUEST, error("invalid request: " + e.getMessage()));
             return;
@@ -185,16 +206,32 @@ public class CommandServlet extends HttpServlet {
     }
 
     private static ContentFormat format(HttpServletRequest req) {
-        String format = req.getParameter("format");
-        return format == null ? null : ContentFormat.fromName(format.toUpperCase());
+        String name = req.getParameter("format");
+        if (name == null) {
+            return null;
+        }
+        ContentFormat format = ContentFormat.fromName(name.toUpperCase());
+        if (format == null) {
+            throw new IllegalArgumentException("unknown format: " + name);
+        }
+        return format;
     }
 
     private static long timeoutSeconds(HttpServletRequest req) {
-        try {
-            return Long.parseLong(req.getParameter("timeout"));
-        } catch (NumberFormatException e) {
+        String value = req.getParameter("timeout");
+        if (value == null) {
             return DEFAULT_TIMEOUT_S;
         }
+        long timeout;
+        try {
+            timeout = Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            timeout = 0;
+        }
+        if (timeout <= 0) {
+            throw new IllegalArgumentException("timeout must be a positive number of seconds: " + value);
+        }
+        return timeout;
     }
 
     private void respond(HttpServletResponse resp, int status, Object body) throws IOException {

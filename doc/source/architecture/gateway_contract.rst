@@ -156,10 +156,13 @@ Django sends commands to ``/api/clients/{endpoint}/{path}`` on the gateway.
 
 Query parameters:
 
-- ``timeout``: seconds the gateway waits for the device response. The default
-  is 5 s.
+- ``timeout``: seconds the gateway waits for the device response, a positive
+  integer. The default is 5 s.
 - ``format``: content format name for the downlink request, for example
   ``CBOR``. Without it, Leshan selects the content format.
+
+An invalid ``timeout``, an unknown ``format``, or a written resource whose
+``id`` differs from the resource ID in the path is answered with ``400``.
 
 The response body is JSON. If the device answers, the body contains
 ``status`` (Leshan response code name), ``code`` (CoAP code, for example
@@ -177,7 +180,7 @@ The response body is JSON. If the device answers, the body contains
      - The device answered with success (CoAP ``2.xx``).
      - ``status``, ``code``, ``content``
    * - ``400``
-     - Invalid path, invalid body or invalid request.
+     - Invalid path, body, query parameter or request.
      - ``error``
    * - ``404``
      - No registered client with this endpoint name.
@@ -213,6 +216,8 @@ The response body is JSON. If the device answers, the body contains
      - Write to an offline device, ``504``
    * - ``unknown_endpoint.json``
      - Command for an unregistered endpoint, ``404``
+   * - ``invalid_request.json``
+     - Unknown format and mismatched resource ID, ``400``
 
 Use of the Command API in Django
 ................................
@@ -225,6 +230,7 @@ to the operation status:
 
 - ``2xx``: ``CONFIRMED``.
 - ``502`` with ``code``: ``FAILED`` at once, without retry.
+- ``400``: ``FAILED`` at once, without retry. The request is invalid.
 - Each other status or a connection error: ``QUEUED`` for a retry, and
   ``FAILED`` after 3 attempts. Django sends a queued operation again the next
   time it processes the pending operations of the endpoint, for example after a

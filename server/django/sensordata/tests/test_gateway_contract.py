@@ -65,9 +65,8 @@ class GatewayResponse:
         return self._body
 
 
-def command_response(name):
-    (response,) = golden("command", name)["steps"][0]["responses"]
-    return GatewayResponse(response)
+def command_response(name, index=0):
+    return GatewayResponse(golden("command", name)["steps"][0]["responses"][index])
 
 
 def replay(client, name, *, step=None):
@@ -191,10 +190,10 @@ class TestCommandResults:
         )
         return EndpointOperation.objects.create(resource=resource, operation_type="send")
 
-    def send(self, operation, name):
+    def send(self, operation, name, index=0):
         with patch("sensordata.tasks.requests") as requests:
-            requests.put.return_value = command_response(name)
-            requests.post.return_value = command_response(name)
+            requests.put.return_value = command_response(name, index)
+            requests.post.return_value = command_response(name, index)
             send_operation(operation.id)
         operation.refresh_from_db()
         return requests
@@ -216,6 +215,14 @@ class TestCommandResults:
     def test_device_rejection_fails_without_retry(self):
         operation = self.operation(3, 0, "Rejected")
         self.send(operation, "write_rejected")
+
+        assert operation.status == EndpointOperation.Status.FAILED
+        assert operation.transmit_counter == 1
+
+    @pytest.mark.parametrize("index", [0, 1])
+    def test_invalid_request_fails_without_retry(self, index):
+        operation = self.operation(3, 14, "+02:00")
+        self.send(operation, "invalid_request", index)
 
         assert operation.status == EndpointOperation.Status.FAILED
         assert operation.transmit_counter == 1

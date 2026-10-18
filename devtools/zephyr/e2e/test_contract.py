@@ -129,6 +129,19 @@ SCENARIOS = {
         ),
         kind="command",
     ),
+    "invalid_request": Scenario(
+        "Requests the gateway rejects before it contacts the device: an unknown "
+        "content format and a resource id that does not match the path.",
+        steps=(
+            (
+                f"http PUT {DEVICE}/3/0/14?timeout=5&format=XML "
+                '{"id": 14, "kind": "singleResource", "value": "+02:00", "type": "STRING"}',
+                f"http PUT {DEVICE}/3/0/14{PARAMS} "
+                '{"id": 15, "kind": "singleResource", "value": "+02:00", "type": "STRING"}',
+            ),
+        ),
+        kind="command",
+    ),
     "unknown_endpoint": Scenario(
         "Command for an endpoint that is not registered.",
         steps=(("http GET /api/clients/urn:imei:unknown/3?timeout=5",),),
