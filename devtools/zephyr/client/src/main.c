@@ -157,6 +157,9 @@ int main(void)
 	if (ret == 0) {
 		ret = sensors_obj_init();
 	}
+	if (ret == 0) {
+		ret = fota_obj_init();
+	}
 	if (ret < 0) {
 		LOG_ERR("LwM2M object setup failed (%d)", ret);
 		return ret;
