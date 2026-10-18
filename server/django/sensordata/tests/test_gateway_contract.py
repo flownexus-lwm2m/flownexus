@@ -108,17 +108,8 @@ def gateway_read():
         yield get
 
 
-UNKNOWN_RESOURCE = pytest.mark.xfail(
-    reason="defect: a resource without ResourceType (3303/5603) fails ingest with HTTP 500",
-    raises=Exception,
-    strict=True,
-)
-
-
 def _ingest_names():
-    for path in sorted((GOLDEN_DIR / "ingest").glob("*.json")):
-        marks = [UNKNOWN_RESOURCE] if path.stem == "send_object_instance" else []
-        yield pytest.param(path.stem, marks=marks)
+    return sorted(path.stem for path in (GOLDEN_DIR / "ingest").glob("*.json"))
 
 
 @pytest.mark.django_db
@@ -171,11 +162,11 @@ class TestSend:
         event = Event.objects.get(endpoint_id=ENDPOINT)
         assert event.resources.count() == 2
 
-    @UNKNOWN_RESOURCE
-    def test_object_instance(self, client):
+    def test_object_instance_skips_unknown_resources(self, client):
         replay(client, "send_object_instance")
 
         assert values(3303, 5700) == [20.0]
+        assert not values(3303, 5603)
 
     def test_cached_timeseries_keeps_device_timestamps(self, client):
         replay(client, "send_cached_timeseries")
