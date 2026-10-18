@@ -66,7 +66,7 @@ docs = [
     "plantuml>=0.3.0",
     "pydot>=4.0.1",
     "pyparsing>=3.3.2",
-    "setuptools<71",
+    "setuptools<85",
     "sphinx-autobuild>=2025.8.25",
     "sphinx-book-theme>=1.1.4",
     "sphinx>=9.1.0",
