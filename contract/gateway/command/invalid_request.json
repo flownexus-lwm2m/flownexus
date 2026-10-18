@@ -1,0 +1,30 @@
+{
+  "scenario": "invalid_request",
+  "description": "Requests the gateway rejects before it contacts the device: an unknown content format and a resource id that does not match the path.",
+  "setup": [
+    "flownexus start <endpoint> <server>"
+  ],
+  "steps": [
+    {
+      "device": [
+        "http PUT /api/clients/<endpoint>/3/0/14?timeout=5&format=XML {\"id\": 14, \"kind\": \"singleResource\", \"value\": \"+02:00\", \"type\": \"STRING\"}",
+        "http PUT /api/clients/<endpoint>/3/0/14?timeout=5&format=CBOR {\"id\": 15, \"kind\": \"singleResource\", \"value\": \"+02:00\", \"type\": \"STRING\"}"
+      ],
+      "requests": [],
+      "responses": [
+        {
+          "status": 400,
+          "body": {
+            "error": "unknown format: XML"
+          }
+        },
+        {
+          "status": 400,
+          "body": {
+            "error": "resource id 15 does not match the path /3/0/14"
+          }
+        }
+      ]
+    }
+  ]
+}
