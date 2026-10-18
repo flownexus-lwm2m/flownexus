@@ -18,7 +18,7 @@ facing user interfaces. Leshan acts as a gateway between Endpoints and the
 backend. There should be no application specific logic implemented in Leshan.
 
 In order to communicate and exchange data, both components (Leshan LwM2M Server
-and Django) post data to each other's ReST APIs. Communication is typically
+and Django) send requests to each other's ReST APIs. Communication is typically
 triggered by IoT devices sending data or the user/application requesting data
 from devices.
 
@@ -34,73 +34,8 @@ Django hosts the ReST API that Leshan posts to. Serializers, a part of Django,
 deserialize the incoming data and store it in the database according to the
 database model.
 
-Leshan Data Format
-..................
-
-There are two types of data that Leshan sends to the backend, single resource
-and composite resource format. The two ReST API endpoints that Leshan posts to
-are available under the following URLs:
-
-- ``/leshan_api/resource/single``: single resource format.
-- ``/leshan_api/resource/composite``: composite resource format.
-
-For more details, please theck the ``Internal Django`` API documentation.
-
-.. code-block:: json
-  :caption: Single Resource Format (3303/0/5700)
-
-  {
-     "ep": "qemu_x86",
-     "obj_id": 3303,
-     "val": {
-         "kind": "singleResource",
-         "id": 5700,
-         "type": "FLOAT",
-         "value": "24.899181214836236"
-     }
-  }
-
-.. code-block:: json
-  :caption: Composite Resource Format (3/0/0..17)
-  :emphasize-lines: 8,26,23
-
-  {
-      "ep" : "qemu_x86",
-      "val" : {
-          "instances" : [ {
-              "kind" : "instance",
-              "resources" : [ {
-                  "kind" : "singleResource",
-                  "id" : 0,
-                  "type" : "STRING",
-                  "value" : "Zephyr"
-              }, {
-                  "kind" : "multiResource",
-                  "values" : {
-                      "0" : "1",
-                      "1" : "5"
-                  },
-              },
-                  "kind" : "singleResource",
-                  "id" : 17,
-                  "type" : "STRING",
-                  "value" : "qemu_x86"
-              } ],
-              "id" : 0
-          } ],
-          "kind" : "obj",
-          "id" : 3
-      }
-  }
-
-The marked lines in the composite resource format show where Object ID,
-Instance ID and Resource ID are located. A composite resource format can
-consist of multiple Object IDs.
-
-.. warning::
-
-  Currently multiResources are not supported and will be ignored. MultiResource
-  dataypes  are e.g. used for Voltage range (min, max).
+The gateway forwards registration events and LwM2M Send data. Chapter
+:doc:`gateway_contract` describes the requests and links to the golden files.
 
 Registration Updates
 ....................
@@ -110,17 +45,10 @@ unregistered. To maintain its registration, an endpoint must send an update to
 Leshan regularly. If an endpoint does not send an update within the specified
 duration, it is considered offline and will be unregistered by Leshan.
 
-Those registration events are encapsulated into an LwM2M Object and sent to the
-backend server. The backend server stores the registration events in the
-database. This allows to use the generic database model for the registration
-events as well. All received registration events are stored in the database and
-can be used for statistics.
-
-All registration events are maintained in the custom LwM2M Object ID ``10240``:
-
-- ``10240/0/0``: Endpoint **registered** to Leshan.
-- ``10240/0/1``: Endpoint **unregistered** from Leshan.
-- ``10240/0/2``: Endpoint **updated** its registration.
+Leshan forwards those registration events to the backend server. The backend
+server stores the registration events in the database. This allows to use the
+generic database model for the registration events as well. All received
+registration events are stored in the database and can be used for statistics.
 
 .. _data-flow-backend-to-endpoint-label:
 
@@ -138,9 +66,9 @@ operations that should be sent to the endpoint while it is online.
 
 Once an endpoint updates it's registration (LwM2M Update Operation) Leshan
 notifies the backend. The backend checks the ``EndpointOperation`` table for
-pending operations and sends them to the device by posting to the Leshan hosted
-ReST API. Leshan keeps the post call open until the device acknowledges the
-operation or a timeout is generated. Endpoints can be slow to respond (several
+pending operations and sends them to the device through the command API that
+Leshan hosts (see :doc:`gateway_contract`). Leshan keeps the HTTP request open
+until the device answers or a timeout is generated. Endpoints can be slow to respond (several
 Seconds), so the backend has to handle the ReST API call in an asynchronous
 manner. By only sending data to endpoints while they are online, the backend
 can be sure that the ReST API calls are not open for a long time.
@@ -162,8 +90,9 @@ status to ``SENDING``, indicating an ongoing operation.
 
 Once the API call is complete the database will be updated with the result
 (e.g. ``CONFIRMED``, ``FAILED``, ``QUEUED``) depending on the result of the
-request. The ``FAILED`` status is assigned after 3 attempts. Retransmissions are
-triggered when the endpoint updates it's registration the next time.
+request. The ``FAILED`` status is assigned at once if the endpoint rejects the
+operation, else after 3 attempts. Retransmissions are triggered when the
+endpoint updates it's registration the next time.
 
 Example Communication
 .....................
@@ -179,5 +108,5 @@ link resource ``Package URI 5/0/1`` to an endpoint:
 #. Backend checks ``EndpointOperation`` table for pending operations for the
    endpoint.
 #. Finds pending operation, send resource to endpoint via the Leshan ReST API.
-#. Pending operation is marked ``completed`` if the endpoint acknowledges the
+#. Pending operation is marked ``CONFIRMED`` if the endpoint acknowledges the
    operation.

@@ -18,7 +18,7 @@ Features
   web application.
 * The web application has to support a secure login and basic user management.
 * Certificate based authentication and encryption.
-* Server to read and observe resources from IoT Device.
+* Server to read resources from IoT Device and receive LwM2M Send data.
 * Server to write resources to IoT Devices.
 * OTA Update.
 * Receive logs from IoT Devices.

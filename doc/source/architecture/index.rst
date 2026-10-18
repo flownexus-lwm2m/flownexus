@@ -9,4 +9,5 @@ interact with each other.
    django
    leshan
    communication_interfaces
+   gateway_contract
    ota
