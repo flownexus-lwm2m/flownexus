@@ -7,6 +7,7 @@ project(flownexus_client)
 target_sources(app PRIVATE
 	src/main.c
 	src/device.c
+	src/fota.c
 	src/sensors.c
 	src/shell.c
 )

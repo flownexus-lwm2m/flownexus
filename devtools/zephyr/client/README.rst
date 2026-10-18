@@ -19,9 +19,14 @@ Structure
    tests can observe them.
 ``src/sensors.c``
    IPSO temperature (3303) and humidity (3304) objects.
+``src/fota.c``
+   Simulated Firmware Update object (5). Writes to the Package URI (5/0/1)
+   and the Update execute (5/0/2) only write a log line. The client does not
+   download the package. On execute, it sends the state (5/0/3) to the
+   server.
 ``src/shell.c``
-   ``flownexus`` shell commands to start the RD client and to simulate
-   network loss.
+   ``flownexus`` shell commands to start the RD client, to simulate network
+   loss and to set and send the firmware update state and result.
 
 To add an object, add a ``<name>_obj_init()`` in a new file, declare it in
 ``src/app.h`` and call it from ``main()``.
@@ -63,6 +68,9 @@ Shell
    lwm2m update                                 # registration update
    lwm2m stop / lwm2m start <endpoint>          # deregister / restart
    flownexus net down / flownexus net up        # simulate network loss
+   flownexus fota state 2                       # set and send 5/0/3
+   flownexus fota result 8                      # set and send 5/0/3, 5/0/5
+   lwm2m write /3/0/3 -s 2.0.0                  # firmware version
    lwm2m read /3/0/14 -s
 
 The ``lwm2m`` shell needs a client context, so the first start must use

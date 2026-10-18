@@ -17,9 +17,8 @@ A https server is usually be hosted under a subdomain. The default is
 certificate for the https server. For details, check chapter
 :ref:`setup-a-virtual-server-label`.
 
-The native_sim E2E client does not implement object 5. Firmware update is
-handled by the LwM2M server and a device that exposes the Firmware Update
-object.
+The native_sim E2E client simulates object 5: it accepts the Package URI but
+does not download the package. See ``devtools/zephyr/e2e/README.rst``.
 
 .. note::
 

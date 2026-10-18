@@ -18,7 +18,6 @@ LOG_MODULE_REGISTER(app_device, LOG_LEVEL_INF);
 #define MANUFACTURER "Zephyr"
 #define MODEL_NUMBER "Flownexus Client"
 #define SERIAL_NUMBER "345000123"
-#define FIRMWARE_VER "1.0"
 #define HARDWARE_VER "1.0.1"
 
 static uint8_t bat_level = 95;
@@ -29,6 +28,7 @@ static int pwr_ma = 900;
 static int mem_free = 15;
 static int mem_total = 25;
 static char utc_offset[16] = "+00:00";
+static char firmware_ver[32] = "1.0";
 
 static int reboot_cb(uint16_t obj_inst_id, uint8_t *args, uint16_t args_len)
 {
@@ -60,7 +60,6 @@ int device_obj_init(void)
 	set_ro_string(&LWM2M_OBJ(3, 0, 0), MANUFACTURER, sizeof(MANUFACTURER));
 	set_ro_string(&LWM2M_OBJ(3, 0, 1), MODEL_NUMBER, sizeof(MODEL_NUMBER));
 	set_ro_string(&LWM2M_OBJ(3, 0, 2), SERIAL_NUMBER, sizeof(SERIAL_NUMBER));
-	set_ro_string(&LWM2M_OBJ(3, 0, 3), FIRMWARE_VER, sizeof(FIRMWARE_VER));
 	set_ro_string(&LWM2M_OBJ(3, 0, 17), CONFIG_BOARD, sizeof(CONFIG_BOARD));
 	set_ro_string(&LWM2M_OBJ(3, 0, 18), HARDWARE_VER, sizeof(HARDWARE_VER));
 
@@ -81,6 +80,8 @@ int device_obj_init(void)
 	lwm2m_set_res_buf(&LWM2M_OBJ(3, 0, 21), &mem_total, sizeof(mem_total), sizeof(mem_total),
 			  0);
 
+	lwm2m_set_res_buf(&LWM2M_OBJ(3, 0, 3), firmware_ver, sizeof(firmware_ver),
+			  strlen(firmware_ver) + 1, 0);
 	lwm2m_set_res_buf(&LWM2M_OBJ(3, 0, 14), utc_offset, sizeof(utc_offset),
 			  strlen(utc_offset) + 1, 0);
 	return lwm2m_register_post_write_callback(&LWM2M_OBJ(3, 0, 14), utc_offset_cb);
