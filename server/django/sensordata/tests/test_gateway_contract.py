@@ -177,6 +177,25 @@ class TestSend:
         ]
 
 
+# Expected operation status for each response of each command golden file.
+# read_device_object answers the read of /3 (TestRegistrationLifecycle).
+COMMAND_RESULTS = {
+    "write_resource": ["CONFIRMED"],
+    "execute_resource": ["CONFIRMED"],
+    "write_rejected": ["FAILED"],
+    "invalid_request": ["FAILED", "FAILED"],
+    "device_timeout": ["QUEUED"],
+    "unknown_endpoint": ["QUEUED"],
+}
+
+
+def test_every_command_golden_file_is_covered():
+    recorded = {path.stem for path in (GOLDEN_DIR / "command").glob("*.json")}
+    assert recorded == set(COMMAND_RESULTS) | {"read_device_object"}
+    for name, statuses in COMMAND_RESULTS.items():
+        assert len(golden("command", name)["steps"][0]["responses"]) == len(statuses), name
+
+
 @pytest.mark.django_db
 class TestCommandResults:
     def operation(self, object_id, resource_id, value=None):
@@ -198,42 +217,27 @@ class TestCommandResults:
         operation.refresh_from_db()
         return requests
 
-    def test_device_success_confirms(self):
+    @pytest.mark.parametrize(
+        "name,index,status",
+        [
+            (name, index, status)
+            for name, statuses in COMMAND_RESULTS.items()
+            for index, status in enumerate(statuses)
+        ],
+    )
+    def test_gateway_response_sets_operation_status(self, name, index, status):
         operation = self.operation(3, 14, "+02:00")
-        requests = self.send(operation, "write_resource")
+        self.send(operation, name, index)
 
-        assert operation.status == EndpointOperation.Status.CONFIRMED
-        assert requests.put.call_args.args[0].endswith(f"/clients/{ENDPOINT}/3/0/14")
+        assert operation.status == status
+        assert operation.transmit_counter == (0 if status == "CONFIRMED" else 1)
 
-    def test_execute_success_confirms(self):
+    def test_execute_is_sent_as_post(self):
         operation = self.operation(3, 4)
         requests = self.send(operation, "execute_resource")
 
-        assert operation.status == EndpointOperation.Status.CONFIRMED
         requests.post.assert_called_once()
-
-    def test_device_rejection_fails_without_retry(self):
-        operation = self.operation(3, 0, "Rejected")
-        self.send(operation, "write_rejected")
-
-        assert operation.status == EndpointOperation.Status.FAILED
-        assert operation.transmit_counter == 1
-
-    @pytest.mark.parametrize("index", [0, 1])
-    def test_invalid_request_fails_without_retry(self, index):
-        operation = self.operation(3, 14, "+02:00")
-        self.send(operation, "invalid_request", index)
-
-        assert operation.status == EndpointOperation.Status.FAILED
-        assert operation.transmit_counter == 1
-
-    @pytest.mark.parametrize("name", ["device_timeout", "unknown_endpoint"])
-    def test_undelivered_command_is_retried(self, name):
-        operation = self.operation(3, 14, "+03:00")
-        self.send(operation, name)
-
-        assert operation.status == EndpointOperation.Status.QUEUED
-        assert operation.transmit_counter == 1
+        requests.put.assert_not_called()
 
     def test_instance_id_is_part_of_the_path(self):
         operation = self.operation(3, 14, "+02:00")

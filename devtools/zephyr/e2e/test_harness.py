@@ -168,3 +168,12 @@ def test_recording_sink_records_requests_per_endpoint() -> None:
             sink.wait_settled("a", known=1, timeout=0.05)
     finally:
         sink.close()
+
+
+def test_every_golden_file_has_a_scenario() -> None:
+    """A golden file without a producer scenario would never be checked again."""
+
+    from .test_contract import GOLDEN_DIR, SCENARIOS
+
+    recorded = {(path.parent.name, path.stem) for path in GOLDEN_DIR.glob("*/*.json")}
+    assert recorded == {(scenario.kind, name) for name, scenario in SCENARIOS.items()}
