@@ -24,7 +24,7 @@ jobs:
     name: Zephyr client (checkpatch, build, twister)
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/zephyrproject-rtos/ci-base:v0.29.3
+      image: ghcr.io/zephyrproject-rtos/ci-base:v0.29.4
     env:
       ZEPHYR_TOOLCHAIN_VARIANT: host
     steps:
