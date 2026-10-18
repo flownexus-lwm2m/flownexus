@@ -6,12 +6,12 @@
 
 name: Deploy
 
-# Deploys the images that "Zephyr E2E CI" tested and published for a commit
+# Deploys the images that "System Tests" tested and published for a commit
 # on main. A manual run deploys any commit with published images, which is
 # also the rollback path. Configuration: doc/source/deploy.rst.
 on:
   workflow_run:
-    workflows: ["Zephyr E2E CI"]
+    workflows: ["System Tests"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -57,7 +57,7 @@ jobs:
           fetch-tags: true
           persist-credentials: false
 
-      # GHCR rejects upper case; the tag matches e2e_test.yml.
+      # GHCR rejects upper case; the tag matches system_test.yml.
       - name: Image names and tag
         id: image
         run: |

@@ -22,12 +22,16 @@ Build the local Leshan image and the Zephyr binary before running the suite::
     podman-compose -f server/compose.yml build leshan
     make build-sim
 
-Run the suite from the repository root. ``make test-e2e`` builds the binary
-and runs the same command::
+Run the E2E scenarios from the repository root with ``make test-e2e``, and
+the gateway contract check with ``make test-contract``. Both build the
+binary and run pytest with ``FLOWNEXUS_RUN_E2E=1``, for example::
 
     FLOWNEXUS_RUN_E2E=1 PYTHONPATH=.:server/django \
-      uv run --extra test pytest --pyargs devtools.zephyr.e2e \
-      -n 0 --override-ini addopts=""
+      uv run --extra test pytest -n 0 --override-ini addopts="" \
+      --pyargs devtools.zephyr.e2e.test_scenarios
+
+``test_harness.py`` holds fast tests of the harness itself; ``make
+test-unit`` runs them without the stack.
 
 Set ``FLOWNEXUS_ZEPHYR_BINARY`` when the binary is outside the default build
 path. The session writes logs and ``run.json`` below
@@ -35,13 +39,14 @@ path. The session writes logs and ``run.json`` below
 ``FLOWNEXUS_E2E_ARTIFACT_ROOT``. The default pytest temporary directory is
 used otherwise. Artifacts are retained after failures.
 
-CI (``.github/workflows/e2e_test.yml``) always runs the fast harness tests.
-The ``build-sim`` job builds ``native_sim`` in ``ci-base`` and runs the
-twister tests of the client. The full-stack job builds the Leshan, Django,
-and Redis images, runs ``devtools/image-smoke-test`` against them, then runs
-this suite with ``FLOWNEXUS_RUN_E2E=1``. This suite runs Django from source;
-the smoke test covers the Django image. On ``push`` the job publishes all
-three images to GHCR.
+CI runs the harness tests in ``checks.yml`` (``make test-unit``). The
+workflow ``system_test.yml`` (``make system-test`` locally) builds
+``native_sim`` in ``ci-base`` and runs the twister tests of the client. The
+``gateway-contract`` job runs ``make test-contract`` against the Leshan image.
+The ``e2e`` job runs after it: it builds the Leshan, Django, and Redis images,
+runs ``make image-smoke-test``, then ``make test-e2e``. The scenarios run
+Django from source; the smoke test covers the Django image. On ``push`` the
+job publishes all three images to GHCR.
 
 To add a scenario, use the ``e2e_context`` fixture, drive the device with
 ``device.shell.command()`` and check the result with ``DjangoApi`` or

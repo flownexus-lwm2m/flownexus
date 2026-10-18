@@ -1,4 +1,8 @@
-name: Zephyr E2E CI
+name: System Tests
+
+# Tests that need the native_sim binary or the container images: the
+# gateway contract and the full-stack E2E scenarios. On push, the tested
+# images are published and deploy.yml deploys them.
 
 on:
   push:
@@ -12,28 +16,10 @@ permissions:
 
 # A newer push cancels the older run, so Deploy never follows an older commit.
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: system-tests-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  harness-tests:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v6
-      with:
-        persist-credentials: false
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        enable-cache: true
-
-    - name: Run fast E2E harness tests
-      env:
-        DJANGO_SETTINGS_MODULE: core.settings_test
-        PYTHONPATH: .:server/django
-      run: uv run --extra test pytest --pyargs devtools.zephyr.e2e.test_harness -n 0
-
   build-sim:
     runs-on: ubuntu-latest
     container:
@@ -85,8 +71,59 @@ jobs:
         path: flownexus/devtools/zephyr/client/build/zephyr/zephyr.exe
         if-no-files-found: error
 
-  e2e-stack:
+  gateway-contract:
     needs: build-sim
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Leshan image
+      uses: docker/build-push-action@v6
+      with:
+        context: server/leshan
+        file: server/leshan/Containerfile
+        build-args: REVISION=${{ github.sha }}
+        tags: localhost/flownexus-leshan:latest
+        load: true
+        cache-from: type=gha,scope=leshan
+
+    - name: Download native_sim binary
+      uses: actions/download-artifact@v4
+      with:
+        name: zephyr-native-sim
+        path: ${{ github.workspace }}/zephyr-bin
+
+    - name: Check gateway against golden files
+      env:
+        FLOWNEXUS_RUN_E2E: "1"
+        FLOWNEXUS_ZEPHYR_BINARY: ${{ github.workspace }}/zephyr-bin/zephyr.exe
+        FLOWNEXUS_E2E_ARTIFACT_ROOT: ${{ github.workspace }}/contract-artifacts
+        PYTHONPATH: .:server/django
+      run: |
+        chmod +x "${FLOWNEXUS_ZEPHYR_BINARY}"
+        make test-contract
+
+    - name: Upload contract artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: contract-artifacts
+        path: ${{ github.workspace }}/contract-artifacts
+        if-no-files-found: ignore
+
+  e2e:
+    needs: [build-sim, gateway-contract]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -162,7 +199,7 @@ jobs:
     - name: Smoke test images
       env:
         CONTAINER_RUNTIME: docker
-      run: devtools/image-smoke-test
+      run: make image-smoke-test
 
     - name: Download native_sim binary
       uses: actions/download-artifact@v4
@@ -179,8 +216,7 @@ jobs:
         PYTHONPATH: .:server/django
       run: |
         chmod +x "${FLOWNEXUS_ZEPHYR_BINARY}"
-        uv run --extra test pytest --pyargs devtools.zephyr.e2e \
-          -n 0 --override-ini addopts=""
+        make test-e2e
 
     - name: Log in to GHCR
       if: github.event_name == 'push'

@@ -22,29 +22,22 @@ discussion.
 Before opening a Pull Request, please run the basic CI tests locally. This
 helps keep the build green and speeds up the review process.
 
-The project uses a `Makefile` to simplify these checks:
+The `Makefile` has one target per CI workflow:
 
-- **Run Django Unit Tests**:
+- **Checks** (`.github/workflows/checks.yml`): unit tests, compliance, docs
+  and the deployment lint. They need only the source checkout:
   ```bash
-  make test-django
+  make checks
   ```
-- **Run Compliance Checks** (Linting, Formatting, Git History):
+- **System tests** (`.github/workflows/system_test.yml`): Zephyr checkpatch and
+  twister tests, the container images, the gateway contract check, the image
+  smoke test and the E2E scenarios. They need `../zephyr`, Podman or Docker:
   ```bash
-  make compliance
+  make system-test
   ```
-- **Run Zephyr checkpatch** (native_sim client, needs `../zephyr`):
-  ```bash
-  make checkpatch
-  ```
-- **Build the Server Stack**:
-  ```bash
-  make server-build
-  ```
-- **(Optional) Run End-to-End Tests**:
-  If you have Podman installed, you can run the full stack integration tests:
-  ```bash
-  make test-e2e
-  ```
+
+The single steps have their own targets, for example `make test-django`,
+`make test-unit`, `make compliance`, `make test-contract` or `make test-e2e`.
 
 ### 3. Commit & PR Requirements
 To maintain a clean and legal history, we require the following:

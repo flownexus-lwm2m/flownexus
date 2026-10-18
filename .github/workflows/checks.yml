@@ -1,0 +1,98 @@
+#
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+name: Checks
+
+# Checks that need only the source checkout: unit tests, lint, docs and the
+# deployment lint. Tests that need built images or the native_sim binary run
+# in system_test.yml.
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Run unit tests
+      run: make test-unit
+
+  compliance:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Run compliance checks
+      env:
+        BASE_REF: ${{ github.base_ref }}
+      run: |
+        git fetch origin "$BASE_REF"
+        git remote set-head origin "$BASE_REF"
+        make compliance
+
+  docs:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install default-jre plantuml graphviz texlive-latex-extra texlive-xetex latexmk imagemagick librsvg2-bin -y
+
+    - name: Build static site
+      run: make doc-build
+
+  deploy-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Lint the playbook and test the nginx config
+      env:
+        CONTAINER_RUNTIME: docker
+      run: make deploy-test
