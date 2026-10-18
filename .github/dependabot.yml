@@ -16,3 +16,28 @@ updates:
       - /server/redis
     schedule:
       interval: weekly
+    # Stay on the JDK LTS line (25); 26-28 are non-LTS.
+    ignore:
+      - dependency-name: library/eclipse-temurin
+        update-types: [version-update:semver-major]
+      - dependency-name: library/maven
+        versions:
+          - 3.9-eclipse-temurin-26
+          - 3.9-eclipse-temurin-27
+          - 3.9-eclipse-temurin-28
+
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
