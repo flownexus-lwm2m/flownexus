@@ -20,6 +20,7 @@ permissions:
 
 jobs:
   unit-tests:
+    name: Unit tests (Django, Leshan, harness)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -37,6 +38,7 @@ jobs:
       run: make test-unit
 
   compliance:
+    name: Compliance (ruff, gitlint)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -60,6 +62,7 @@ jobs:
         make compliance
 
   docs:
+    name: Docs build (HTML, PDF)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -83,6 +86,7 @@ jobs:
       run: make doc-build
 
   deploy-lint:
+    name: Deploy lint (Ansible, nginx)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
