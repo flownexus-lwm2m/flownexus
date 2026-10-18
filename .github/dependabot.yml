@@ -1,0 +1,18 @@
+# Copyright (c) 2026 Jonas Remmert
+#
+# SPDX-License-Identifier: Apache-2.0
+
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /server/leshan
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directories:
+      - /server/leshan
+      - /server/django
+      - /server/redis
+    schedule:
+      interval: weekly
