@@ -32,6 +32,8 @@ jobs:
         enable-cache: true
 
     - name: Run unit tests
+      env:
+        CONTAINER_RUNTIME: docker
       run: make test-unit
 
   compliance:

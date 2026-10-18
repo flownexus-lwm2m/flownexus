@@ -1,11 +1,10 @@
-/* Copyright (c) 2024 Jonas Remmert
+/* Copyright (c) 2026 Jonas Remmert
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 package lwm2m;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -14,6 +13,7 @@ import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
  *
  * A request that fails with a connection error or a 5xx status is retried
  * with exponential backoff, ATTEMPTS times in total, and then dropped. A 4xx
- * status is not retried. Retries are kept in memory only and can reorder
- * requests.
+ * status is not retried. Retries are kept in memory only, at most
+ * MAX_PENDING_RETRIES at a time, and can reorder requests.
  */
 public class IngestClient {
     public static final String REGISTRATION = "/flownexus/ingest/registration";
@@ -35,20 +35,28 @@ public class IngestClient {
 
     static final int ATTEMPTS = 6;
     static final long FIRST_RETRY_MS = 2000;
+    static final int MAX_PENDING_RETRIES = 10000;
 
     private static final Logger log = LoggerFactory.getLogger(IngestClient.class);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
     private final String baseUri;
     private final ObjectMapper mapper;
+    private final long firstRetryMs;
+    private final AtomicInteger pendingRetries = new AtomicInteger();
     private final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(REQUEST_TIMEOUT)
             .build();
     private final ScheduledExecutorService retries = Executors.newSingleThreadScheduledExecutor();
 
     public IngestClient(String baseUri, ObjectMapper mapper) {
+        this(baseUri, mapper, FIRST_RETRY_MS);
+    }
+
+    IngestClient(String baseUri, ObjectMapper mapper, long firstRetryMs) {
         this.baseUri = baseUri;
         this.mapper = mapper;
+        this.firstRetryMs = firstRetryMs;
     }
 
     public void post(String path, Object body) {
@@ -86,9 +94,17 @@ public class IngestClient {
                                 reason);
                         return;
                     }
-                    long delay = FIRST_RETRY_MS << (attempt - 1);
+                    if (pendingRetries.incrementAndGet() > MAX_PENDING_RETRIES) {
+                        pendingRetries.decrementAndGet();
+                        log.error("Dropping request to {}: too many pending retries", request.uri());
+                        return;
+                    }
+                    long delay = firstRetryMs << (attempt - 1);
                     log.warn("Request to {} failed ({}), retry in {} ms", request.uri(), reason, delay);
-                    retries.schedule(() -> send(request, attempt + 1), delay, TimeUnit.MILLISECONDS);
+                    retries.schedule(() -> {
+                        pendingRetries.decrementAndGet();
+                        send(request, attempt + 1);
+                    }, delay, TimeUnit.MILLISECONDS);
                 });
     }
 

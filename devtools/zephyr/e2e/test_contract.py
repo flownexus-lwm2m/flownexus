@@ -255,24 +255,3 @@ def test_gateway_requests_match_golden_file(gateway, name: str) -> None:
             lineterm="",
         )
         pytest.fail("Gateway requests differ from the golden file:\n" + "\n".join(diff))
-
-
-def test_gateway_retries_while_django_is_down(gateway) -> None:
-    """A 5xx answer from Django makes the gateway send the request again."""
-
-    config, sink = gateway
-    endpoint = f"{config.endpoint}-r"
-    supervisor = ProcessSupervisor(config.artifact_dir)
-    device = start_zephyr(supervisor, config, binary=_binary(), name="zephyr-retry")
-    sink.failures = 1
-    try:
-        device.shell.command(
-            f"flownexus start {endpoint} coap://127.0.0.1:{config.leshan_coap_port}"
-        )
-        recorded = sink.wait_settled(endpoint, known=1, timeout=config.timeout, quiet=3)
-    finally:
-        sink.failures = 0
-        supervisor.stop_all()
-
-    assert [r.status for r in recorded] == [503, 201]
-    assert recorded[0].body == recorded[1].body

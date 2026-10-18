@@ -33,8 +33,13 @@ Run the Django tests::
 
   host:~/flownexus$ make test-django
 
-Run all tests that need only the source checkout (Django and the E2E harness
-tests)::
+Run the Leshan gateway unit tests. They run Maven in the Maven image of
+``server/leshan/Containerfile``, so they need Podman or Docker but no local
+Java::
+
+  host:~/flownexus$ make test-leshan
+
+Run all unit tests (Django, Leshan and the E2E harness tests)::
 
   host:~/flownexus$ make test-unit
 

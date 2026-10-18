@@ -59,15 +59,13 @@ class Recorded:
 class RecordingSink:
     """HTTP server that stands in for Django and records each request.
 
-    ``status`` is the response code for every request. While ``failures`` is
-    above zero, the sink answers 503 and counts it down, to simulate a Django
-    outage.
+    ``status`` is the response code for every request, so a test can also
+    simulate a failing Django.
     """
 
     host: str = "0.0.0.0"
     port: int = 0
     status: int = 201
-    failures: int = 0
     requests: list[Recorded] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -79,9 +77,8 @@ class RecordingSink:
                 length = int(self.headers.get("Content-Length", 0))
                 raw = self.rfile.read(length).decode() if length else ""
                 body = json.loads(raw) if raw else None
+                status = sink.status
                 with sink._changed:
-                    status = 503 if sink.failures > 0 else sink.status
-                    sink.failures = max(0, sink.failures - 1)
                     sink.requests.append(Recorded(self.command, self.path, body, status))
                     sink._changed.notify_all()
                 self.send_response(status)

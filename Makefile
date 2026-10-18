@@ -18,7 +18,7 @@ SYSTEM_TEST := FLOWNEXUS_RUN_E2E=1 PYTHONPATH=.:server/django \
 SIM_BINARY := $(if $(FLOWNEXUS_ZEPHYR_BINARY),,build-sim)
 
 .PHONY: test-all checks system-test \
-	test-django test-unit compliance doc-build doc-html doc-pdf doc-generate deploy-test \
+	test-django test-leshan test-unit compliance doc-build doc-html doc-pdf doc-generate deploy-test \
 	checkpatch build-sim test-sim leshan-image django-image redis-image \
 	test-contract image-smoke-test test-e2e \
 	doc run-mock run-mock-multi-site server-build server-run deploy
@@ -41,8 +41,17 @@ system-test: checkpatch build-sim test-sim leshan-image django-image redis-image
 test-django:
 	cd server/django && uv run --extra test pytest sensordata/tests/ frontend/tests.py
 
-# Run all tests that need only the source checkout
-test-unit: test-django
+# Run the Leshan gateway unit tests with the Maven image of the Containerfile.
+# The sources are copied inside the container; downloads stay in a volume.
+MAVEN_IMAGE := $(shell sed -n 's/^FROM \(.*maven[^ ]*\) AS build$$/\1/p' server/leshan/Containerfile)
+test-leshan:
+	$(CONTAINER_RUNTIME) run --rm \
+		-v $(CURDIR)/server/leshan:/src:ro,Z \
+		-v flownexus-maven-cache:/root/.m2 \
+		$(MAVEN_IMAGE) sh -c 'cp -r /src /tmp/leshan && cd /tmp/leshan && mvn -B test'
+
+# Run all tests that need only the source checkout and a container runtime
+test-unit: test-django test-leshan
 	PYTHONPATH=.:server/django uv run --extra test pytest \
 		--pyargs devtools.zephyr.e2e.test_harness -n 0
 

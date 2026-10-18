@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Jonas Remmert
+/* Copyright (c) 2024-2026 Jonas Remmert
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -22,7 +22,6 @@ import org.eclipse.leshan.transport.californium.server.endpoint.CaliforniumServe
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
-import lwm2m.json.JacksonLwM2mNodeDeserializer;
 import lwm2m.json.JacksonLwM2mNodeSerializer;
 import lwm2m.servlet.CommandServlet;
 import lwm2m.servlet.HealthServlet;
@@ -71,7 +70,6 @@ public class LeshanSvr {
     static ObjectMapper createMapper() {
         SimpleModule module = new SimpleModule();
         module.addSerializer(LwM2mNode.class, new JacksonLwM2mNodeSerializer());
-        module.addDeserializer(LwM2mNode.class, new JacksonLwM2mNodeDeserializer());
         return new ObjectMapper().registerModule(module);
     }
 
