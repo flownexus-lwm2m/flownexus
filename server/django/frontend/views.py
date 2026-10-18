@@ -192,7 +192,7 @@ def switch_site(request, site_id):
 
             site = Site.objects.get(id=site_id, is_active=True)
             request.session["current_site_id"] = site.id
-        except (Site.DoesNotExist, ValueError):
+        except Site.DoesNotExist, ValueError:
             pass
     else:
         # Check if user has membership to this site
@@ -203,7 +203,7 @@ def switch_site(request, site_id):
                 user=request.user, site_id=site_id, site__is_active=True
             )
             request.session["current_site_id"] = membership.site.id
-        except (SiteMembership.DoesNotExist, ValueError):
+        except SiteMembership.DoesNotExist, ValueError:
             pass
 
     # Redirect back to referring page or dashboard
@@ -577,7 +577,7 @@ def data_analysis(request):
                     start_date = (
                         timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
                     )
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
         if time_to_str:
             try:
@@ -587,7 +587,7 @@ def data_analysis(request):
                     # Flatpickr resolution is 1 minute; extend end by 1 minute so that
                     # "12:00 – 12:01" includes readings timestamped at 12:01:xx.
                     end_date = end_date + timedelta(minutes=1)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
     elif time_range == "all":
         start_date = None
@@ -772,7 +772,7 @@ def _parse_export_filters(request: Any) -> dict[str, Any]:
                     start_date = (
                         timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
                     )
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
         if time_to_str:
             try:
@@ -780,7 +780,7 @@ def _parse_export_filters(request: Any) -> dict[str, Any]:
                 if parsed:
                     end_date = timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
                     end_date = end_date + timedelta(minutes=1)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
     elif time_range == "all":
         start_date = None
@@ -1024,7 +1024,7 @@ def _parse_pm_time_filters(request: Any) -> tuple[Any, Any]:
                     start_date = (
                         timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
                     )
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
         if time_to_str:
             try:
@@ -1032,7 +1032,7 @@ def _parse_pm_time_filters(request: Any) -> tuple[Any, Any]:
                 if parsed:
                     end_date = timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
                     end_date = end_date + timedelta(minutes=1)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
     elif time_range == "all":
         start_date = None

@@ -41,7 +41,7 @@ def check_purgecss():
     try:
         subprocess.run(["purgecss", "--version"], capture_output=True, check=True)
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except subprocess.CalledProcessError, FileNotFoundError:
         return False
 
 

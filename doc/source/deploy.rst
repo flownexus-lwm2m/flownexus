@@ -53,7 +53,7 @@ Container Environment
 
 Both components run in a container. The Leshan gateway (Leshan 2.0.0-M18)
 runs in an ``eclipse-temurin:25-jre`` container and the Django server runs in
-a ``python:3.13-slim`` container. This allows for an easy and reproducible setup
+a ``python:3.14-slim`` container. This allows for an easy and reproducible setup
 of the server.
 
   .. uml::

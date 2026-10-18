@@ -9,7 +9,7 @@ name = "flownexus"
 version = "0.1.0"
 description = "Local-first IoT framework using LwM2M protocol"
 readme = "README.rst"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 license = {text = "Apache-2.0"}
 authors = [
     {name = "Jonas Remmert"}
@@ -19,7 +19,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 # Production dependencies - what runs in podman-compose
@@ -90,7 +90,7 @@ mock = [
 default-groups = []
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 100
 exclude = ["**/migrations/*"]
 
