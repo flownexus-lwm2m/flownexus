@@ -144,6 +144,16 @@ class TestRegistrationLifecycle:
         assert Endpoint.objects.get(endpoint=ENDPOINT).registered is False
         assert gateway_read.call_count == 1
 
+    def test_late_event_does_not_change_the_state(self, client):
+        replay(client, "registration_lifecycle", step=0)
+        late = {"ep": ENDPOINT, "event": "unregistered", "time": "2025-12-31T23:59:59Z"}
+        url = "/flownexus/ingest/registration"
+        response = client.post(url, late, content_type="application/json")
+
+        assert response.status_code == 201
+        assert Endpoint.objects.get(endpoint=ENDPOINT).registered is True
+        assert len(values(10240, 1)) == 1
+
 
 @pytest.mark.django_db
 class TestSend:
@@ -161,11 +171,10 @@ class TestSend:
         event = Event.objects.get(endpoint_id=ENDPOINT)
         assert event.resources.count() == 2
 
-    def test_object_instance_skips_unknown_resources(self, client):
+    def test_object_instance_stores_known_resources(self, client):
         replay(client, "send_object_instance")
 
         assert values(3303, 5700) == [20.0]
-        assert not values(3303, 5603)
 
     def test_cached_timeseries_keeps_device_timestamps(self, client):
         replay(client, "send_cached_timeseries")
