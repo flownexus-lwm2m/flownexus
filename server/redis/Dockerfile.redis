@@ -1,4 +1,4 @@
-FROM docker.io/library/redis:8.4-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
+FROM docker.io/library/redis:8.10-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
 
 ARG REVISION=unknown
 LABEL org.opencontainers.image.title="flownexus-redis" \
