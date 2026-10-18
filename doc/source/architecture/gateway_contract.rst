@@ -53,7 +53,8 @@ The gateway posts each registration change to
      - LwM2M Update; time of the update
      - Sends pending operations.
    * - ``unregistered``
-     - LwM2M De-register or expired registration; gateway time of the event
+     - LwM2M De-register or expired registration; gateway time of the event.
+       Not sent when a new registration replaces the old one (device reboot).
      - Sets the endpoint not registered.
 
 Django creates an unknown endpoint on the first event. It stores each event as
@@ -61,6 +62,8 @@ a resource of the internal object ``10240`` (``0`` registered, ``1``
 unregistered, ``2`` updated) with the event time in epoch milliseconds as
 value, so the database model and the frontend need no separate event table.
 Object ``10240`` exists only in Django and is not part of the wire format.
+An event older than the newest stored event of the endpoint, for example a
+late retry, is stored but does not change the registration state.
 
 After a ``registered`` event, the Celery task ``read_device_object`` reads
 ``/3`` through the command API and stores the content with the composite
@@ -126,7 +129,7 @@ The gateway handles the result as follows:
   the request.
 
 Each attempt has an HTTP timeout of 10 s. The gateway keeps pending retries in
-memory only, so a gateway restart loses them. The order of requests is not
+memory only, at most 10000 at a time, so a gateway restart loses them. The order of requests is not
 guaranteed: a retried request can arrive after later requests.
 
 Command API
@@ -149,7 +152,9 @@ Django sends commands to ``/api/clients/{endpoint}/{path}`` on the gateway.
      - Write (replace)
      - Resource path. The body is one LwM2M node of kind ``singleResource``,
        for example ``{"id": 14, "kind": "singleResource", "value": "+02:00",
-       "type": "STRING"}``.
+       "type": "STRING"}``. ``type`` is ``STRING``, ``INTEGER``,
+       ``UNSIGNED_INTEGER``, ``FLOAT``, ``BOOLEAN`` (``true``, ``false``, ``0``
+       or ``1``), ``OPAQUE`` (hex string) or ``TIME`` (epoch milliseconds).
    * - ``POST``
      - Execute
      - Resource path. An optional plain text body holds the execute arguments.

@@ -181,7 +181,7 @@ def test_fota_through_firmware_object(e2e_context) -> None:
     device.logs.wait_for(re.escape("execute 5/0/2 (update)"), timeout=config.timeout)
     wait_update("state UPDATING", state=3)
 
-    # Simulated reboot into the new image: the registration makes Leshan read /3.
+    # Simulated reboot into the new image: Django reads /3 after the registration.
     device.shell.command(ShellContract.write_string("/3/0/3", version))
     device.shell.command(ShellContract.stop())
     device.logs.wait_for(r"Disconnected", timeout=config.timeout)

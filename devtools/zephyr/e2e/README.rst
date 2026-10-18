@@ -92,8 +92,8 @@ does not download it. The test sets the update state with ``flownexus fota
 state <n>``, which sends ``5/0/3`` to the server. On state ``DOWNLOADED``
 Django executes ``5/0/2``, and the client sends state ``UPDATING``. The test
 then simulates a reboot into the new image: it writes the version to
-``3/0/3``, stops the client, and starts it again. Leshan reads ``/3`` on the
-new registration, so Django compares the version and sets the result
+``3/0/3``, stops the client, and starts it again. Django reads ``/3`` after
+the new registration, compares the version and sets the result
 ``SUCCESS``::
 
     flownexus fota state 1

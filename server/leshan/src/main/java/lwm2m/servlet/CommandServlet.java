@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Jonas Remmert
+/* Copyright (c) 2026 Jonas Remmert
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17,7 +17,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.core.node.InvalidLwM2mPathException;
 import org.eclipse.leshan.core.node.LwM2mPath;
 import org.eclipse.leshan.core.node.LwM2mSingleResource;
@@ -37,8 +36,9 @@ import org.eclipse.leshan.core.response.ReadResponse;
 import org.eclipse.leshan.server.LeshanServer;
 import org.eclipse.leshan.server.registration.Registration;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lwm2m.json.SingleResourceParser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,22 +79,21 @@ public class CommandServlet extends HttpServlet {
         if (target == null) {
             return;
         }
-        LwM2mNode node;
+        LwM2mSingleResource node;
         try {
-            node = mapper.readValue(req.getInputStream(), LwM2mNode.class);
-        } catch (JsonProcessingException | IllegalArgumentException e) {
+            node = SingleResourceParser.parse(mapper.readTree(req.getInputStream()));
+        } catch (IOException | IllegalArgumentException e) {
             respond(resp, HttpServletResponse.SC_BAD_REQUEST, error("invalid resource: " + e.getMessage()));
             return;
         }
         LwM2mPath path = new LwM2mPath(target.path());
-        if (!(node instanceof LwM2mSingleResource) || !path.isResource()) {
+        if (!path.isResource()) {
             respond(resp, HttpServletResponse.SC_BAD_REQUEST, error("only a single resource can be written"));
             return;
         }
-        int id = ((LwM2mSingleResource) node).getId();
-        if (id != path.getResourceId()) {
+        if (node.getId() != path.getResourceId()) {
             respond(resp, HttpServletResponse.SC_BAD_REQUEST,
-                    error("resource id " + id + " does not match the path " + target.path()));
+                    error("resource id " + node.getId() + " does not match the path " + target.path()));
             return;
         }
         send(req, resp, target,
@@ -149,8 +148,8 @@ public class CommandServlet extends HttpServlet {
         ContentFormat format;
         long timeout;
         try {
-            format = format(req);
-            timeout = timeoutSeconds(req);
+            format = parseFormat(req.getParameter("format"));
+            timeout = parseTimeout(req.getParameter("timeout"));
         } catch (IllegalArgumentException e) {
             respond(resp, HttpServletResponse.SC_BAD_REQUEST, error(e.getMessage()));
             return;
@@ -173,40 +172,43 @@ public class CommandServlet extends HttpServlet {
             return;
         }
 
-        if (response == null) {
-            log.warn("{} {} timed out after {} s", req.getMethod(), req.getPathInfo(), timeout);
-            respond(resp, HttpServletResponse.SC_GATEWAY_TIMEOUT,
-                    error("no device response within " + timeout + " s"));
-            return;
+        Result result = result(response, timeout);
+        if (result.status() != HttpServletResponse.SC_OK) {
+            log.warn("{} {} failed: {}", req.getMethod(), req.getPathInfo(), result.body());
         }
+        respond(resp, result.status(), result.body());
+    }
 
+    record Result(int status, Map<String, Object> body) {
+    }
+
+    /** Map a device response, or null for no response within timeout, to the HTTP answer. */
+    static Result result(LwM2mResponse response, long timeout) {
+        if (response == null) {
+            return new Result(HttpServletResponse.SC_GATEWAY_TIMEOUT,
+                    error("no device response within " + timeout + " s"));
+        }
         Map<String, Object> body = new LinkedHashMap<>();
+        int code = response.getCode().getCode();
         body.put("status", response.getCode().getName());
-        body.put("code", coapCode(response.getCode().getCode()));
+        body.put("code", String.format("%d.%02d", code / 100, code % 100));
         if (response instanceof ReadResponse read && read.getContent() != null) {
             body.put("content", read.getContent());
         }
-        if (response.isFailure()) {
-            log.warn("{} {} failed on device: {}", req.getMethod(), req.getPathInfo(), response.getCode());
-            if (response.getErrorMessage() != null && !response.getErrorMessage().isEmpty()) {
-                body.put("error", response.getErrorMessage());
-            }
-            respond(resp, HttpServletResponse.SC_BAD_GATEWAY, body);
-        } else {
-            respond(resp, HttpServletResponse.SC_OK, body);
+        if (response.isSuccess()) {
+            return new Result(HttpServletResponse.SC_OK, body);
         }
-    }
-
-    private static String coapCode(int code) {
-        return String.format("%d.%02d", code / 100, code % 100);
+        if (response.getErrorMessage() != null && !response.getErrorMessage().isEmpty()) {
+            body.put("error", response.getErrorMessage());
+        }
+        return new Result(HttpServletResponse.SC_BAD_GATEWAY, body);
     }
 
     private static Map<String, Object> error(String message) {
         return Map.of("error", message == null ? "" : message);
     }
 
-    private static ContentFormat format(HttpServletRequest req) {
-        String name = req.getParameter("format");
+    static ContentFormat parseFormat(String name) {
         if (name == null) {
             return null;
         }
@@ -217,8 +219,7 @@ public class CommandServlet extends HttpServlet {
         return format;
     }
 
-    private static long timeoutSeconds(HttpServletRequest req) {
-        String value = req.getParameter("timeout");
+    static long parseTimeout(String value) {
         if (value == null) {
             return DEFAULT_TIMEOUT_S;
         }
