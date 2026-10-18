@@ -23,7 +23,7 @@ import org.eclipse.leshan.core.node.LwM2mPath;
 import org.eclipse.leshan.core.node.LwM2mSingleResource;
 import org.eclipse.leshan.core.node.codec.CodecException;
 import org.eclipse.leshan.core.request.ContentFormat;
-import org.eclipse.leshan.core.request.DownlinkRequest;
+import org.eclipse.leshan.core.request.DownlinkDeviceManagementRequest;
 import org.eclipse.leshan.core.request.ExecuteRequest;
 import org.eclipse.leshan.core.request.ReadRequest;
 import org.eclipse.leshan.core.request.WriteRequest;
@@ -132,7 +132,7 @@ public class CommandServlet extends HttpServlet {
     }
 
     private void send(HttpServletRequest req, HttpServletResponse resp, Target target,
-                      DownlinkRequest<? extends LwM2mResponse> request) throws IOException {
+                      DownlinkDeviceManagementRequest<? extends LwM2mResponse> request) throws IOException {
         long timeout = timeoutSeconds(req);
         LwM2mResponse response;
         try {

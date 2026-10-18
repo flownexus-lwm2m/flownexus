@@ -11,13 +11,13 @@ package lwm2m;
 import java.net.InetSocketAddress;
 
 import org.eclipse.californium.core.config.CoapConfig;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.server.LeshanServer;
 import org.eclipse.leshan.server.LeshanServerBuilder;
-import org.eclipse.leshan.server.californium.endpoint.CaliforniumServerEndpointsProvider;
+import org.eclipse.leshan.transport.californium.server.endpoint.CaliforniumServerEndpointsProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -89,7 +89,7 @@ public class LeshanSvr {
 
     private static Server createWebServer(LeshanServer lwm2m, ObjectMapper mapper) {
         Server server = new Server(new InetSocketAddress(HTTP_PORT));
-        ServletContextHandler root = new ServletContextHandler(null, "/", true, false);
+        ServletContextHandler root = new ServletContextHandler("/");
         root.addServlet(new ServletHolder(new HealthServlet()), "/health");
         root.addServlet(new ServletHolder(new CommandServlet(lwm2m, mapper)), "/api/clients/*");
         server.setHandler(root);
