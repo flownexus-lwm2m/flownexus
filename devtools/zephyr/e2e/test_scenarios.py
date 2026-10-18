@@ -139,3 +139,127 @@ def test_server_operation_is_received_by_device_and_confirmed(e2e_context) -> No
         description=f"operation {operation['id']} confirmed",
     )
     assert named_operation(confirmed, operation["id"])["status"] == "CONFIRMED"
+
+
+def test_fota_through_firmware_object(e2e_context) -> None:
+    """Run FOTA through Object 5 and confirm the new version after a re-registration."""
+
+    config, _, _, device, api = e2e_context
+    version = f"2.0.0-{config.endpoint.rsplit('-', 1)[-1]}"
+    poll_until(
+        api.endpoint_data,
+        lambda value: value.get("registered") is True,
+        timeout=config.timeout,
+        description=f"registration of {config.endpoint}",
+    )
+    update = api.create_firmware_update(version, b"flownexus e2e firmware")
+
+    def update_row(rows: list[dict]) -> dict | None:
+        return next((row for row in rows if row["id"] == update["id"]), None)
+
+    def wait_update(description: str, **expected: int) -> dict:
+        rows = poll_until(
+            api.firmware_updates,
+            lambda rows: (
+                (row := update_row(rows)) is not None
+                and all(row[key] == value for key, value in expected.items())
+            ),
+            timeout=config.timeout,
+            interval=config.poll_interval,
+            description=description,
+        )
+        return update_row(rows)
+
+    # Django sends queued operations, here the Package URI, on registration update.
+    device.shell.command(ShellContract.update())
+    uri = update["firmware"]["binary"]
+    device.logs.wait_for(re.escape(f"write 5/0/1={uri}"), timeout=config.timeout)
+
+    device.shell.command(ShellContract.fota_state(1))
+    wait_update("state DOWNLOADING", state=1)
+    device.shell.command(ShellContract.fota_state(2))
+    device.logs.wait_for(re.escape("execute 5/0/2 (update)"), timeout=config.timeout)
+    wait_update("state UPDATING", state=3)
+
+    # Simulated reboot into the new image: the registration makes Leshan read /3.
+    device.shell.command(ShellContract.write_string("/3/0/3", version))
+    device.shell.command(ShellContract.stop())
+    device.logs.wait_for(r"Disconnected", timeout=config.timeout)
+    _restart_client(config, device)
+
+    finished = wait_update("FOTA success", result=1)
+    assert finished["state"] == 0
+    assert finished["firmware"]["version"] == version
+    operations = api.operations()
+    assert [row["status"] for row in operations[-2:]] == ["CONFIRMED", "CONFIRMED"]
+
+
+def _restart_client(config, device) -> None:
+    """Start the client again; ``start`` fails until the engine is idle after a stop."""
+
+    server = f"coap://127.0.0.1:{config.leshan_coap_port}"
+    poll_until(
+        lambda: device.shell.command(ShellContract.start(config.endpoint, server), check=False),
+        lambda lines: not any("failed" in line for line in lines),
+        timeout=config.timeout,
+        interval=config.poll_interval,
+        description="client restart",
+    )
+
+
+def test_deregistration_marks_endpoint_unregistered(e2e_context) -> None:
+    config, _, _, device, api = e2e_context
+
+    def registered(expected: bool) -> dict:
+        return poll_until(
+            api.endpoint_data,
+            lambda value: value.get("registered") is expected,
+            timeout=config.timeout,
+            description=f"registered={expected} for {config.endpoint}",
+        )
+
+    registered(True)
+    device.shell.command(ShellContract.stop())
+    device.logs.wait_for(r"Disconnected", timeout=config.timeout)
+    registered(False)
+
+    _restart_client(config, device)
+    registered(True)
+
+
+@pytest.mark.xfail(
+    reason="defect P-008: the gateway returns HTTP 200 for a device error, so Django "
+    "records the rejected write as CONFIRMED",
+    strict=True,
+)
+def test_write_rejected_by_device_fails_operation(e2e_context) -> None:
+    """Write the read-only Device/Manufacturer; the device answers 4.05."""
+
+    config, _, _, device, api = e2e_context
+    value = "Rejected"
+    api.seed_resource(3, 0, "STRING", value)
+    resources = poll_until(
+        api.resources,
+        lambda rows: matching_resource(rows, "manufacturer", value),
+        timeout=config.timeout,
+        description="seeded manufacturer resource",
+    )
+    resource = next(
+        row
+        for row in reversed(resources)
+        if row["resource_type"].endswith(" - manufacturer") and row["value"] == value
+    )
+    operation = api.create_operation(resource["resource_id"], "send")
+    device.shell.command(ShellContract.update())
+
+    def operation_done(rows: list[dict]) -> bool:
+        row = named_operation(rows, operation["id"])
+        return row is not None and row.get("status") in {"CONFIRMED", "FAILED"}
+
+    rows = poll_until(
+        api.operations,
+        operation_done,
+        timeout=config.timeout,
+        description=f"operation {operation['id']} finished",
+    )
+    assert named_operation(rows, operation["id"])["status"] == "FAILED"
