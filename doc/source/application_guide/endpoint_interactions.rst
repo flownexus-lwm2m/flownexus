@@ -2,14 +2,17 @@ Endpoint Interactions
 =====================
 
 flownexus can interact with any endpoint via the LwM2M methods ``Read``,
-``Write``, ``Execute`` and ``Observe``.
+``Write`` and ``Execute``.
 
 
 Read
 ----
 
+Django reads the Device object (``/3``) after each registration of an
+endpoint.
+
 .. note::
-   Currently not supported
+   Other reads are currently not supported
 
 Write
 -----
@@ -20,15 +23,13 @@ See Chapter :ref:`data-flow-backend-to-endpoint-label` for more details.
 Execute
 -------
 
-.. note::
-   Currently not supported
+Django sends a pending operation for a resource of data type ``NONE`` as
+execute, for example ``5/0/2`` during a firmware update. See Chapter
+:ref:`data-flow-backend-to-endpoint-label` for more details.
 
 Observe
 -------
 
-See chapter :ref:`events-via-composite-observe-label` to see events are
-generated from composite Observe.
-
 .. note::
-   Currently Observe interactions are handled in Leshan, check
-   :ref:`lwm2m-observe-label`.
+   Currently not supported. Endpoints report values with LwM2M Send, see
+   chapter :ref:`events-via-send-label`.
