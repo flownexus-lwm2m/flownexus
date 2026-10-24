@@ -29,7 +29,7 @@ jobs:
       ZEPHYR_TOOLCHAIN_VARIANT: host
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         path: flownexus
         persist-credentials: false
@@ -66,7 +66,7 @@ jobs:
           -O twister-out --inline-logs
 
     - name: Upload native_sim binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: zephyr-native-sim
         path: flownexus/devtools/zephyr/client/build/zephyr/zephyr.exe
@@ -78,20 +78,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         persist-credentials: false
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Leshan image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: server/leshan
         file: server/leshan/Containerfile
@@ -101,7 +101,7 @@ jobs:
         cache-from: type=gha,scope=leshan
 
     - name: Download native_sim binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: zephyr-native-sim
         path: ${{ github.workspace }}/zephyr-bin
@@ -118,7 +118,7 @@ jobs:
 
     - name: Upload contract artifacts
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: contract-artifacts
         path: ${{ github.workspace }}/contract-artifacts
@@ -133,13 +133,13 @@ jobs:
       contents: read
       packages: write
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0 # Necessary for git describe to work
         persist-credentials: false
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
 
@@ -153,10 +153,10 @@ jobs:
         echo "describe=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Leshan image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: server/leshan
         file: server/leshan/Containerfile
@@ -170,7 +170,7 @@ jobs:
         cache-to: type=gha,mode=max,scope=leshan
 
     - name: Build Django image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: server/django/Dockerfile.django
@@ -186,7 +186,7 @@ jobs:
         cache-to: type=gha,mode=max,scope=django
 
     - name: Build Redis image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: server/redis
         file: server/redis/Dockerfile.redis
@@ -205,7 +205,7 @@ jobs:
       run: make image-smoke-test
 
     - name: Download native_sim binary
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: zephyr-native-sim
         path: ${{ github.workspace }}/zephyr-bin
@@ -240,7 +240,7 @@ jobs:
 
     - name: Upload E2E artifacts
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: e2e-artifacts
         path: ${{ github.workspace }}/e2e-artifacts
