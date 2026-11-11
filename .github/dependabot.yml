@@ -25,6 +25,10 @@ updates:
           - 3.9-eclipse-temurin-26
           - 3.9-eclipse-temurin-27
           - 3.9-eclipse-temurin-28
+      # Stay on Python 3.14 until gevent and its dependencies in uv.lock
+      # ship 3.15 wheels; the slim image cannot compile them.
+      - dependency-name: library/python
+        update-types: [version-update:semver-minor]
 
   - package-ecosystem: uv
     directory: /
@@ -33,6 +37,9 @@ updates:
     groups:
       python-minor-patch:
         update-types: [minor, patch]
+    # sphinxcontrib-redoc imports pkg_resources, which setuptools 82 removed.
+    ignore:
+      - dependency-name: setuptools
 
   - package-ecosystem: github-actions
     directory: /
