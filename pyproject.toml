@@ -48,7 +48,7 @@ test = [
 [dependency-groups]
 # Development tools - only for local dev and CI
 dev = [
-    "gitlint",
+    "gitlint-core",
     "pre-commit",
     "ruff",
 ]
