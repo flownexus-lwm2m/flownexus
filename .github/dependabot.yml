@@ -42,9 +42,6 @@ updates:
     directory: /
     patterns: ["*"]
     multi-ecosystem-group: monthly
-    # sphinxcontrib-redoc imports pkg_resources, which setuptools 82 removed.
-    ignore:
-      - dependency-name: setuptools
 
   - package-ecosystem: github-actions
     directory: /

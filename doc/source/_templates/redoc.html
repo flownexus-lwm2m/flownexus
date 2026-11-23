@@ -1,0 +1,19 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+<!doctype html>
+<html>
+  <head>
+    <title>flownexus API documentation</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>body { margin: 0; padding: 0; }</style>
+  </head>
+  <body>
+    <div id="redoc"></div>
+    <script type="application/json" id="spec">{{ spec }}</script>
+    <script src="{{ redoc_uri }}"></script>
+    <script>
+      Redoc.init(JSON.parse(document.getElementById("spec").textContent), {},
+                 document.getElementById("redoc"));
+    </script>
+  </body>
+</html>
