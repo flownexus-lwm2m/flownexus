@@ -5,8 +5,8 @@
 #
 
 import logging
+from datetime import datetime
 
-from dateutil import parser
 from rest_framework import serializers
 
 from ..models import Endpoint
@@ -51,7 +51,7 @@ class TimestampedResourceSerializer(HandleResourceMixin, serializers.Serializer)
                     if ts == "null":
                         self.handle_resource(endpoint, obj_id, resource)
                     else:
-                        timestamp = parser.parse(ts)
+                        timestamp = datetime.fromisoformat(ts)
                         self.handle_resource(endpoint, obj_id, resource, timestamp)
 
         return endpoint
