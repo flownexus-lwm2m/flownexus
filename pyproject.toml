@@ -26,7 +26,6 @@ classifiers = [
 # Keep this minimal for container image size
 dependencies = [
     "django>=6.0.1,<7.0",
-    "django-extensions>=4.1,<5.0",
     "djangorestframework>=3.16.1,<4.0",
     "drf-spectacular>=0.29.0",  # Required by Django settings (INSTALLED_APPS)
     "requests>=2.32.3,<3.0",
@@ -62,6 +61,7 @@ dev = [
 # Documentation build - heavy deps, not needed in production
 docs = [
     "codespell>=2.4.1",
+    "django-extensions>=4.1,<5.0",
     "graphviz>=0.21",
     "plantuml>=0.3.0",
     "pydot>=4.0.1",
