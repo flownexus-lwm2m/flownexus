@@ -28,11 +28,9 @@ updates:
     ignore:
       - dependency-name: library/eclipse-temurin
         update-types: [version-update:semver-major]
+      # Dependabot reads 3.9-eclipse-temurin-26 as version 3.9.26.
       - dependency-name: library/maven
-        versions:
-          - 3.9-eclipse-temurin-26
-          - 3.9-eclipse-temurin-27
-          - 3.9-eclipse-temurin-28
+        versions: [">= 3.9.26, < 3.9.29"]
       # Stay on Python 3.14 until gevent and its dependencies in uv.lock
       # ship 3.15 wheels; the slim image cannot compile them.
       - dependency-name: library/python
