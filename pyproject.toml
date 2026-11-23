@@ -59,13 +59,11 @@ docs = [
     "codespell>=2.4.1",
     "django-extensions>=4.1,<5.0",
     "pydot>=4.0.1",
-    "setuptools<71",
     "sphinx-autobuild>=2025.8.25",
     "sphinx-book-theme>=1.1.4",
     "sphinx>=9.1.0",
     "sphinxcontrib-httpdomain>=1.8.1",
     "sphinxcontrib-plantuml>=0.31",
-    "sphinxcontrib-redoc>=1.6.0",
 ]
 
 # Deployment (Ansible playbook in deploy/ansible)

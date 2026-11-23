@@ -683,13 +683,11 @@ docs = [
     { name = "codespell" },
     { name = "django-extensions" },
     { name = "pydot" },
-    { name = "setuptools" },
     { name = "sphinx" },
     { name = "sphinx-autobuild" },
     { name = "sphinx-book-theme" },
     { name = "sphinxcontrib-httpdomain" },
     { name = "sphinxcontrib-plantuml" },
-    { name = "sphinxcontrib-redoc" },
 ]
 mock = [
     { name = "pyyaml" },
@@ -728,13 +726,11 @@ docs = [
     { name = "codespell", specifier = ">=2.4.1" },
     { name = "django-extensions", specifier = ">=4.1,<5.0" },
     { name = "pydot", specifier = ">=4.0.1" },
-    { name = "setuptools", specifier = "<71" },
     { name = "sphinx", specifier = ">=9.1.0" },
     { name = "sphinx-autobuild", specifier = ">=2025.8.25" },
     { name = "sphinx-book-theme", specifier = ">=1.1.4" },
     { name = "sphinxcontrib-httpdomain", specifier = ">=1.8.1" },
     { name = "sphinxcontrib-plantuml", specifier = ">=0.31" },
-    { name = "sphinxcontrib-redoc", specifier = ">=1.6.0" },
 ]
 mock = [{ name = "pyyaml", specifier = ">=6.0" }]
 
@@ -1350,15 +1346,6 @@ wheels = [
 ]
 
 [[package]]
-name = "setuptools"
-version = "70.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/65/d8/10a70e86f6c28ae59f101a9de6d77bf70f147180fbf40c3af0f64080adc3/setuptools-70.3.0.tar.gz", hash = "sha256:f171bab1dfbc86b132997f26a119f6056a57950d058587841a0082e8830f9dc5", size = 2333112, upload-time = "2024-07-09T16:08:06.251Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/15/88e46eb9387e905704b69849618e699dc2f54407d8953cc4ec4b8b46528d/setuptools-70.3.0-py3-none-any.whl", hash = "sha256:fe384da74336c398e0d956d1cae0669bc02eed936cdb1d49b57de1990dc11ffc", size = 931070, upload-time = "2024-07-09T16:07:58.829Z" },
-]
-
-[[package]]
 name = "sh"
 version = "1.14.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1514,19 +1501,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/68/bc/9104308fc285eb3e0
 wheels = [
     { url = "https://files.pythonhosted.org/packages/27/83/859ecdd180cacc13b1f7e857abf8582a64552ea7a061057a6c716e790fce/sphinxcontrib_qthelp-2.0.0-py3-none-any.whl", hash = "sha256:b18a828cdba941ccd6ee8445dbe72ffa3ef8cbe7505d8cd1fa0d42d3f2d5f3eb", size = 88743, upload-time = "2024-07-29T01:09:54.885Z" },
 ]
-
-[[package]]
-name = "sphinxcontrib-redoc"
-version = "1.6.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jinja2" },
-    { name = "jsonschema" },
-    { name = "pyyaml" },
-    { name = "six" },
-    { name = "sphinx" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/73/872189269380d0271d575771986db8a77f06bc4565c1a971bebd54f38d2c/sphinxcontrib-redoc-1.6.0.tar.gz", hash = "sha256:e358edbe23927d36432dde748e978cf897283a331a03e93d3ef02e348dee4561", size = 350482, upload-time = "2020-04-17T19:46:48.041Z" }
 
 [[package]]
 name = "sphinxcontrib-serializinghtml"

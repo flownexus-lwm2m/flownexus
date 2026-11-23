@@ -10,9 +10,12 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import json
 import os
 import subprocess
 import sys
+
+import yaml
 
 sys.path.insert(0, os.path.abspath("../../src/"))
 master_doc = "index"
@@ -37,13 +40,13 @@ extensions = [
     "sphinxcontrib.plantuml",
     "sphinx.ext.imgconverter",
     "sphinx.ext.todo",
-    "sphinxcontrib.redoc",
 ]
 
 exclude_patterns = []
 
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+templates_path = ["_templates"]
 html_favicon = "_static/flownexus_favicon.svg"
 html_baseurl = "https://flownexus-lwm2m.github.io/flownexus/"
 
@@ -55,16 +58,21 @@ html_css_files = [
     "custom.css",
 ]
 
-# Automatically generate ReST API documentation
-redoc = [
-    {
-        "spec": "../build/generated/openapi-schema.yaml",
-        "page": "api_doc/api",
-        "embed": True,
-    },
-]
-# Specify a more recent version for API Doc v
+# The HTML build replaces api_doc/api with a standalone ReDoc page that embeds
+# the generated OpenAPI schema. Other builders keep the placeholder text.
+openapi_spec = "../build/generated/openapi-schema.yaml"
 redoc_uri = "https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"
+
+
+def redoc_page(app):
+    with open(os.path.join(app.confdir, openapi_spec), encoding="utf-8") as f:
+        spec = json.dumps(yaml.safe_load(f)).replace("</", "<\\/")
+    yield "api_doc/api", {"spec": spec, "redoc_uri": redoc_uri}, "redoc.html"
+
+
+def setup(app):
+    app.connect("html-collect-pages", redoc_page)
+
 
 html_theme_options = {
     "repository_url": "https://github.com/flownexus-lwm2m/flownexus",
