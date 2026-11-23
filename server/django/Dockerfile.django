@@ -1,8 +1,7 @@
+FROM ghcr.io/astral-sh/uv:0.13.1@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336 AS uv
+
 # Use the official lightweight Python image.
 FROM docker.io/library/python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.13.1@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336 /uv /bin/uv
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -28,8 +27,9 @@ COPY pyproject.toml uv.lock /django/
 # Ensure python is accessible at the expected path for uv
 RUN ln -sf /usr/local/bin/python3 /usr/bin/python3
 
-# Install production dependencies only
-RUN uv sync --no-dev --frozen
+# Install production dependencies only; uv stays out of the final image
+RUN --mount=type=bind,from=uv,source=/uv,target=/bin/uv \
+    uv sync --no-dev --frozen
 
 # Add virtual environment to PATH so python/celery commands work in entrypoint
 ENV PATH="/django/.venv/bin:$PATH"
