@@ -1,0 +1,2 @@
+# Collapse the lock file in pull request diffs
+uv.lock linguist-generated=true
