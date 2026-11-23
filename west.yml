@@ -6,15 +6,10 @@ manifest:
     path: flownexus
 
   remotes:
-    - name: eclipse-leshan
-      url-base: https://github.com/eclipse-leshan/
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
 
   projects:
-    - name: leshan
-      remote: eclipse-leshan
-      revision: master
     - name: zephyr
       remote: zephyrproject-rtos
       repo-path: zephyr
