@@ -682,7 +682,6 @@ dependencies = [
     { name = "chardet" },
     { name = "charset-normalizer" },
     { name = "django" },
-    { name = "django-extensions" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "gevent" },
@@ -715,6 +714,7 @@ dev = [
 ]
 docs = [
     { name = "codespell" },
+    { name = "django-extensions" },
     { name = "graphviz" },
     { name = "plantuml" },
     { name = "pydot" },
@@ -737,7 +737,6 @@ requires-dist = [
     { name = "chardet", specifier = "<8" },
     { name = "charset-normalizer", specifier = ">=3.0,<4.0" },
     { name = "django", specifier = ">=6.0.1,<7.0" },
-    { name = "django-extensions", specifier = ">=4.1,<5.0" },
     { name = "djangorestframework", specifier = ">=3.16.1,<4.0" },
     { name = "drf-spectacular", specifier = ">=0.29.0" },
     { name = "factory-boy", marker = "extra == 'test'", specifier = ">=3.3.1,<4.0" },
@@ -767,6 +766,7 @@ dev = [
 ]
 docs = [
     { name = "codespell", specifier = ">=2.4.1" },
+    { name = "django-extensions", specifier = ">=4.1,<5.0" },
     { name = "graphviz", specifier = ">=0.21" },
     { name = "plantuml", specifier = ">=0.3.0" },
     { name = "pydot", specifier = ">=4.0.1" },

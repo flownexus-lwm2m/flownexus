@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+from importlib.util import find_spec
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -117,12 +118,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_extensions",
     "rest_framework",
     "drf_spectacular",
     "sensordata",
     "frontend",
 ]
+
+# graph_models for the docs ERD; installed with the docs group only
+if find_spec("django_extensions"):
+    INSTALLED_APPS.append("django_extensions")
 
 MIDDLEWARE = [
     "core.middleware.RequestLoggingMiddleware",
